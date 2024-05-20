@@ -4,7 +4,7 @@ import reader, writer, time, beepy
 
 
 # User Input
-sources = ['Draftkings','Fanduel','Betrivers','BetMGM','Caesars']
+sources = ['Fanduel','Fliff','Fanatics', 'BetMGM','Draftkings','Betrivers','Caesars']
 min_value = 0.5
 
 
@@ -14,29 +14,88 @@ driver = reader.open_dynamic_website(url)
 
 idx = 1
 
+# exclude games already played today 
+# bc strictly prematch games
+todays_schedule = []#reader.read_todays_schedule()
+
+prev_prematch_arb_data = [] # first loop init=prev or None?
+
+beepy.volume = 0.5
+beepy.frequency = 1
+
 # keep looping every 5 seconds for change
 while True:
 
 	prematch_arb_data_file = 'data/prematch arb data.csv'
 	init_prematch_arb_data = reader.extract_data(prematch_arb_data_file, header=True)
+	if idx == 1:
+		print('init_prematch_arb_data: ' + str(init_prematch_arb_data))
+	prematch_arb_data = reader.read_prematch_arb_data(driver, min_value, sources, todays_schedule)
 
-	prematch_arb_data = reader.read_prematch_arb_data(driver, min_value, sources)
-
-	print('init_prematch_arb_data: ' + str(init_prematch_arb_data))
-	print('prematch_arb_data: ' + str(prematch_arb_data))
-
-	# new_pick = False
-	# for arb_row in prematch_arb_data:
-
-	# 	if arb_row not in init_prematch_arb_data:
-	# 		new_pick = True
-	# 		break
+	if prematch_arb_data is None:
+		continue
 	
-	if init_prematch_arb_data != prematch_arb_data:
-		print(str(idx) + ': Found New Picks')
+
+	# if just check diff then will alert when arb disappears
+	# which we do not want
+	new_pick = False
+	new_picks = []
+	for arb_row in prematch_arb_data:
+
+        # instead of just checking if any diff
+		# must be either 
+		# 1. existing arb goes from below min val to above = Any Diff bc pick not added if below min val
+		# 2. diff game and market
+		if arb_row not in init_prematch_arb_data and arb_row not in prev_prematch_arb_data:
+			# check if existing game and market
+			arb_game = arb_row[2]
+			arb_market = arb_row[3]
+			same_arb = False
+			init_same_arb = []
+			for init_arb_row in init_prematch_arb_data:
+				init_arb_game = arb_row[2]
+				init_arb_market = arb_row[3]
+				if arb_game == init_arb_game and arb_market == init_arb_market:
+					same_arb = True
+					init_same_arb = init_arb_row
+
+					# print('Same Arb')
+					# print('arb_row: ' + str(arb_row))
+					break
+
+
+			if same_arb:	
+				# if same arb with changed val but prev val was already above min val
+				# so already taken so ignore
+				#arb_val = arb_row[0]
+				init_arb_val = float(init_same_arb[0])
+				# arb val went from below to above min
+				if init_arb_val < min_value:
+					new_picks.append(arb_row)
+
+			else:
+				new_picks.append(arb_row)
+
+			# if new_pick:
+			# 	new_picks.append(arb_row)
+				#break
+	
+	
+	# check 2 prev arb tables bc sometimes disappear and reappear so not new
+	#if len(prematch_arb_data) > 0 and init_prematch_arb_data != prematch_arb_data and prev_prematch_arb_data != prematch_arb_data:
+	if len(new_picks) > 0:
+		print('\n' + str(idx) + ': Found New Picks')
+
+		# print('init_prematch_arb_data: ' + str(init_prematch_arb_data))
+		# print('prematch_arb_data: ' + str(prematch_arb_data))
+
+		print('new_picks: ' + str(new_picks))
+
 		beepy.beep()
-	else:
-		print(str(idx) + ': No New Picks')
+	# else:
+	# 	print(str(idx) + ': No New Picks')
+
+	
 
 
 	# if init_prematch_arb_data != prematch_arb_data:
@@ -67,7 +126,8 @@ while True:
 
 	idx += 1
 	
-	writer.write_data_to_file(prematch_arb_data, prematch_arb_data_file)
+	prev_prematch_arb_data = init_prematch_arb_data # save last 2 in case glitch causes temp disappearance
+	writer.write_data_to_file(prematch_arb_data, prematch_arb_data_file) # becomes init next loop
 
 	# keep looping every 5 seconds for change
 	time.sleep(5)

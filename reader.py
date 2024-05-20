@@ -2547,11 +2547,27 @@ def read_source_from_link(link):
 	elif re.search('BETRIVERS', link):
 		source = 'Betrivers'
 
+	elif re.search('FLIFF', link):
+		source = 'Fliff'
+
+	elif re.search('FANATICS', link):
+		source = 'Fanatics'
+
 	return source
 
-def read_prematch_arb_data(driver, min_value=0, sources=[]):
-	print('\n===Read Prematch Arb Data===\n')
-	print('\nOutput: prematch_arb_data = [[%, $, ...], ...]\n')
+# def determine_same_day_game(game, todays_schedule):
+
+# 	same_day = False
+
+# 	# todays schedule
+# 	if game in todays_schedule:
+# 		same_day = True
+
+# 	return same_day
+
+def read_prematch_arb_data(driver, min_value=0, sources=[], todays_schedule=[], max_retries=3):
+	# print('\n===Read Prematch Arb Data===\n')
+	# print('\nOutput: prematch_arb_data = [[%, $, ...], ...]\n')
 
 	prematch_arb_data = []
 
@@ -2560,79 +2576,96 @@ def read_prematch_arb_data(driver, min_value=0, sources=[]):
 	# need to login manually 
 	# then the sportsbook filter btn appears so filter manually
 
+	retries = 0
+
+	while retries < max_retries:
+		try:
 
 
-	# Read Cur Pre Arbs
-	data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
-	#print("data_elements: " + data_elements.get_attribute('innerHTML'))
+			# Read Cur Pre Arbs
+			data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
+			#print("data_elements: " + data_elements.get_attribute('innerHTML'))
 
-	# print('\nElements:')
-	# for idx in range(len(data_elements)):
-	# 	#if idx == 3:
-	# 	e = data_elements[idx]
-	# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
-	# 	#break
+			# print('\nElements:')
+			# for idx in range(len(data_elements)):
+			# 	#if idx == 3:
+			# 	e = data_elements[idx]
+			# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
+			# 	#break
 
-	data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
-	#print("data_table: " + data_table.get_attribute('innerHTML'))
+			data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
+			#print("data_table: " + data_table.get_attribute('innerHTML'))
 
-	# see if table or not?
-	#arb_tables = data_table.find_elements('class name', 'pb-2')
-	arb_tables = data_table.find_elements('tag name', 'table')
-	# print('\nTables:')
-	# for idx in range(len(arb_tables)):
-	# 	table = arb_tables[idx]
-	# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
-	# prematch_arb_data = ''
-	if len(arb_tables) > 3:
-		# always last table?
-		#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
-		prematch_arb_table = arb_tables[-1]
-		#print("prematch_arb_data: " + prematch_arb_data)
+			# see if table or not?
+			#arb_tables = data_table.find_elements('class name', 'pb-2')
+			arb_tables = data_table.find_elements('tag name', 'table')
+			# print('\nTables:')
+			# for idx in range(len(arb_tables)):
+			# 	table = arb_tables[idx]
+			# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
+			# prematch_arb_data = ''
+			if len(arb_tables) > 3:
+				# always last table?
+				#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
+				prematch_arb_table = arb_tables[-1]
+				#print("prematch_arb_data: " + prematch_arb_data)
 
-		arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
-		#print('\nArbs:')
-		# skip header row
-		# only take rows that have nested rows
-		num = 1
-		#for idx in range(1, len(arb_rows)):
-		for arb in arb_rows[1:]:
-			#arb = arb_rows[idx]
-			arb_str = arb.get_attribute('innerHTML')
-			if re.search('<tr ', arb_str):
-				#print("\nArb " + str(num) + ": " + arb_str)
-				num += 1
+				arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+				#print('\nArbs:')
+				# skip header row
+				# only take rows that have nested rows
+				num = 1
+				#for idx in range(1, len(arb_rows)):
+				for arb in arb_rows[1:]:
+					#arb = arb_rows[idx]
+					arb_str = arb.get_attribute('innerHTML')
+					if re.search('<tr ', arb_str):
+						#print("\nArb " + str(num) + ": " + arb_str)
+						num += 1
 
-				arb_data = arb.find_elements('tag name', 'td')
-				value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
-				if float(value) < min_value:
-					continue
+						arb_data = arb.find_elements('tag name', 'td')
+						value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+						if float(value) < min_value:
+							continue
 
-				profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
-				game = arb_data[2].get_attribute('innerHTML')
-				market = arb_data[3].get_attribute('innerHTML')
-				
-				# nested elements
-				bets_element = arb_data[4]#.get_attribute('innerHTML')
-				#print('bets_element: ' + str(bets_element.get_attribute('innerHTML')))
-				bet_sources = bets_element.find_elements('tag name', 'img')
-				bet1 = read_source_from_link(bet_sources[0].get_attribute('src'))
-				if bet1 not in sources:
-					continue
-				bet2 = read_source_from_link(bet_sources[1].get_attribute('src'))
-				if bet2 not in sources:
-					continue
-				# bets = (bet1, bet2)
-				# print('bets: ' + str(bets))
+						profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
+						game = arb_data[2].get_attribute('innerHTML')
+						# check same day game bc less suspicious
+						# if game not in todays_schedule:
+						# 	continue
+						market = arb_data[3].get_attribute('innerHTML')
+						
+						# nested elements
+						bets_element = arb_data[4]#.get_attribute('innerHTML')
+						#print('bets_element: ' + str(bets_element.get_attribute('innerHTML')))
+						bet_sources = bets_element.find_elements('tag name', 'img')
+						bet1 = read_source_from_link(bet_sources[0].get_attribute('src'))
+						if bet1 not in sources:
+							continue
+						bet2 = read_source_from_link(bet_sources[1].get_attribute('src'))
+						if bet2 not in sources:
+							continue
+						# bets = (bet1, bet2)
+						# print('bets: ' + str(bets))
 
-				arb_row = [value, profit, game, market, bet1, bet2]
-				#print('arb_row: ' + str(arb_row))
+						arb_row = [value, profit, game, market, bet1, bet2]
+						#print('arb_row: ' + str(arb_row))
 
-				prematch_arb_data.append(arb_row)
+						prematch_arb_data.append(arb_row)
 
 
-				# test 1 to see why not equal
-				#break
+						# test 1 to see why not equal
+						#break
+
+
+			#print('prematch_arb_data:\n' + str(prematch_arb_data))
+			return prematch_arb_data
+
+		except Exception as e:
+			
+			retries += 1
+			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+			print('Warning: No SGP element!\n', e)
 
 
 		
@@ -2644,10 +2677,10 @@ def read_prematch_arb_data(driver, min_value=0, sources=[]):
 	# time.sleep(1000)
 
 	#print('prematch_arb_data:\n' + str(prematch_arb_data))
-	return prematch_arb_data
+	#return prematch_arb_data
 
 def open_react_website(url, mobile=False):
-	print('\n===Open React Website===\n')
+	#print('\n===Open React Website===\n')
 
 	# Create Chromeoptions instance 
 	options = webdriver.ChromeOptions() 
@@ -2675,7 +2708,7 @@ def open_react_website(url, mobile=False):
 
 
 def open_dynamic_website(url, max_retries=3):
-	print('\n===Open Dynamic Website===\n')
+	#print('\n===Open Dynamic Website===\n')
 
 	retries = 0
 
@@ -2683,7 +2716,7 @@ def open_dynamic_website(url, max_retries=3):
 		try:
 
 			driver = open_react_website(url)
-
+			#time.sleep(100)
 			dialog_element = driver.find_element('id', 'radix-:r5:')
 			#print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
 
