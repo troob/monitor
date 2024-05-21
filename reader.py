@@ -7154,10 +7154,13 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 	url = 'https://www.espn.com/nba/schedule'
 	if sport == 'baseball':
 		url = 'https://www.espn.com/mlb/schedule'
+	elif sport == 'hockey':
+		url = 'https://www.espn.com/nhl/schedule'
 
 	# Table__Title
 	# get game dates from soup bc not in table data
 	soup = read_website(url)
+	
 	if soup is not None:
 
 		dates = []
@@ -7176,6 +7179,16 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 			dates.append(game_date)
 
 		#print('dates: ' + str(dates))
+
+
+		# need to separate soup for each table so we can iso cur table
+		# so we can get full team names bc not in table data
+		tables = []
+		for table in soup.find_all('tbody', {'class': 'Table__TBODY'}): #.encode_contents()
+			#print('table:\n' + str(table))
+			tables.append(table)
+
+		#print('tables: ' + str(tables))
 
 	
 	game_tables = read_web_data(url)
@@ -7202,10 +7215,47 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 
 			date = dates[order]
 			print('date: ' + str(date))
+
+			table = tables[order]
+			#print('table: ' + str(table))
+
 			# simplest case running code on day of game
 			# BUT allow for option to input date of interest
 			if date == todays_date:
 				print('found todays schedule')
+
+
+				# if baseball or football
+				# then multi teams same city so need logo to diff
+				away_teams = []
+				home_teams = []
+				# soup.find_elements('class name', 'team__logo'):
+				# soup.find_all('img', {'class': 'team__logo'}):
+				for game_row in table.find_all('tr'):
+					#print('game_row: ' + str(game_row))
+
+					# first 2 cells are away and home teams
+					cells = game_row.find_all('td')
+					away_team = re.sub('-',' ',cells[0].find('a').get('href').split('/')[-1])
+					home_team = re.sub('-',' ',cells[1].find('a').get('href').split('/')[-1])
+					# print('away_team: ' + str(away_team))
+					# print('home_team: ' + str(home_team))
+					away_teams.append(away_team)
+					home_teams.append(home_team)
+
+					# # parent element has full team name in href
+					# team_name = team_logo.find_element('xpath','..')
+					# print('team_name: ' + str(team_name))
+
+					# # src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/chw.png&w=40&h=40&scale=crop&cquality=40&location=origin"
+					# team_abbrev = team_logo.get_attribute('src')
+					# print('team_abbrev: ' + team_abbrev)
+
+					# team_abbrevs.append(team_abbrev)
+
+				#print('team_abbrevs: ' + str(team_abbrevs))
+
+
 				for idx, row in game_tables_df.iterrows():
 
 					
@@ -7224,28 +7274,28 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 					cutoff_time = datetime.strptime(cutoff_time_str, '%I:%M %p').time()
 
 					if current_time < game_time and cutoff_time > game_time:
-						away_team = row['MATCHUP'].lower()
-						# if playin, away_team: los angelesnba play-in - west - 7th place vs 8th place
-						away_team = re.split('nba|east|west',away_team)[0]#.strip()
-						home_team = re.sub('@ ', '', row['MATCHUP.1']).lower()
-						print('away_team: ' + str(away_team))
-						print('home_team: ' + str(home_team))
-						# convert game_teams: [('Denver', '@ LA')]
-						# remove last word from full team name
-						away_team = converter.convert_team_loc_to_abbrev(away_team)
-						home_team = converter.convert_team_loc_to_abbrev(home_team)
+						
+						# ===V1: ambiguous if multi teams same city so CHANGED to use href
+						# away_team = row['MATCHUP'].lower()
+						# # if playin, away_team: los angelesnba play-in - west - 7th place vs 8th place
+						# away_team = re.split('nba|east|west',away_team)[0]#.strip()
+						# home_team = re.sub('@ ', '', row['MATCHUP.1']).lower()
+						# print('away_team: ' + str(away_team))
+						# print('home_team: ' + str(home_team))
+						# # convert game_teams: [('Denver', '@ LA')]
+						# # remove last word from full team name
+						# away_team = converter.convert_team_loc_to_abbrev(away_team)
+						# home_team = converter.convert_team_loc_to_abbrev(home_team)
+						
+						# ===V2===
+						away_team = converter.convert_team_name_to_abbrev(away_teams[idx])
+						home_team = converter.convert_team_name_to_abbrev(home_teams[idx])
+						
 						game = (away_team, home_team)
 						game_teams.append(game)
 
 
 				break # after read todays games
-
-
-
-
-
-
-
 
 	print("game_teams: " + str(game_teams))
 	return game_teams
@@ -7261,7 +7311,7 @@ def read_todays_schedule(sports):
 		cur_game_teams = read_current_game_teams(sport)
 		todays_schedule.extend(cur_game_teams)
 
-
+	print("todays_schedule: " + str(todays_schedule))
 	return todays_schedule
 
 

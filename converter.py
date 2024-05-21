@@ -11,8 +11,8 @@ import math
 
 
 def convert_game_teams_to_abbrevs(game_teams):
-    print('\n===Convert Game Teams to Abbrevs===\n')
-    print('Input: game_teams = \'Away Team vs Home Team\'')
+    # print('\n===Convert Game Teams to Abbrevs===\n')
+    # print('Input: game_teams = \'Away Team vs Home Team\'')
 
     #team_abbrevs = ()
     teams = game_teams.split(' vs ')
@@ -469,7 +469,7 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
     return abbrev
 
 def convert_team_name_to_abbrev(team_name):
-    print('\n===Convert Team Name to Abbrev: ' + team_name + '===\n')
+    #print('\n===Convert Team Name to Abbrev: ' + team_name + '===\n')
     
     abbrev = ''
 
@@ -601,13 +601,15 @@ def convert_team_name_to_abbrev(team_name):
                     'san francisco 49ers':'sff',
                     'seattle seahawks':'sea'} # could get from fantasy pros table but simpler to make once bc only 30 immutable vals
 
-    # hard fail so we can correct name
-    #if team_name in team_abbrevs.keys():
-    abbrev = team_abbrevs[team_name]
-    # else:
-    #     print('Warning: Unknown team name! ' + team_name)
+    # hard fail so we can correct name?
+    # Problem is we need to filter by sport
+    # so if name not here then consider not needed
+    if team_name in team_abbrevs.keys():
+        abbrev = team_abbrevs[team_name]
+    else:
+        print('Warning: Unknown team name! ' + team_name)
 
-    print('abbrev: ' + abbrev)
+    #print('abbrev: ' + abbrev)
     return abbrev
 
 def convert_team_abbrev_to_name(team_abbrev):
