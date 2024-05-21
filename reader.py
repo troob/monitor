@@ -32,7 +32,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen # request website, open webpage given req
 
 # === Local Internal Libraries ===
-# import converter # convert year span to current season
+import converter # convert year span to current season
 # #from converter import round_half_up
 # import determiner # determine played season before reading webpage to avoid exception/error
 # import isolator # isolate_player_game_data to read data from file
@@ -7144,12 +7144,16 @@ def read_game_teams(read_season_year):
 
 	return game_teams
 
-def read_current_game_teams(cutoff_time_str='11:59 pm'):
+def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 	print('\n===Read Current Games Teams===\n')
+	print('Input: Sport = ' + sport)
+	print('\nOutput: game_teams = [(ind, nyk),...]\n')
 
 	game_teams = [] # read todays schedule if cur yr
 
 	url = 'https://www.espn.com/nba/schedule'
+	if sport == 'baseball':
+		url = 'https://www.espn.com/mlb/schedule'
 
 	# Table__Title
 	# get game dates from soup bc not in table data
@@ -7245,6 +7249,20 @@ def read_current_game_teams(cutoff_time_str='11:59 pm'):
 
 	print("game_teams: " + str(game_teams))
 	return game_teams
+
+
+def read_todays_schedule(sports):
+	print('\n===Read Todays Schedule===\n')
+
+	todays_schedule = []
+
+	for sport in sports:
+
+		cur_game_teams = read_current_game_teams(sport)
+		todays_schedule.extend(cur_game_teams)
+
+
+	return todays_schedule
 
 
 # https://www.espn.com/nba/injuries
