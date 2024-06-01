@@ -2,7 +2,7 @@
 
 import reader, writer, converter, time, beepy
 
-import re
+import re, os
 
 from slack_sdk import WebClient
 
@@ -19,7 +19,7 @@ from slack_sdk import WebClient
 
 
 # store as environment variable
-slack_token = 'xoxb-7185840768439-7193845858614-UtN2Y255dBoha1pR8cWjDqDX'
+slack_token = os.environ["SLACK_TOKEN"]
 test_msg = 'test'
 
 # set up webclient with slack oauth token
