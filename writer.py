@@ -22,8 +22,95 @@ from tabulate import tabulate # display output, eg consistent stat vals
 #import determiner # determine matching key
 #import sorter # sort players outcomes so we see conditions grouped by type and other useful visuals
 
-# import converter # convert dicts to lists
+import converter # convert dicts to lists AND number formats
 # import remover
+
+
+
+
+def write_arbs_to_post(arbs, client, channel, post=False):
+
+    props_str = ''
+
+    val_idx = 0
+    game_idx = 1
+    market_idx = 2
+    bet1_idx = 3
+    bet2_idx = 4
+    odds1_idx = 5
+    odds2_idx = 6
+    link1_idx = 7
+    link2_idx = 8
+		
+		
+    # for test_pick in test_picks:
+    # 	print('\n' + str(test_pick))
+
+    for arb in arbs:
+        value = arb[val_idx]
+        #value_str = 'Value:\t' + value + '%'
+        game = arb[game_idx]
+        #game_str = 'Game:\t' + game
+        market = arb[market_idx]
+        #market_str = 'Market:\t' + market
+        bet1 = arb[bet1_idx]
+        # bet1_str = 'Bet 1:\t' + bet1
+        bet2 = arb[bet2_idx]
+        # bet2_str = 'Bet 2:\t' + bet2
+        odds1 = arb[odds1_idx]
+        # odds1_str = 'Odds 1:\t' + odds1
+        odds2 = arb[odds2_idx]
+        # bet2_str = 'Bet 2:\t' + bet2
+
+        
+        # Make list of sizes depending on limit, from 1000 to 100, every 100
+        size1_options = []
+        size2_options = []
+        max_limit = 1000
+        # Better to make hedge bet rounder number bc seems more normal/rec
+        size1_str = '$' + converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
+        size2_str = '$' + str(max_limit)
+
+        # if Betrivers show range bc inaccurate reading
+        props_str += '\n' + value + '%\n'
+
+        props_str += '\n' + game + '\n'
+
+        props_str += '\n' + market + '\n'
+
+        # Betrivers		Fanatics
+        # -110			+110
+        # $1200			$1000
+        # -105			+110
+        # $1250			$1000
+        # props_str += '\n' + bet1 + '\t' + bet2
+
+        # props_str += '\n' + odds1 + '\t' + odds2
+
+        # props_str += '\n' + size1_str + '\t' + size2_str
+
+        arb_table = [[bet1, '', bet2], [odds1, '', odds2], [size1_str, '', size2_str]]
+
+        props_str += '\n' + tabulate(arb_table)
+
+        props_str += '\n==================\n'
+
+    print(props_str)
+    #print(tabulate(arb_table))
+
+
+    #send msg on slack app
+    print('Post: ' + str(post))
+    if post:
+        client.chat_postMessage(
+            channel=channel,
+            text=props_str,
+            username='Ball'
+        )
+    
+
+
+
 
 def display_game_data(all_valid_streaks_list):
     #print("\n===Game Data===\n")

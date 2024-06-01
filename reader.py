@@ -2565,11 +2565,14 @@ def read_source_from_link(link):
 
 # 	return same_day
 
-def read_prematch_arb_data(driver, min_value=0, sources=[], todays_schedule=[], max_retries=3):
+def read_prematch_arb_data(driver, sources=[], todays_schedule=[], max_retries=3):
 	# print('\n===Read Prematch Arb Data===\n')
 	# print('\nOutput: prematch_arb_data = [[%, $, ...], ...]\n')
 
 	prematch_arb_data = []
+
+	# if big diff then disappears too quick so ignore
+	#max_value = 5
 
 	#web_data = []
 
@@ -2579,93 +2582,134 @@ def read_prematch_arb_data(driver, min_value=0, sources=[], todays_schedule=[], 
 	retries = 0
 
 	while retries < max_retries:
-		try:
+
+		# Comment out try block to pinpoint exact error
+		# try:
 
 
-			# Read Cur Pre Arbs
-			data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
-			#print("data_elements: " + data_elements.get_attribute('innerHTML'))
+		# Read Cur Pre Arbs
+		data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
+		#print("data_elements: " + data_elements.get_attribute('innerHTML'))
 
-			# print('\nElements:')
-			# for idx in range(len(data_elements)):
-			# 	#if idx == 3:
-			# 	e = data_elements[idx]
-			# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
-			# 	#break
+		# print('\nElements:')
+		# for idx in range(len(data_elements)):
+		# 	#if idx == 3:
+		# 	e = data_elements[idx]
+		# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
+		# 	#break
 
-			data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
-			#print("data_table: " + data_table.get_attribute('innerHTML'))
+		data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
+		#print("data_table: " + data_table.get_attribute('innerHTML'))
 
-			# see if table or not?
-			#arb_tables = data_table.find_elements('class name', 'pb-2')
-			arb_tables = data_table.find_elements('tag name', 'table')
-			# print('\nTables:')
-			# for idx in range(len(arb_tables)):
-			# 	table = arb_tables[idx]
-			# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
-			# prematch_arb_data = ''
-			if len(arb_tables) > 3:
-				# always last table?
-				#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
-				prematch_arb_table = arb_tables[-1]
-				#print("prematch_arb_data: " + prematch_arb_data)
+		# see if table or not?
+		#arb_tables = data_table.find_elements('class name', 'pb-2')
+		arb_tables = data_table.find_elements('tag name', 'table')
+		# print('\nTables:')
+		# for idx in range(len(arb_tables)):
+		# 	table = arb_tables[idx]
+		# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
+		# prematch_arb_data = ''
+		if len(arb_tables) > 3:
+			# always last table?
+			#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
+			prematch_arb_table = arb_tables[-1]
+			#print("prematch_arb_data: " + prematch_arb_data)
 
-				arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
-				#print('\nArbs:')
-				# skip header row
-				# only take rows that have nested rows
-				num = 1
-				#for idx in range(1, len(arb_rows)):
-				for arb in arb_rows[1:]:
-					#arb = arb_rows[idx]
-					arb_str = arb.get_attribute('innerHTML')
-					if re.search('<tr ', arb_str):
-						#print("\nArb " + str(num) + ": " + arb_str)
-						num += 1
+			arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+			#print('\nArbs:')
+			# skip header row
+			# only take rows that have nested rows
+			num = 1
+			#for idx in range(1, len(arb_rows)):
+			for arb in arb_rows[1:]:
+				#arb = arb_rows[idx]
+				if arb is None:
+					continue
+				
+				arb_str = arb.get_attribute('innerHTML')
+				if re.search('<tr ', arb_str):
+					#print("\nArb " + str(num) + ": " + arb_str)
+					num += 1
 
-						arb_data = arb.find_elements('tag name', 'td')
-						value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
-						if float(value) < min_value:
-							continue
+					arb_data = arb.find_elements('tag name', 'td')
+					value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+					
+					# read all arbs and then split into test and valid later
+					# if float(value) < min_value or float(value) > max_value:
+					# 	continue
 
-						profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
-						game = arb_data[2].get_attribute('innerHTML')
-						# check same day game bc less suspicious
-						# if game not in todays_schedule:
-						# 	continue
-						market = arb_data[3].get_attribute('innerHTML')
+					# profit depends on limits
+					#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
+					game = arb_data[2].get_attribute('innerHTML')
+					# check same day game bc less suspicious
+					# if game not in todays_schedule:
+					# 	continue
+					market = arb_data[3].get_attribute('innerHTML')
+					
+					# nested elements
+					bets_element = arb_data[4]#.get_attribute('innerHTML')
+					#print('bets_element: ' + str(bets_element.get_attribute('innerHTML')))
+					bet_sources = bets_element.find_elements('tag name', 'img')
+
+					bet1 = read_source_from_link(bet_sources[0].get_attribute('src'))
+					if bet1 not in sources:
+						continue
+					bet2 = read_source_from_link(bet_sources[1].get_attribute('src'))
+					if bet2 not in sources:
+						continue
+					# bets = (bet1, bet2)
+					# print('bets: ' + str(bets))
+
+					odds1 = arb_data[8].get_attribute('innerHTML')
+					
+					if len(arb_data) <= 9:
+						# error so continue
+						continue
 						
-						# nested elements
-						bets_element = arb_data[4]#.get_attribute('innerHTML')
-						#print('bets_element: ' + str(bets_element.get_attribute('innerHTML')))
-						bet_sources = bets_element.find_elements('tag name', 'img')
-						bet1 = read_source_from_link(bet_sources[0].get_attribute('src'))
-						if bet1 not in sources:
-							continue
-						bet2 = read_source_from_link(bet_sources[1].get_attribute('src'))
-						if bet2 not in sources:
-							continue
-						# bets = (bet1, bet2)
-						# print('bets: ' + str(bets))
+					odds2 = arb_data[9].get_attribute('innerHTML')
+					# print('odds1: ' + odds1)
+					# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
 
-						arb_row = [value, profit, game, market, bet1, bet2]
-						#print('arb_row: ' + str(arb_row))
-
-						prematch_arb_data.append(arb_row)
+					# if source=betrivers, odds might not be correct
+					# so give 2 options:
+					# 1. if correct
+					# 2. adjusted down by 5 (bc seems most common error)
 
 
-						# test 1 to see why not equal
-						#break
+					# website defaults to nj so convert link to ny
+					# NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+					# NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+					link1_element = arb_data[13]
+					#print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
+					link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
+					link1 = re.sub('nj', 'ny', link1)
+					#print('link1: ' + link1)
+
+					link2_element = arb_data[14]
+					#print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
+					link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
+					link2 = re.sub('nj', 'ny', link2)
+					#print('link2: ' + link2)
+					
+
+					arb_row = [value, game, market, bet1, bet2, odds1, odds2, link1, link2]
+					#print('arb_row: ' + str(arb_row))
+
+					prematch_arb_data.append(arb_row)
 
 
-			#print('prematch_arb_data:\n' + str(prematch_arb_data))
-			return prematch_arb_data
+					# test 1 to see why not equal
+					#break
 
-		except Exception as e:
+
+		#print('prematch_arb_data:\n' + str(prematch_arb_data))
+		return prematch_arb_data
+
+		# except Exception as e:
 			
-			retries += 1
-			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
-			print('Warning: No SGP element!\n', e)
+		# 	retries += 1
+		# 	print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+		# 	print('Warning: No SGP element!\n', e)
 
 
 		
@@ -7170,12 +7214,12 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 			game_date_str = date_div.decode_contents().strip()
 			# remove dow bc strptime fails
 			#game_date_str = re.sub('[a-zA-Z]+,\s','',game_date_str)
-			print('game_date_str: \'' + game_date_str + '\'')
+			#print('game_date_str: \'' + game_date_str + '\'')
 			#game_date = converter.convert_str_to_date(date_div.decode_contents().lower())
 			# game_date_str = 'Thursday, April 4, 2024'
 			# print('game_date_str: \'' + game_date_str + '\'')
 			game_date = datetime.strptime(game_date_str, '%A, %B %d, %Y').date()
-			print('game_date: ' + str(game_date))
+			#print('game_date: ' + str(game_date))
 			dates.append(game_date)
 
 		#print('dates: ' + str(dates))
@@ -7198,23 +7242,23 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 
 		# todays_date: 2024-04-04 21:32:29.423709
 		todays_date = datetime.today().date()
-		print("todays_date: " + str(todays_date))
+		#print("todays_date: " + str(todays_date))
 		# need to see if cur time past game in table
 		current_time = datetime.today().time()
-		print("current_time: " + str(current_time))
+		#print("current_time: " + str(current_time))
 
 		# maybe first or second table depending what time of day
 		# if page updated for new day
 		# so loop until find current date
 		for order in range(len_html_results):
-			print("order: " + str(order))
+			#print("order: " + str(order))
 
 			game_tables_df = game_tables[order]
-			print('game_tables: ' + str(game_tables_df))
-			print("no. columns: " + str(len(game_tables_df.columns.tolist())))
+			# print('game_tables: ' + str(game_tables_df))
+			# print("no. columns: " + str(len(game_tables_df.columns.tolist())))
 
 			date = dates[order]
-			print('date: ' + str(date))
+			#print('date: ' + str(date))
 
 			table = tables[order]
 			#print('table: ' + str(table))
@@ -7255,11 +7299,16 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 
 				#print('team_abbrevs: ' + str(team_abbrevs))
 
+				# if no more games today
+				if 'TIME' not in game_tables_df.iloc[0]:
+					break
 
 				for idx, row in game_tables_df.iterrows():
 
 					
 					# time: 10:00 PM
+					
+
 					game_time_str = row['TIME']
 
 					if game_time_str == 'LIVE':
@@ -7269,7 +7318,7 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 					# add 10min to game time as standard
 					time_change = timedelta(minutes=10)
 					game_time = (game_time + time_change).time()
-					print('game_time: ' + str(game_time))
+					#print('game_time: ' + str(game_time))
 
 					cutoff_time = datetime.strptime(cutoff_time_str, '%I:%M %p').time()
 
@@ -7310,6 +7359,7 @@ def read_todays_schedule(sports):
 
 		cur_game_teams = read_current_game_teams(sport)
 		todays_schedule.extend(cur_game_teams)
+
 
 	print("todays_schedule: " + str(todays_schedule))
 	return todays_schedule

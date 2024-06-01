@@ -10,8 +10,81 @@ import math
 
 
 
+
+# (+100, +105) -> (max limit, x)
+# Arbitrage % = ((1 / decimal odds for outcome A) x 100) + ((1 / decimal odds for outcome B) x 100)
+# Individual Bet = (Total Investment x Individual Odds Percentage) / Total Arbitrage Percentage
+def convert_odds_to_bet_size(odds1, odds2, max_limit):
+    print('\n===Convert Odds to Bet Size===\n')
+    print('odds1: ' + odds1)
+    print('odds2: ' + odds2)
+    print('max_limit: ' + str(max_limit))
+    print('\nOutput: stake = x\n')
+
+    # calc individual odds percent
+    # if positive
+    # decimal_odds1 = 0
+    # if odds1[0] == '+':
+    #     decimal_odds1 = (int(odds1) / 100) + 1
+    # # if negative
+    # else:
+    #     decimal_odds1 = (100 / int(odds1)) + 1
+
+    # percent_odds1 = (1 / decimal_odds1) * 100
+
+    # decimal_odds2 = 0
+    # if odds1[0] == '+':
+    #     decimal_odds2 = (int(odds2) / 100) + 1
+    # # if negative
+    # else:
+    #     decimal_odds2 = (100 / int(odds2)) + 1
+
+    # percent_odds2 = (1 / decimal_odds2) * 100
+
+    # percent_odds1 = 0
+    # if odds1[0] == '+':
+    #     print('Positive')
+    #     percent_odds1 = 100 / (int(odds1) + 100) * 100
+    #     percent_odds2 = int(odds2) / (int(odds2) + 100) * 100
+    # # if negative
+    # else:
+    #     percent_odds1 = int(odds1) / (int(odds1) + 100) * 100
+    #     percent_odds2 = 100 / (int(odds2) + 100) * 100
+
+
+    # odds1 always negative odds
+    # -210 / 
+    percent_odds1 = int(odds1) / (int(odds1) - 100) * 100
+    percent_odds2 = 100 / (int(odds2) + 100) * 100
+
+    # print('decimal_odds1: ' + str(decimal_odds1))
+    # print('decimal_odds2: ' + str(decimal_odds2))
+    print('percent_odds1: ' + str(percent_odds1))
+    print('percent_odds2: ' + str(percent_odds2))
+
+
+    # arb_percent = percent_odds1 + percent_odds2
+
+    # # total_stake = max_limit + likely_stake
+    # stake1 = (total_stake * percent_odds1) / arb_percent
+
+    # stake2 = (total_stake * percent_odds2) / arb_percent
+    # # stake2 * arb_percent = total_stake * percent_odds2
+    # total_stake = stake2 * arb_percent / percent_odds2
+
+    # bigger bet on more likely outcome
+    stake = str(math.ceil(max_limit * percent_odds1 / percent_odds2))
+
+    print('stake: ' + stake)
+    return stake
+
+
+
+
+
 def convert_game_teams_to_abbrevs(game_teams):
     # print('\n===Convert Game Teams to Abbrevs===\n')
+    # print('game_teams: ' + str(game_teams))
     # print('Input: game_teams = \'Away Team vs Home Team\'')
 
     #team_abbrevs = ()
@@ -472,6 +545,9 @@ def convert_team_name_to_abbrev(team_name):
     #print('\n===Convert Team Name to Abbrev: ' + team_name + '===\n')
     
     abbrev = ''
+
+    # ensure lowercase and no dots
+    team_name = re.sub('\.','',team_name).lower()
 
     team_abbrevs = {'atlanta hawks':'atl', 
                     'boston celtics':'bos', 
