@@ -4,7 +4,7 @@ import reader, writer, converter, time, beepy
 
 import re, os
 
-from slack_sdk import WebClient
+#from slack_sdk import WebClient
 
 # send email
 # email vs text: which is faster???
@@ -23,7 +23,7 @@ from slack_sdk import WebClient
 test_msg = 'test'
 
 # set up webclient with slack oauth token
-client = WebClient(token=slack_token)
+#client = WebClient(token=slack_token)
 
 
 
