@@ -19,7 +19,7 @@ from slack_sdk import WebClient
 
 
 # store as environment variable
-slack_token = os.environ["SLACK_TOKEN"]
+#slack_token = os.environ["SLACK_TOKEN"]
 test_msg = 'test'
 
 # set up webclient with slack oauth token
