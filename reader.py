@@ -2641,7 +2641,7 @@ def read_prematch_arb_data(driver, sources=[], todays_schedule=[], max_retries=3
 					except:
 						print('No Arb Data')
 						break
-					
+
 					value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
 					
 					# read all arbs and then split into test and valid later
@@ -2664,6 +2664,11 @@ def read_prematch_arb_data(driver, sources=[], todays_schedule=[], max_retries=3
 					bet1 = read_source_from_link(bet_sources[0].get_attribute('src'))
 					if bet1 not in sources:
 						continue
+					
+					if len(bet_sources) == 1:
+						print('Only 1 Bet Source Found')
+						break
+
 					bet2 = read_source_from_link(bet_sources[1].get_attribute('src'))
 					if bet2 not in sources:
 						continue

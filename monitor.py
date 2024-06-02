@@ -125,6 +125,16 @@ while True:
 				print('AVOID arb_market: ' + str(arb_market))
 				continue
 
+			# AVOID small markets
+			# AVOID non-star role player props
+			# especially low rebound numbers
+			# How to tell if main player
+			# for basketball, based on minutes or specific stat level
+			# bc players may have large minutes but low rebounds or assists 
+			# so still small market
+			# So use specific stat level
+			
+
 
 			# if player prop, need higher min val to justify use 
 			# bc otherwise short term profit not worth long term loss due to obvious samples with edge

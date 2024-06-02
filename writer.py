@@ -85,7 +85,7 @@ def write_arbs_to_post(arbs, client, channel, post=False):
         # props_str += odds1 + ', ' + odds2 + '\t|\t'
         # props_str += value + '%' + '\t|\t'
 
-        props_str += bet1 + ', ' + bet2 + ' | \n'
+        props_str += '\n' + bet1 + ', ' + bet2 + ' | \n'
         props_str += odds1 + ', ' + odds2 + ' | \n' # + '\t'#|\t'
         props_str += game + ' | \n'
         props_str += market + ' | \n'
