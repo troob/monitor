@@ -71,12 +71,32 @@ def write_arbs_to_post(arbs, client, channel, post=False):
         size1_str = '$' + converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
         size2_str = '$' + str(max_limit)
 
+
+        # Format Message
+        # Top part 4 lines of msg shows in notification preview 
+        # so show useful info to decide if need to see more
+        # 1. which books to avoid limits
+        # 2. market/prop to go to
+        # 3. odds to double check
+        # 4. value to see how important/valuable
+        # props_str += bet1 + ', ' + bet2 + '\t\t\t\t'
+        # props_str += game + '\t'
+        # props_str += market + '\t|\t'
+        # props_str += odds1 + ', ' + odds2 + '\t|\t'
+        # props_str += value + '%' + '\t|\t'
+
+        props_str += bet1 + ', ' + bet2 + ' | \n'
+        props_str += odds1 + ', ' + odds2 + ' | \n' # + '\t'#|\t'
+        props_str += game + ' | \n'
+        props_str += market + ' | \n'
+        props_str += value + '%' + ' | \n'
+
         # if Betrivers show range bc inaccurate reading
-        props_str += '\n' + value + '%\n'
+        # props_str += '\n' + value + '%\n'
 
-        props_str += '\n' + game + '\n'
+        # props_str += '\n' + game + '\n'
 
-        props_str += '\n' + market + '\n'
+        # props_str += '\n' + market + '\n'
 
         # Betrivers		Fanatics
         # -110			+110
@@ -93,7 +113,7 @@ def write_arbs_to_post(arbs, client, channel, post=False):
 
         props_str += '\n' + tabulate(arb_table)
 
-        props_str += '\n==================\n'
+        props_str += '\n==================\n==================\n\n'
 
     print(props_str)
     #print(tabulate(arb_table))

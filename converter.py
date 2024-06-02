@@ -53,9 +53,14 @@ def convert_odds_to_bet_size(odds1, odds2, max_limit):
 
 
     # odds1 always negative odds
+    # EXCEPT +100
     # -210 / 
-    percent_odds1 = int(odds1) / (int(odds1) - 100) * 100
-    percent_odds2 = 100 / (int(odds2) + 100) * 100
+    percent_odds1 = 0 #int(odds1) / (int(odds1) - 100) * 100
+    if odds1[0] == '+':
+        percent_odds1 = round_half_up(100 / (int(odds1) + 100) * 100, 1)
+    else:
+        percent_odds1 = round_half_up(int(odds1) / (int(odds1) - 100) * 100, 1)
+    percent_odds2 = round_half_up(100 / (int(odds2) + 100) * 100, 1)
 
     # print('decimal_odds1: ' + str(decimal_odds1))
     # print('decimal_odds2: ' + str(decimal_odds2))

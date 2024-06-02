@@ -4,7 +4,12 @@ import reader, writer, converter, time, beepy
 
 import re, os
 
-#from slack_sdk import WebClient
+from slack_sdk import WebClient
+
+# TEST
+test = False
+
+
 
 # send email
 # email vs text: which is faster???
@@ -19,11 +24,12 @@ import re, os
 
 
 # store as environment variable
-#slack_token = os.environ["SLACK_TOKEN"]
+slack_token = os.environ["SLACK_TOKEN"]
+#print(slack_token)
 test_msg = 'test'
 
 # set up webclient with slack oauth token
-#client = WebClient(token=slack_token)
+client = WebClient(token=slack_token)
 
 
 
@@ -32,11 +38,12 @@ test_msg = 'test'
 # When I am mobile, only send notifications that are valid
 # so exclude limited sources
 # BUT other ppl are not limited so we need different channels
-limited_sources = ['BetMGM']
+limited_sources = ['BetMGM', 'Fanatics']
 sources = ['Fanduel','Fliff','Draftkings','Betrivers','Caesars', 'Fanatics', 'BetMGM']
 min_value = 1
 max_value = 5
-player_prop_min_val = 1.2 # take big markets at 1% but need slightly higher val to take player prop???
+player_prop_min_val = 1 #1.2 # take big markets at 1% but need slightly higher val to take player prop???
+betrivers_min_val = 1.5
 sports = ['basketball','baseball','hockey'] # big markets to stay subtle
 
 todays_schedule = reader.read_todays_schedule(sports)
@@ -130,6 +137,14 @@ while True:
 				continue
 
 
+			# Betrivers is usually off by 5 odds so need higher limit to avoid false alarm
+			arb_bet1 = arb_row[bet1_idx]
+			arb_bet2 = arb_row[bet2_idx]
+			if arb_bet1 == 'Betrivers' or arb_bet2 == 'Betrivers':
+				if arb_val < betrivers_min_val:
+					print('AVOID Betrivers arb_val: ' + str(arb_val) + ', ' + str(arb_market))
+					continue
+
 			# AVOID picking same prop twice bc obvious strategy suspicious
 			same_arb = False
 			for init_arb_row in init_prematch_arb_data:
@@ -164,20 +179,21 @@ while True:
 		print('\n' + str(idx) + ': Found New Picks')
 
 		# format string to post
-		writer.write_arbs_to_post(new_picks, client, 'ball')#, True)
+		writer.write_arbs_to_post(new_picks, client, 'ball', True)
 
 
 
 	#==============
 	# === TEST ===
 	#==============
-	if len(test_picks) > 0:
-		# TEST single pick
-		test_picks = [test_picks[0]]
-		print('\nTest Pick: ' + str(test_picks))
+	if test:
+		if len(test_picks) > 0:
+			# TEST single pick
+			test_picks = [test_picks[0]]
+			print('\nTest Pick: ' + str(test_picks))
 
-		# format string to post
-		writer.write_arbs_to_post(test_picks, client, 'test')#, True)
+			# format string to post
+			writer.write_arbs_to_post(test_picks, client, 'test', True)
 
 		
 

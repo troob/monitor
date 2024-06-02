@@ -2623,15 +2623,25 @@ def read_prematch_arb_data(driver, sources=[], todays_schedule=[], max_retries=3
 			#for idx in range(1, len(arb_rows)):
 			for arb in arb_rows[1:]:
 				#arb = arb_rows[idx]
-				if arb is None:
-					continue
-				
-				arb_str = arb.get_attribute('innerHTML')
+				#print('arb: ' + str(arb))
+				arb_str = ''
+				try:
+					arb_str = arb.get_attribute('innerHTML')
+				except:
+					print('No Arb')
+					break
+
 				if re.search('<tr ', arb_str):
 					#print("\nArb " + str(num) + ": " + arb_str)
 					num += 1
 
-					arb_data = arb.find_elements('tag name', 'td')
+					arb_data = []
+					try:
+						arb_data = arb.find_elements('tag name', 'td')
+					except:
+						print('No Arb Data')
+						break
+					
 					value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
 					
 					# read all arbs and then split into test and valid later
