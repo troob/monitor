@@ -2523,35 +2523,43 @@ def read_dk_sgp(driver, stats_of_interest):
 def read_source_from_link(link):
 	source = ''
 
+	link = link.lower()
+
 	# pinnacle is illegal?
 	# https://www.oddsview.com/_next/image?url=%2Fsportsbook_logos%2FPINNY.png&w=48&q=75
 	# if re.search('PINNY', link):
 	# 	source = 'Pinnacle'
 
 	# https://www.oddsview.com/_next/image?url=%2Fsportsbook_logos%2FDRAFTKINGS.png&w=48&q=75
-	if re.search('DRAFTKINGS', link):
+	if re.search('draftkings', link):
 		source = 'Draftkings'
 
 	# https://www.oddsview.com/_next/image?url=%2Fsportsbook_logos%2FFANDUEL.png&w=48&q=75
-	elif re.search('FANDUEL', link):
+	elif re.search('fanduel', link):
 		source = 'Fanduel'
 
 	# https://www.oddsview.com/_next/image?url=%2Fsportsbook_logos%2FBETMGM.png&w=48&q=75
-	elif re.search('BETMGM', link):
+	elif re.search('betmgm', link):
 		source = 'BetMGM'
 
 	# https://www.oddsview.com/_next/image?url=%2Fsportsbook_logos%2FCAESARS.png&w=48&q=75
-	elif re.search('CAESARS', link):
+	elif re.search('caesars', link):
 		source = 'Caesars'
 
-	elif re.search('BETRIVERS', link):
+	elif re.search('betrivers', link):
 		source = 'Betrivers'
 
-	elif re.search('FLIFF', link):
+	elif re.search('fliff', link):
 		source = 'Fliff'
 
-	elif re.search('FANATICS', link):
+	elif re.search('fanatics', link):
 		source = 'Fanatics'
+
+	elif re.search('espn', link):
+		source = 'ESPN'
+
+	elif re.search('pinnacle', link):
+		source = 'Pinnacle'
 
 	return source
 
@@ -2565,7 +2573,318 @@ def read_source_from_link(link):
 
 # 	return same_day
 
-def read_prematch_arb_data(driver, sources=[], todays_schedule=[], max_retries=3):
+
+
+
+
+
+# Prematch, Live, or both
+def read_arb_data(arb_type, driver, sources=[], max_retries=3):
+	print('\n===Read Arb Data===\n')
+	print('\nOutput: arb_data = (live arbs, prematch arbs) = ([[%, $, ...], ...], ...\n')
+
+	# if both, need to check live, click prematch btn, and then check prematch, and then press live btn to go back
+	# if arb_type == 'pre':
+	# 	arb_data = read_prematch_arb_data(driver, sources)
+
+
+
+
+
+	prematch_arb_data = []
+
+	# if big diff then disappears too quick so ignore
+	#max_value = 5
+
+	#web_data = []
+
+	# need to login manually 
+	# then the sportsbook filter btn appears so filter manually
+
+	retries = 0
+
+	while retries < max_retries:
+
+		# Comment out try block to pinpoint exact error
+		try:
+
+
+			# Read Cur Pre Arbs
+			try:
+				data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
+				#print("data_elements: " + data_elements.get_attribute('innerHTML'))
+			except:
+				print('No Data')
+				break
+
+			# print('\nElements:')
+			# for idx in range(len(data_elements)):
+			# 	#if idx == 3:
+			# 	e = data_elements[idx]
+			# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
+			# 	#break
+
+			data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
+			#print("data_table: " + data_table.get_attribute('innerHTML'))
+
+			# see if table or not?
+			#arb_tables = data_table.find_elements('class name', 'pb-2')
+			arb_tables = data_table.find_elements('tag name', 'table')
+			# print('\nTables:')
+			# for idx in range(len(arb_tables)):
+			# 	table = arb_tables[idx]
+			# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
+			# prematch_arb_data = ''
+			if len(arb_tables) > 3:
+				# always last table?
+				#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
+				prematch_arb_table = arb_tables[-1]
+				#print("prematch_arb_data: " + str(prematch_arb_data))
+
+				arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+				#print('\nArbs:')
+				# skip header row
+				# only take rows that have nested rows
+				num = 1
+				#for idx in range(1, len(arb_rows)):
+				for arb in arb_rows[1:]:
+					#arb = arb_rows[idx]
+					#print('arb: ' + str(arb))
+					arb_str = ''
+					try:
+						arb_str = arb.get_attribute('innerHTML')
+					except:
+						print('No Arb')
+						break
+
+					if re.search('<tr ', arb_str):
+						#print("\nArb " + str(num) + ": " + arb_str)
+						num += 1
+
+						arb_data = []
+						try:
+							arb_data = arb.find_elements('tag name', 'td')
+							# print arb data to find idxs
+							# for ad_idx in range(len(arb_data)):
+							# 	ad = arb_data[ad_idx].get_attribute('innerHTML')
+							# 	print('ad ' + str(ad_idx) + ': ' + str(ad))
+						except:
+							print('No Arb Data')
+							break
+
+						value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+						#print('value: ' + str(value))
+
+						# read all arbs and then split into test and valid later
+						# if float(value) < min_value or float(value) > max_value:
+						# 	continue
+
+						# profit depends on limits
+						#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
+						# if len(arb_data) <= 2:
+						# 	print('No Game')
+						# 	break
+
+						try:
+							game = arb_data[2].find_elements('tag name', 'p')[1].get_attribute('innerHTML')
+						except:
+							print('No Game')
+							break
+						#print('game: ' + str(game))
+						# check same day game bc less suspicious
+						# if game not in todays_schedule:
+						# 	continue
+
+						# sometimes stale element so still len but no element
+						# if len(arb_data) <= 3:
+						# 	print('No Market')
+						# 	break
+
+						try:
+							market = arb_data[3].find_element('tag name', 'div').get_attribute('innerHTML')
+							#print('market: ' + str(market))
+						except:
+							print('No Market')
+							break
+						
+						# nested elements
+						# bets element
+						vals_element = arb_data[4]#.get_attribute('innerHTML')
+						#print('vals_element: ' + str(vals_element.get_attribute('innerHTML')))
+						# bet_sources = bets_element.find_elements('tag name', 'img')
+						# for bet_source in bet_sources:
+						# 	print('bet_source: ' + bet_source.get_attribute('innerHTML'))
+
+						try:
+							vals_data = vals_element.find_elements('tag name', 'tr')
+						except:
+							print('No Vals')
+							break
+						# for td_idx in range(len(row_data)):
+						# 	td = row_data[td_idx]
+						# 	td_link = td.find_element('tag name', 'a').get_attribute('href')
+						# 	print('td ' + str(td_idx) + ': ' + td_link)
+						
+						# website defaults to nj so convert link to ny
+						# NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# if len(arb_data) <= 13:
+						# 	print('No Link')
+						# 	continue
+						
+						# link1_element = arb_data[13]
+						# #print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
+						# link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
+						# if len(row_data) == 0:
+						# 	print('No Links')
+						# 	break
+						try:
+							# V2
+							# link1 = row_data[0].find_element('tag name', 'a').get_attribute('href')
+							# link1 = re.sub('nj', 'ny', link1)
+							#print('link1: ' + link1)
+
+							#V3
+							val1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						except:
+							print('No Val 1')
+							for row in vals_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							break
+
+						# link2_element = arb_data[14]
+						# #print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
+						# link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
+						# if len(row_data) <= 1:
+						# 	print('No Link 2')
+						# 	break
+						try:
+							# link2 = row_data[1].find_element('tag name', 'a').get_attribute('href')
+							# link2 = re.sub('nj', 'ny', link2)
+							#print('link2: ' + link2)
+
+							#V3
+							val2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						except:
+							print('No Val 2')
+							break
+
+
+
+						links_element = arb_data[13]
+						links_data = links_element.find_elements('tag name', 'tr')
+
+						try:
+							link1 = links_data[0].find_element('tag name', 'a').get_attribute('href')
+							link1 = re.sub('nj', 'ny', link1)
+							#print('link1: ' + link1)
+
+						except:
+							print('No Link 1')
+							for row in links_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							break
+
+						try:
+							link2 = links_data[1].find_element('tag name', 'a').get_attribute('href')
+							link2 = re.sub('nj', 'ny', link2)
+							#print('link2: ' + link2)
+
+						except:
+							print('No Link 2')
+							for row in links_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							break
+						
+						
+						bet1 = read_source_from_link(link1)
+						#print('bet1: ' + str(bet1))
+						# if bet1 not in sources:
+						# 	print('No bet1: ' + bet1)
+						# 	continue
+						
+						# if len(bet_sources) == 1:
+						# 	print('Only 1 Bet Source Found')
+						# 	break
+
+						bet2 = read_source_from_link(link2)
+						#print('bet2: ' + str(bet2))
+						# if bet2 not in sources:
+						# 	print('No bet2: ' + bet2)
+						# 	continue
+						# bets = (bet1, bet2)
+						# print('bets: ' + str(bets))
+
+
+						# if bet1 == '' or bet2 == '':
+						# 	print('Unknown Bet source: ' + link1 + ', ' + link2)
+						# 	break
+						if bet1 not in sources or bet2 not in sources:
+							#print('Unavailable Bet source: ' + link1 + ', ' + link2)
+							break
+
+
+
+						odds1 = arb_data[8].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						
+						# if len(arb_data) <= 9:
+						# 	# error so continue
+						# 	print('No odds2')
+						# 	break
+							
+						try:
+							odds2 = arb_data[9].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						except:
+							print('No odds2')
+							break
+						# print('odds1: ' + odds1)
+						# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
+
+						# if source=betrivers, odds might not be correct
+						# so give 2 options:
+						# 1. if correct
+						# 2. adjusted down by 5 (bc seems most common error)
+
+
+
+						# V3 format
+						#odds_element = arb_data[5]
+						
+						
+						# game_date, 
+						arb_row = [value, game, market, bet1, bet2, odds1, odds2, link1, link2, val1, val2]
+						#print('arb_row: ' + str(arb_row))
+
+						prematch_arb_data.append(arb_row)
+
+
+						# test 1 to see why not equal
+						#break
+
+
+			#print('prematch_arb_data:\n' + str(prematch_arb_data))
+			return prematch_arb_data
+
+		except KeyboardInterrupt:
+			print('Keyboard Interrupt')
+			return ''
+
+		except Exception as e:
+
+			print('Unknown Error: ', e)
+			retries += 1
+
+
+
+	return arb_data
+
+
+# read pre or live is exactly the same format
+# so can use for either but need to press btn first
+# use input arb type to know which btn to press
+def read_live_arb_data(driver, sources=[], max_retries=3):
 	# print('\n===Read Prematch Arb Data===\n')
 	# print('\nOutput: prematch_arb_data = [[%, $, ...], ...]\n')
 
@@ -2584,145 +2903,568 @@ def read_prematch_arb_data(driver, sources=[], todays_schedule=[], max_retries=3
 	while retries < max_retries:
 
 		# Comment out try block to pinpoint exact error
-		# try:
+		try:
 
 
-		# Read Cur Pre Arbs
-		data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
-		#print("data_elements: " + data_elements.get_attribute('innerHTML'))
+			# Read Cur Pre Arbs
+			try:
+				data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
+				#print("data_elements: " + data_elements.get_attribute('innerHTML'))
+			except:
+				print('No Data')
+				return '' # null so it breaks outer loop
 
-		# print('\nElements:')
-		# for idx in range(len(data_elements)):
-		# 	#if idx == 3:
-		# 	e = data_elements[idx]
-		# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
-		# 	#break
+			# print('\nElements:')
+			# for idx in range(len(data_elements)):
+			# 	#if idx == 3:
+			# 	e = data_elements[idx]
+			# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
+			# 	#break
 
-		data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
-		#print("data_table: " + data_table.get_attribute('innerHTML'))
+			data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
+			#print("data_table: " + data_table.get_attribute('innerHTML'))
 
-		# see if table or not?
-		#arb_tables = data_table.find_elements('class name', 'pb-2')
-		arb_tables = data_table.find_elements('tag name', 'table')
-		# print('\nTables:')
-		# for idx in range(len(arb_tables)):
-		# 	table = arb_tables[idx]
-		# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
-		# prematch_arb_data = ''
-		if len(arb_tables) > 3:
-			# always last table?
-			#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
-			prematch_arb_table = arb_tables[-1]
-			#print("prematch_arb_data: " + prematch_arb_data)
+			# see if table or not?
+			#arb_tables = data_table.find_elements('class name', 'pb-2')
+			arb_tables = data_table.find_elements('tag name', 'table')
+			# print('\nTables:')
+			# for idx in range(len(arb_tables)):
+			# 	table = arb_tables[idx]
+			# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
+			# prematch_arb_data = ''
+			if len(arb_tables) > 3:
+				# always last table?
+				#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
+				prematch_arb_table = arb_tables[-1]
+				#print("prematch_arb_data: " + str(prematch_arb_data))
 
-			arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
-			#print('\nArbs:')
-			# skip header row
-			# only take rows that have nested rows
-			num = 1
-			#for idx in range(1, len(arb_rows)):
-			for arb in arb_rows[1:]:
-				#arb = arb_rows[idx]
-				#print('arb: ' + str(arb))
-				arb_str = ''
-				try:
-					arb_str = arb.get_attribute('innerHTML')
-				except:
-					print('No Arb')
-					break
-
-				if re.search('<tr ', arb_str):
-					#print("\nArb " + str(num) + ": " + arb_str)
-					num += 1
-
-					arb_data = []
+				arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+				#print('\nArbs:')
+				# skip header row
+				# only take rows that have nested rows
+				num = 1
+				#for idx in range(1, len(arb_rows)):
+				for arb in arb_rows[1:]:
+					#arb = arb_rows[idx]
+					#print('arb: ' + str(arb))
+					arb_str = ''
 					try:
-						arb_data = arb.find_elements('tag name', 'td')
+						arb_str = arb.get_attribute('innerHTML')
 					except:
-						print('No Arb Data')
-						break
-
-					value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
-					
-					# read all arbs and then split into test and valid later
-					# if float(value) < min_value or float(value) > max_value:
-					# 	continue
-
-					# profit depends on limits
-					#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
-					game = arb_data[2].get_attribute('innerHTML')
-					# check same day game bc less suspicious
-					# if game not in todays_schedule:
-					# 	continue
-					market = arb_data[3].get_attribute('innerHTML')
-					
-					# nested elements
-					bets_element = arb_data[4]#.get_attribute('innerHTML')
-					#print('bets_element: ' + str(bets_element.get_attribute('innerHTML')))
-					bet_sources = bets_element.find_elements('tag name', 'img')
-
-					bet1 = read_source_from_link(bet_sources[0].get_attribute('src'))
-					if bet1 not in sources:
+						print('No Arb')
 						continue
-					
-					if len(bet_sources) == 1:
-						print('Only 1 Bet Source Found')
-						break
 
-					bet2 = read_source_from_link(bet_sources[1].get_attribute('src'))
-					if bet2 not in sources:
-						continue
-					# bets = (bet1, bet2)
-					# print('bets: ' + str(bets))
+					if re.search('<tr ', arb_str):
+						#print("\nArb " + str(num) + ": " + arb_str)
+						num += 1
 
-					odds1 = arb_data[8].get_attribute('innerHTML')
-					
-					if len(arb_data) <= 9:
-						# error so continue
-						continue
+						arb_data = []
+						try:
+							arb_data = arb.find_elements('tag name', 'td')
+							# print arb data to find idxs
+							# for ad_idx in range(len(arb_data)):
+							# 	ad = arb_data[ad_idx].get_attribute('innerHTML')
+							# 	print('ad ' + str(ad_idx) + ': ' + str(ad))
+						except:
+							print('No Arb Data')
+							continue
+
+						value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+						#print('value: ' + str(value))
+
+						# read all arbs and then split into test and valid later
+						# if float(value) < min_value or float(value) > max_value:
+						# 	continue
+
+						# profit depends on limits
+						#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
+						# if len(arb_data) <= 2:
+						# 	print('No Game')
+						# 	break
+
+						try:
+							game = arb_data[2].find_elements('tag name', 'p')[1].get_attribute('innerHTML')
+						except:
+							print('No Game')
+							continue
+						#print('game: ' + str(game))
+						# check same day game bc less suspicious
+						# if game not in todays_schedule:
+						# 	continue
+
+						# sometimes stale element so still len but no element
+						# if len(arb_data) <= 3:
+						# 	print('No Market')
+						# 	break
+
+						try:
+							market = arb_data[3].find_element('tag name', 'div').get_attribute('innerHTML')
+							#print('market: ' + str(market))
+						except:
+							print('No Market')
+							continue
 						
-					odds2 = arb_data[9].get_attribute('innerHTML')
-					# print('odds1: ' + odds1)
-					# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
+						# nested elements
+						# bets element
+						vals_element = arb_data[4]#.get_attribute('innerHTML')
+						#print('vals_element: ' + str(vals_element.get_attribute('innerHTML')))
+						# bet_sources = bets_element.find_elements('tag name', 'img')
+						# for bet_source in bet_sources:
+						# 	print('bet_source: ' + bet_source.get_attribute('innerHTML'))
 
-					# if source=betrivers, odds might not be correct
-					# so give 2 options:
-					# 1. if correct
-					# 2. adjusted down by 5 (bc seems most common error)
+						try:
+							vals_data = vals_element.find_elements('tag name', 'tr')
+						except:
+							print('No Vals')
+							continue
+						# for td_idx in range(len(row_data)):
+						# 	td = row_data[td_idx]
+						# 	td_link = td.find_element('tag name', 'a').get_attribute('href')
+						# 	print('td ' + str(td_idx) + ': ' + td_link)
+						
+						# website defaults to nj so convert link to ny
+						# NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# if len(arb_data) <= 13:
+						# 	print('No Link')
+						# 	continue
+						
+						# link1_element = arb_data[13]
+						# #print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
+						# link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
+						# if len(row_data) == 0:
+						# 	print('No Links')
+						# 	break
+						try:
+							# V2
+							# link1 = row_data[0].find_element('tag name', 'a').get_attribute('href')
+							# link1 = re.sub('nj', 'ny', link1)
+							#print('link1: ' + link1)
+
+							#V3
+							val1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						except:
+							print('No Val 1')
+							for row in vals_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							continue
+
+						# link2_element = arb_data[14]
+						# #print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
+						# link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
+						# if len(row_data) <= 1:
+						# 	print('No Link 2')
+						# 	break
+						try:
+							# link2 = row_data[1].find_element('tag name', 'a').get_attribute('href')
+							# link2 = re.sub('nj', 'ny', link2)
+							#print('link2: ' + link2)
+
+							#V3
+							val2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						except:
+							print('No Val 2')
+							continue
 
 
-					# website defaults to nj so convert link to ny
-					# NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
-					# NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
-					link1_element = arb_data[13]
-					#print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
-					link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
-					link1 = re.sub('nj', 'ny', link1)
-					#print('link1: ' + link1)
 
-					link2_element = arb_data[14]
-					#print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
-					link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
-					link2 = re.sub('nj', 'ny', link2)
-					#print('link2: ' + link2)
-					
+						links_element = arb_data[13]
+						links_data = links_element.find_elements('tag name', 'tr')
 
-					arb_row = [value, game, market, bet1, bet2, odds1, odds2, link1, link2]
-					#print('arb_row: ' + str(arb_row))
+						try:
+							link1 = links_data[0].find_element('tag name', 'a').get_attribute('href')
+							link1 = re.sub('nj', 'ny', link1)
+							#print('link1: ' + link1)
 
-					prematch_arb_data.append(arb_row)
+						except:
+							print('No Link 1')
+							# for row in links_data:
+							# 	print('row: ' + row.get_attribute('innerHTML'))
+							continue
+
+						try:
+							link2 = links_data[1].find_element('tag name', 'a').get_attribute('href')
+							link2 = re.sub('nj', 'ny', link2)
+							#print('link2: ' + link2)
+
+						except:
+							print('No Link 2')
+							for row in links_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							continue
+						
+						
+						bet1 = read_source_from_link(link1)
+						#print('bet1: ' + str(bet1))
+						# if bet1 not in sources:
+						# 	print('No bet1: ' + bet1)
+						# 	continue
+						
+						# if len(bet_sources) == 1:
+						# 	print('Only 1 Bet Source Found')
+						# 	break
+
+						bet2 = read_source_from_link(link2)
+						#print('bet2: ' + str(bet2))
+						# if bet2 not in sources:
+						# 	print('No bet2: ' + bet2)
+						# 	continue
+						# bets = (bet1, bet2)
+						# print('bets: ' + str(bets))
 
 
-					# test 1 to see why not equal
-					#break
+						# if bet1 == '' or bet2 == '':
+						# 	print('Unknown Bet source: ' + link1 + ', ' + link2)
+						# 	break
+						if bet1 not in sources or bet2 not in sources:
+							#print('Unavailable Bet source: ' + link1 + ', ' + link2)
+							continue
 
 
-		#print('prematch_arb_data:\n' + str(prematch_arb_data))
-		return prematch_arb_data
 
-		# except Exception as e:
-			
-		# 	retries += 1
+						odds1 = arb_data[8].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						
+						# if len(arb_data) <= 9:
+						# 	# error so continue
+						# 	print('No odds2')
+						# 	break
+							
+						try:
+							odds2 = arb_data[9].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						except:
+							print('No odds2')
+							continue
+						# print('odds1: ' + odds1)
+						# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
+
+						# if source=betrivers, odds might not be correct
+						# so give 2 options:
+						# 1. if correct
+						# 2. adjusted down by 5 (bc seems most common error)
+
+
+
+						# V3 format
+						#odds_element = arb_data[5]
+						
+						
+						# game_date, 
+						arb_row = [value, game, market, bet1, bet2, odds1, odds2, link1, link2, val1, val2]
+						#print('arb_row: ' + str(arb_row))
+
+						prematch_arb_data.append(arb_row)
+
+
+						# test 1 to see why not equal
+						#break
+
+
+			#print('prematch_arb_data:\n' + str(prematch_arb_data))
+			return prematch_arb_data
+
+		except KeyboardInterrupt:
+			print('Keyboard Interrupt')
+			return ''
+
+		except Exception as e:
+
+			print('Unknown Error: ', e)
+			retries += 1
+
+
+# read pre or live is exactly the same format
+# so can use for either but need to press btn first
+# use input arb type to know which btn to press
+def read_prematch_arb_data(driver, sources=[], max_retries=3):
+	# print('\n===Read Prematch Arb Data===\n')
+	# print('\nOutput: prematch_arb_data = [[%, $, ...], ...]\n')
+
+	prematch_arb_data = []
+
+	# if big diff then disappears too quick so ignore
+	#max_value = 5
+
+	#web_data = []
+
+	# need to login manually 
+	# then the sportsbook filter btn appears so filter manually
+
+	retries = 0
+
+	while retries < max_retries:
+
+		# Comment out try block to pinpoint exact error
+		try:
+
+
+			# Read Cur Pre Arbs
+			try:
+				data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
+				#print("data_elements: " + data_elements.get_attribute('innerHTML'))
+			except:
+				print('No Data')
+				return '' # null so it breaks outer loop
+
+			# print('\nElements:')
+			# for idx in range(len(data_elements)):
+			# 	#if idx == 3:
+			# 	e = data_elements[idx]
+			# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
+			# 	#break
+
+			data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
+			#print("data_table: " + data_table.get_attribute('innerHTML'))
+
+			# see if table or not?
+			#arb_tables = data_table.find_elements('class name', 'pb-2')
+			arb_tables = data_table.find_elements('tag name', 'table')
+			# print('\nTables:')
+			# for idx in range(len(arb_tables)):
+			# 	table = arb_tables[idx]
+			# 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
+			# prematch_arb_data = ''
+			if len(arb_tables) > 3:
+				# always last table?
+				#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
+				prematch_arb_table = arb_tables[-1]
+				#print("prematch_arb_data: " + str(prematch_arb_data))
+
+				arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+				#print('\nArbs:')
+				# skip header row
+				# only take rows that have nested rows
+				num = 1
+				#for idx in range(1, len(arb_rows)):
+				for arb in arb_rows[1:]:
+					#arb = arb_rows[idx]
+					#print('arb: ' + str(arb))
+					arb_str = ''
+					try:
+						arb_str = arb.get_attribute('innerHTML')
+					except:
+						print('No Arb')
+						continue
+
+					if re.search('<tr ', arb_str):
+						#print("\nArb " + str(num) + ": " + arb_str)
+						num += 1
+
+						arb_data = []
+						try:
+							arb_data = arb.find_elements('tag name', 'td')
+							# print arb data to find idxs
+							# for ad_idx in range(len(arb_data)):
+							# 	ad = arb_data[ad_idx].get_attribute('innerHTML')
+							# 	print('ad ' + str(ad_idx) + ': ' + str(ad))
+						except:
+							print('No Arb Data')
+							continue
+
+						value = arb_data[0].get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+						#print('value: ' + str(value))
+
+						# read all arbs and then split into test and valid later
+						# if float(value) < min_value or float(value) > max_value:
+						# 	continue
+
+						# profit depends on limits
+						#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
+						# if len(arb_data) <= 2:
+						# 	print('No Game')
+						# 	break
+
+						try:
+							game = arb_data[2].find_elements('tag name', 'p')[1].get_attribute('innerHTML')
+						except:
+							print('No Game')
+							continue
+						#print('game: ' + str(game))
+						# check same day game bc less suspicious
+						# if game not in todays_schedule:
+						# 	continue
+
+						# sometimes stale element so still len but no element
+						# if len(arb_data) <= 3:
+						# 	print('No Market')
+						# 	break
+
+						try:
+							market = arb_data[3].find_element('tag name', 'div').get_attribute('innerHTML')
+							#print('market: ' + str(market))
+						except:
+							print('No Market')
+							continue
+						
+						# nested elements
+						# bets element
+						vals_element = arb_data[4]#.get_attribute('innerHTML')
+						#print('vals_element: ' + str(vals_element.get_attribute('innerHTML')))
+						# bet_sources = bets_element.find_elements('tag name', 'img')
+						# for bet_source in bet_sources:
+						# 	print('bet_source: ' + bet_source.get_attribute('innerHTML'))
+
+						try:
+							vals_data = vals_element.find_elements('tag name', 'tr')
+						except:
+							print('No Vals')
+							continue
+						# for td_idx in range(len(row_data)):
+						# 	td = row_data[td_idx]
+						# 	td_link = td.find_element('tag name', 'a').get_attribute('href')
+						# 	print('td ' + str(td_idx) + ': ' + td_link)
+						
+						# website defaults to nj so convert link to ny
+						# NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# if len(arb_data) <= 13:
+						# 	print('No Link')
+						# 	continue
+						
+						# link1_element = arb_data[13]
+						# #print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
+						# link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
+						# if len(row_data) == 0:
+						# 	print('No Links')
+						# 	break
+						try:
+							# V2
+							# link1 = row_data[0].find_element('tag name', 'a').get_attribute('href')
+							# link1 = re.sub('nj', 'ny', link1)
+							#print('link1: ' + link1)
+
+							#V3
+							val1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						except:
+							print('No Val 1')
+							for row in vals_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							continue
+
+						# link2_element = arb_data[14]
+						# #print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
+						# link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
+						# if len(row_data) <= 1:
+						# 	print('No Link 2')
+						# 	break
+						try:
+							# link2 = row_data[1].find_element('tag name', 'a').get_attribute('href')
+							# link2 = re.sub('nj', 'ny', link2)
+							#print('link2: ' + link2)
+
+							#V3
+							val2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						except:
+							print('No Val 2')
+							continue
+
+
+
+						links_element = arb_data[13]
+						links_data = links_element.find_elements('tag name', 'tr')
+
+						try:
+							link1 = links_data[0].find_element('tag name', 'a').get_attribute('href')
+							link1 = re.sub('nj', 'ny', link1)
+							#print('link1: ' + link1)
+
+						except:
+							print('No Link 1')
+							# for row in links_data:
+							# 	print('row: ' + row.get_attribute('innerHTML'))
+							continue
+
+						try:
+							link2 = links_data[1].find_element('tag name', 'a').get_attribute('href')
+							link2 = re.sub('nj', 'ny', link2)
+							#print('link2: ' + link2)
+
+						except:
+							print('No Link 2')
+							for row in links_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							continue
+						
+						
+						bet1 = read_source_from_link(link1)
+						#print('bet1: ' + str(bet1))
+						# if bet1 not in sources:
+						# 	print('No bet1: ' + bet1)
+						# 	continue
+						
+						# if len(bet_sources) == 1:
+						# 	print('Only 1 Bet Source Found')
+						# 	break
+
+						bet2 = read_source_from_link(link2)
+						#print('bet2: ' + str(bet2))
+						# if bet2 not in sources:
+						# 	print('No bet2: ' + bet2)
+						# 	continue
+						# bets = (bet1, bet2)
+						# print('bets: ' + str(bets))
+
+
+						# if bet1 == '' or bet2 == '':
+						# 	print('Unknown Bet source: ' + link1 + ', ' + link2)
+						# 	break
+						if bet1 not in sources or bet2 not in sources:
+							#print('Unavailable Bet source: ' + link1 + ', ' + link2)
+							continue
+
+
+
+						odds1 = arb_data[8].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						
+						# if len(arb_data) <= 9:
+						# 	# error so continue
+						# 	print('No odds2')
+						# 	break
+							
+						try:
+							odds2 = arb_data[9].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						except:
+							print('No odds2')
+							continue
+						# print('odds1: ' + odds1)
+						# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
+
+						# if source=betrivers, odds might not be correct
+						# so give 2 options:
+						# 1. if correct
+						# 2. adjusted down by 5 (bc seems most common error)
+
+
+
+						# V3 format
+						#odds_element = arb_data[5]
+						
+						
+						# game_date, 
+						arb_row = [value, game, market, bet1, bet2, odds1, odds2, link1, link2, val1, val2]
+						#print('arb_row: ' + str(arb_row))
+
+						prematch_arb_data.append(arb_row)
+
+
+						# test 1 to see why not equal
+						#break
+
+
+			#print('prematch_arb_data:\n' + str(prematch_arb_data))
+			return prematch_arb_data
+
+		except KeyboardInterrupt:
+			print('Keyboard Interrupt')
+			return ''
+
+		except Exception as e:
+
+			print('Unknown Error: ', e)
+			retries += 1
 		# 	print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
 		# 	print('Warning: No SGP element!\n', e)
 
@@ -2805,7 +3547,7 @@ def open_dynamic_website(url, max_retries=3):
 			# so need arb btn idx either way
 			#arb_btn = data_table.find_element('id', 'radix-:r16:-trigger-arbitrage') #data_table.find_elements('tag name', 'button')[36] #
 			btns = data_table.find_elements('tag name', 'button')
-			arb_btn_idx = pre_btn_idx = 0
+			arb_btn_idx = pre_btn_idx = live_btn_idx = 0
 			for idx in range(len(btns)):
 				btn = btns[idx]
 				btn_str = btn.get_attribute('innerHTML')
@@ -2813,6 +3555,7 @@ def open_dynamic_website(url, max_retries=3):
 
 				if btn_str == 'Arbitrage':
 					arb_btn_idx = idx
+					live_btn_idx = arb_btn_idx + 2
 					pre_btn_idx = arb_btn_idx + 3
 					break
 
@@ -2821,6 +3564,11 @@ def open_dynamic_website(url, max_retries=3):
 			#print("arb_btn: " + arb_btn.get_attribute('innerHTML'))
 			arb_btn.click()
 
+
+
+			# Wait to click pre/live depending on arb type tod
+			live_btn = btns[live_btn_idx]
+			# IF arb type = prematch
 			# Click Prematch Btn
 			#prematch_btn = data_table.find_elements('tag name', 'button')[39] #find_element('id', 'radix-:rv:-trigger-arbitrage')
 			prematch_btn = btns[pre_btn_idx]
@@ -2828,12 +3576,13 @@ def open_dynamic_website(url, max_retries=3):
 			# 	btn = btns[idx]
 			# 	print("btn " + str(idx) + ": " + btn.get_attribute('innerHTML'))
 			#print("prematch_btn: " + prematch_btn.get_attribute('innerHTML'))
-			prematch_btn.click()
+			
+			# Wait to click pre/live depending on arb type tod
+			# prematch_btn.click()
+			# # need sleep to load dynamic data otherwise blank
+			# time.sleep(1)
 
-			# need sleep to load dynamic data otherwise blank
-			time.sleep(1)
-
-			return driver
+			return driver, live_btn, prematch_btn
 
 
 		except Exception as e:
@@ -7203,12 +7952,15 @@ def read_game_teams(read_season_year):
 
 	return game_teams
 
-def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
-	print('\n===Read Current Games Teams===\n')
+# read_current_game_teams
+# not just game teams bc we want to read all game data at once 
+# and then we can iso parts of data
+def read_schedule_from_website(sport, cutoff_time_str='11:59 pm'):
+	print('\n===Read Schedule from Website===\n')
 	print('Input: Sport = ' + sport)
-	print('\nOutput: game_teams = [(ind, nyk),...]\n')
+	print('\nOutput: schedule = [(ind, nyk, time),...]\n')
 
-	game_teams = [] # read todays schedule if cur yr
+	schedule = [] # read todays schedule if cur yr
 
 	url = 'https://www.espn.com/nba/schedule'
 	if sport == 'baseball':
@@ -7331,8 +8083,12 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 
 					game_time = datetime.strptime(game_time_str, '%I:%M %p')
 					# add 10min to game time as standard
-					time_change = timedelta(minutes=10)
-					game_time = (game_time + time_change).time()
+					# is this only basketball???
+					# and if so is it all ball games or do any games start on time???
+					if sport == 'basketball':
+						time_change = timedelta(minutes=10)
+						game_time = (game_time + time_change)#.time()
+					game_time = game_time.time()
 					#print('game_time: ' + str(game_time))
 
 					cutoff_time = datetime.strptime(cutoff_time_str, '%I:%M %p').time()
@@ -7355,29 +8111,60 @@ def read_current_game_teams(sport, cutoff_time_str='11:59 pm'):
 						away_team = converter.convert_team_name_to_abbrev(away_teams[idx])
 						home_team = converter.convert_team_name_to_abbrev(home_teams[idx])
 						
-						game = (away_team, home_team)
-						game_teams.append(game)
+						game = (away_team, home_team, game_time)
+						schedule.append(game)
 
 
 				break # after read todays games
 
-	print("game_teams: " + str(game_teams))
-	return game_teams
+	#print("schedule: " + str(schedule))
+	return schedule
+
+
 
 
 def read_todays_schedule(sports):
 	print('\n===Read Todays Schedule===\n')
 
+	# schedule includes time
 	todays_schedule = []
+	todays_game_teams = []
 
 	for sport in sports:
 
-		cur_game_teams = read_current_game_teams(sport)
-		todays_schedule.extend(cur_game_teams)
+		# need list with and without times
+		# bc we directly compare game teams here to oddsview
+		# and we also need first and last start times to get arb types to monitor
+		# (away, home, time)
+		sport_schedule = read_schedule_from_website(sport)
+		todays_schedule.extend(sport_schedule)
+
+		# remove game time from last idx of each game tuple
+		# (away, home)
+		sport_game_teams = []
+		game_times = []
+		for game in todays_schedule:
+			#print('game: ' + str(game))
+			#game_teams = game[:-1]
+			cur_game_teams = (game[0], game[1])
+			sport_game_teams.append(cur_game_teams)
+			game_times.append(game[2])
+		
+		# add in 1 list blend all sports
+		todays_game_teams.extend(sport_game_teams)
 
 
-	print("todays_schedule: " + str(todays_schedule))
-	return todays_schedule
+	# get earliest game time in all sports
+	first_game_time = min(game_times) # 2230 = 10:30pm
+	last_game_time = max(game_times)
+
+
+
+	print("todays_game_teams: " + str(todays_game_teams))
+	#print("todays_schedule: " + str(todays_schedule))
+	print("first_game_time: " + str(first_game_time))
+	print("last_game_time: " + str(last_game_time))
+	return todays_game_teams, first_game_time, last_game_time
 
 
 # https://www.espn.com/nba/injuries

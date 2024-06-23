@@ -6,6 +6,8 @@ import re, os
 
 from slack_sdk import WebClient
 
+from datetime import datetime
+
 # TEST
 test = False
 
@@ -33,28 +35,58 @@ client = WebClient(token=slack_token)
 
 
 
-
+# === SETTINGS === 
 # User Input
 # When I am mobile, only send notifications that are valid
 # so exclude limited sources
 # BUT other ppl are not limited so we need different channels
-limited_sources = ['BetMGM', 'Fanatics']
+# for limited sources, require higher profit to be worth it
+limited_sources = ['BetMGM', 'Fanatics', 'Betrivers']
 sources = ['Fanduel','Fliff','Draftkings','Betrivers','Caesars', 'Fanatics', 'BetMGM']
-min_value = 1
-max_value = 5
+big_market_min = 0.5 # sharper big market but can put more down
+min_value = 0.9
+# if value too high then likely too temp to hit or read error so avoid
+# sources differ so provide list
+normal_max_val = 5
+max_value = 7 # 5-10?
+alt_max_val = 8
 player_prop_min_val = 1 #1.2 # take big markets at 1% but need slightly higher val to take player prop???
 betrivers_min_val = 1.5
-sports = ['basketball','baseball','hockey'] # big markets to stay subtle
+limited_min_val = 2.5
+new_arb_rules = {'normal max': normal_max_val, 
+				 'max': max_value, 
+				 'min': min_value,
+				 'player min': player_prop_min_val, 
+				 'betrivers min': betrivers_min_val,
+				 'limited min': limited_min_val}
 
+
+sports = ['baseball','hockey'] # big markets to stay subtle
+arb_type = 'pre' # all/both/options, live, OR prematch/pre
+
+# include game times so we can find first and last
+# only need to read once per day, not every run
+# save team list and times separately
+# bc diff formats and we only need to get times once per day
+todays_schedule_file = 'data/todays schedule.csv'
+game_time_file = 'data/game times.txt' # first, last
+init_todays_schedule = reader.extract_data(todays_schedule_file, header=True)
 todays_schedule = reader.read_todays_schedule(sports)
+game_teams = todays_schedule[0]
+first_live_time = todays_schedule[1] # first game start
+last_pre_time = todays_schedule[2] # last game start
 
 # diff from read react website bc we keep site open and loop read data
 url = 'https://www.oddsview.com/odds'
-driver = reader.open_dynamic_website(url)
+website = reader.open_dynamic_website(url)
+# need to switch bt live and prematch on same page
+driver = website[0]
+live_btn = website[1]
+pre_btn = website[2]
 
 idx = 1
 
-prev_prematch_arb_data = [] # first loop init=prev or None?
+prev_arb_data = [] # first loop init=prev or None?
 
 val_idx = 0
 game_idx = 1
@@ -67,30 +99,29 @@ link1_idx = 7
 link2_idx = 8
 
 
-# why does vol and freq setting not work???
-# beepy.volume = 0.5
-# beepy.frequency = 1
+# input all arbs read this scan
+# output only valid arbs into proper channels
+# so diff users only see arbs that apply to them
+def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, new_arb_rules):
+	# print('\n===Monitor New Arbs===\n')
+	# print('\nOutput: new_arbs = [[%, $, ...], ...]\n')
 
-# keep looping every 5 seconds for change
-while True:
-
-	prematch_arb_data_file = 'data/prematch arb data.csv'
-	init_prematch_arb_data = reader.extract_data(prematch_arb_data_file, header=True)
-	if idx == 1:
-		print('init_prematch_arb_data: ' + str(init_prematch_arb_data))
-	prematch_arb_data = reader.read_prematch_arb_data(driver, sources, todays_schedule)
-	
-
-	if prematch_arb_data is None:
-		continue
-	
+	val_idx = 0
+	game_idx = 1
+	market_idx = 2
+	bet1_idx = 3
+	bet2_idx = 4
+	odds1_idx = 5
+	odds2_idx = 6
+	link1_idx = 7
+	link2_idx = 8
 
 	# if just check diff then will alert when arb disappears
 	# which we do not want
 	new_pick = False
 	new_picks = []
 	test_picks = []
-	for arb_row in prematch_arb_data:
+	for arb_row in arb_data:
 
 		# TEST
 		test_picks.append(arb_row)
@@ -99,7 +130,7 @@ while True:
 		# must be either 
 		# 1. existing arb goes from below min val to above = Any Diff bc pick not added if below min val
 		# 2. diff game and market
-		if arb_row not in init_prematch_arb_data and arb_row not in prev_prematch_arb_data:
+		if arb_row not in init_arb_data and arb_row not in prev_arb_data:
 			
 			
 
@@ -121,9 +152,9 @@ while True:
 			# AVOID baseball player Home Run props 
 			# bc most common market inefficiency so obvious honeypot
 			arb_market = arb_row[market_idx]
-			if re.search('Home Run', arb_market):
-				print('AVOID arb_market: ' + str(arb_market))
-				continue
+			# if re.search('Home Run', arb_market):
+			# 	print('AVOID arb_market: ' + str(arb_market))
+			# 	continue
 
 			# AVOID small markets
 			# AVOID non-star role player props
@@ -133,31 +164,44 @@ while True:
 			# bc players may have large minutes but low rebounds or assists 
 			# so still small market
 			# So use specific stat level
-			
+
 
 
 			# if player prop, need higher min val to justify use 
 			# bc otherwise short term profit not worth long term loss due to obvious samples with edge
 			arb_val = float(arb_row[val_idx])
-			if arb_val < min_value or arb_val > max_value:
+			if arb_val < new_arb_rules['min'] or arb_val > new_arb_rules['max']:
 				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
 				continue
-			if not re.search('Moneyline|Spread|Total', arb_market) and arb_val < player_prop_min_val:
+			#allow home runs if already limited on other markets
+			if not re.search('Moneyline|Spread|Total|Home', arb_market) and arb_val < new_arb_rules['player min']:
 				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
 				continue
 
 
 			# Betrivers is usually off by 5 odds so need higher limit to avoid false alarm
+			# if limited by betrivers only take >3%
+			# EXCEPT big markets, moneyline, spread, total bc higher limits
 			arb_bet1 = arb_row[bet1_idx]
 			arb_bet2 = arb_row[bet2_idx]
 			if arb_bet1 == 'Betrivers' or arb_bet2 == 'Betrivers':
-				if arb_val < betrivers_min_val:
+				# less limited markets such as home runs bc very extreme odds
+				# so accept lower min bc invest more
+				
+				if arb_val < new_arb_rules['betrivers min'] and not re.search('Moneyline|Spread|Total|Home', arb_market):
 					print('AVOID Betrivers arb_val: ' + str(arb_val) + ', ' + str(arb_market))
+					continue
+
+
+			# limited sites need higher val to be worth it
+			if arb_bet1 in limited_sources or arb_bet2 in limited_sources:
+				if arb_val < new_arb_rules['limited min'] and not re.search('Moneyline|Spread|Total|Home', arb_market):
+					print('AVOID limited arb_val: ' + str(arb_val) + ', ' + str(arb_market))
 					continue
 
 			# AVOID picking same prop twice bc obvious strategy suspicious
 			same_arb = False
-			for init_arb_row in init_prematch_arb_data:
+			for init_arb_row in init_arb_data:
 				init_arb_game = converter.convert_game_teams_to_abbrevs(init_arb_row[game_idx])
 				init_arb_market = init_arb_row[market_idx]
 				# print('\narb_game: ' + str(arb_game))
@@ -179,72 +223,142 @@ while True:
 
 			# simple version: if any diff, notify
 			new_picks.append(arb_row)
-	
-	
+
+	# notify immediately after reading new live arbs
+	# before checking prematch
+
 	# check 2 prev arb tables bc sometimes disappear and reappear so not new
 	#if len(prematch_arb_data) > 0 and init_prematch_arb_data != prematch_arb_data and prev_prematch_arb_data != prematch_arb_data:
 	if len(new_picks) > 0:
-		beepy.beep() # first notify so i can get moving
+		#beepy.beep() # first notify so i can get moving
+		os.system('say "Go Fuck Yourself."')
 
 		print('\n' + str(idx) + ': Found New Picks')
 
+
+		post_arbs = []
+		for pick in new_picks:
+			arb_market = pick[market_idx]
+			if not re.search('Home Run', arb_market):
+				post_arbs.append(pick)
+
+
+
 		# format string to post
-		writer.write_arbs_to_post(new_picks, client, 'ball', True)
-
-
-
-	#==============
-	# === TEST ===
-	#==============
-	if test:
-		if len(test_picks) > 0:
-			# TEST single pick
-			test_picks = [test_picks[0]]
-			print('\nTest Pick: ' + str(test_picks))
-
-			# format string to post
-			writer.write_arbs_to_post(test_picks, client, 'test', True)
-
-		
-
-
-	# else:
-	# 	print(str(idx) + ': No Test Picks')
-		#print('prematch_arb_data: ' + str(prematch_arb_data))
+		writer.write_arbs_to_post(post_arbs, client, 'ball', True)
 
 	
 
 
-	# if init_prematch_arb_data != prematch_arb_data:
-	# 	print(str(idx) + ': Found New Picks')
-	# 	# notify me to confirm picks
+	#return new_picks
+
+# use time of day to tell arb type
+# if before first game, only pre
+# if after last game started, only live
+# else both
+def monitor_arb_type(first_live_time, last_pre_time):
+	# print('\n===Monitor Arb Type===\n')
+	# print('first_live_time: ' + str(first_live_time))
+	# print('last_pre_time: ' + str(last_pre_time))
+
+	arb_type = 'pre'
+
+	current_time = datetime.today().time()
+	#print("current_time: " + str(current_time))
+
+	if current_time > last_pre_time:
+		arb_type = 'live'
+	elif current_time > first_live_time:
+		arb_type = 'all'
+
+	#print('arb_type: ' + arb_type)
+	return arb_type
 
 
-	# 	# parse out % value to check >0.5
-	# 	# parse out sources allowed
-	# 	# SO we must first separate only new pick rows
 
-		
-	# 	# How to make system alert with noise on Mac?
-	# 	# put % info in notification so i can decide if worth it 
-	# 	# although can already see in window next to it so not needed
-	# 	# Play a bell sound
-	# 	beepy.beep()
+# why does vol and freq setting not work???
+# beepy.volume = 0.5
+# beepy.frequency = 1
+
+# already init on live page
+if arb_type == 'pre':
+	pre_btn.click()
+
+# need sleep to load dynamic data otherwise blank
+time.sleep(1)
+
+# keep looping every 5 seconds for change
+while True:
+
+	# DO we need to separate live and prematch in 2 files???
+	# no bc just checking if any change overall
+	# BUT we need to make diff notice for live vs prematch 
+	# so we know which page to go to for link
+	arb_data_file = 'data/arb data.csv'
+	init_arb_data = reader.extract_data(arb_data_file, header=True)
+
+	# only 1 file for efficiency but in file it separates live and prematch arbs
+	# init_live_arb_data = init_arb_data[0]
+	# init_prematch_arb_data = init_arb_data[1]
+
+	if idx == 1:
+		print('init_arb_data: ' + str(init_arb_data))
 
 
-		
-	# 	# after I confirm
-	# 	# deploy bots to make picks
-	# 	# need to get around PerimeterX bot blocker
-	# 	# even so they can probably tell if bot and ban me quicker
-	# 	# BUT if surefire way to hide bot then definitely worth it
+	# use time of day to tell arb type
+	# if before first game, only pre
+	# if after last game started, only live
+	# else both
+	#arb_type = monitor_arb_type(first_live_time, last_pre_time)
+	# read live first bc changes faster
+	# if arb_type == 'live':
+	# 	arb_data = reader.read_live_arb_data(driver, sources)
+	# elif arb_type == 'pre':
+	# 	arb_data = reader.read_prematch_arb_data(driver, sources)
 	# else:
-	# 	print(str(idx) + ': No New Picks')
+	# 	arb_data = reader.read_prematch_arb_data(driver, sources)
+	
+
+	# first check Live and then Prematch
+	# notify bt each so no delay for live arbs
+	# read either live or pre, not both
+	arb_data = []
+	if arb_type == 'live':
+		# if on pre-page, click live btn
+		# init on live page so not extra btn to press
+		arb_data = reader.read_live_arb_data(driver, sources)
+	elif arb_type == 'pre':
+		# if on live-page, click pre btn
+		arb_data = reader.read_prematch_arb_data(driver, sources)
+	# live_arb_data = arb_data[0]
+	# prematch_arb_data = arb_data[1]
+	
+
+	# if keyboard interrupt return blank so we know to break loop
+	if arb_data == '':
+		break
+	if arb_data is None:
+		continue
+	
+	# monitor either live or pre, not both
+	new_arbs = monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, game_teams, new_arb_rules)
+	
+	
+	
+	# new_live_arbs = new_arbs[0]
+	# new_prematch_arbs = new_arbs[1]
+	
+
 
 	idx += 1
 	
-	prev_prematch_arb_data = init_prematch_arb_data # save last 2 in case glitch causes temp disappearance
-	writer.write_data_to_file(prematch_arb_data, prematch_arb_data_file) # becomes init next loop
+	prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
+	writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
 
-	# keep looping every 5 seconds for change
+	# if prematch, keep looping every 5 seconds for change
+	# if live, loop every 2 seconds bc fast change
 	time.sleep(5)
+
+
+
+

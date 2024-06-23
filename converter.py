@@ -7,7 +7,30 @@ import reader # read player abbrevs
 import math
 
 
+# we must iteratively try to round stake and see if other side stake is round enough
+# until both stakes are round enough
+def round_stakes(stake1, stake2):
+    print('\n===Round Stakes: ' + str(stake) + '===\n')
 
+    round_stake = str(stake)
+
+    # if <100, round up to nearest 10
+    if stake < 100:
+        round_stake = round(stake, 10)
+
+    print('round_stake: ' + round_stake)
+    return str(round_stake)
+
+
+# if very likely odds 80/20 then lean more towards likely outcome
+# but if 70/30 or less then round down if less than 5
+def round_stake(stake):
+    print('\n===Round Stake: ' + str(stake) + '===\n')
+
+    round_stake = round(stake, 10)
+
+    print('round_stake: ' + round_stake)
+    return str(round_stake)
 
 
 
@@ -15,11 +38,11 @@ import math
 # Arbitrage % = ((1 / decimal odds for outcome A) x 100) + ((1 / decimal odds for outcome B) x 100)
 # Individual Bet = (Total Investment x Individual Odds Percentage) / Total Arbitrage Percentage
 def convert_odds_to_bet_size(odds1, odds2, max_limit):
-    print('\n===Convert Odds to Bet Size===\n')
-    print('odds1: ' + odds1)
-    print('odds2: ' + odds2)
-    print('max_limit: ' + str(max_limit))
-    print('\nOutput: stake = x\n')
+    # print('\n===Convert Odds to Bet Size===\n')
+    # print('Input: odds1 = +x = ' + odds1)
+    # print('odds2: ' + odds2)
+    # print('max_limit: ' + str(max_limit))
+    # print('\nOutput: stake = x\n')
 
     # calc individual odds percent
     # if positive
@@ -64,8 +87,8 @@ def convert_odds_to_bet_size(odds1, odds2, max_limit):
 
     # print('decimal_odds1: ' + str(decimal_odds1))
     # print('decimal_odds2: ' + str(decimal_odds2))
-    print('percent_odds1: ' + str(percent_odds1))
-    print('percent_odds2: ' + str(percent_odds2))
+    # print('percent_odds1: ' + str(percent_odds1))
+    # print('percent_odds2: ' + str(percent_odds2))
 
 
     # arb_percent = percent_odds1 + percent_odds2
@@ -77,11 +100,21 @@ def convert_odds_to_bet_size(odds1, odds2, max_limit):
     # # stake2 * arb_percent = total_stake * percent_odds2
     # total_stake = stake2 * arb_percent / percent_odds2
 
-    # bigger bet on more likely outcome
-    stake = str(math.ceil(max_limit * percent_odds1 / percent_odds2))
+    # loop thru from max limit to min limit
+    # every 100
+    # limits = []
+    # for limit in limits:
 
-    print('stake: ' + stake)
-    return stake
+
+    # bigger bet on more likely outcome
+    # rounder bet on less likely outcome bc less suspicious
+    likely_stake = str(round(math.ceil(max_limit * percent_odds1 / percent_odds2), -1))
+    # simply round based on scale
+    # more advanced will iteratively round both stakes until both are ideally round
+    #likely_stake = round_stakes(likely_stake, max_limit)
+
+    #print('likely_stake: ' + likely_stake)
+    return likely_stake
 
 
 

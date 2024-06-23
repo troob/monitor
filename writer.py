@@ -29,6 +29,8 @@ import converter # convert dicts to lists AND number formats
 
 
 def write_arbs_to_post(arbs, client, channel, post=False):
+    # print('\n===Write Arbs to Post===\n')
+    # print('arbs: ' + str(arbs))
 
     props_str = ''
 
@@ -41,7 +43,12 @@ def write_arbs_to_post(arbs, client, channel, post=False):
     odds2_idx = 6
     link1_idx = 7
     link2_idx = 8
-		
+
+    
+	# Need diff string for each channel:
+    # 1. all
+    # 2. home runs
+    # 3. new user
 		
     # for test_pick in test_picks:
     # 	print('\n' + str(test_pick))
@@ -85,11 +92,13 @@ def write_arbs_to_post(arbs, client, channel, post=False):
         # props_str += odds1 + ', ' + odds2 + '\t|\t'
         # props_str += value + '%' + '\t|\t'
 
-        props_str += '\n' + bet1 + ', ' + bet2 + ' | \n'
-        props_str += odds1 + ', ' + odds2 + ' | \n' # + '\t'#|\t'
-        props_str += game + ' | \n'
-        props_str += market + ' | \n'
-        props_str += value + '%' + ' | \n'
+        # props_str += '\n' + bet1 + ', ' + bet2 + '\t\n'
+        # props_str += odds1 + ', ' + odds2 + ' - \n' # + '\t'#|\t'
+
+        props_str += '\n' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n'
+        props_str += game + ' - \n'
+        props_str += market + ' - \n'
+        props_str += value + '%' + ' - \n'
 
         # if Betrivers show range bc inaccurate reading
         # props_str += '\n' + value + '%\n'
@@ -118,10 +127,21 @@ def write_arbs_to_post(arbs, client, channel, post=False):
     print(props_str)
     #print(tabulate(arb_table))
 
+    # separate props into diff channels for specific types of users
+    # 1 channel for all possible
+    # 1 channel for new user avoiding home runs
+    # 1 channel for limited users who can take home runs on specific apps
+    # Do not post home runs to general channel bc only use on limited apps
+    # post_arbs = []
+    # for pick in new_picks:
+    #     arb_market = pick[market_idx]
+    #     if not re.search('Home Run', arb_market):
+    #         post_arbs.append(pick)
+
 
     #send msg on slack app
-    print('Post: ' + str(post))
-    if post:
+    print('Post: ' + str(post) + '\n\n')
+    if post and props_str != '':
         client.chat_postMessage(
             channel=channel,
             text=props_str,
