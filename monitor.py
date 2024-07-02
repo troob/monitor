@@ -33,6 +33,8 @@ test_msg = 'test'
 # set up webclient with slack oauth token
 client = WebClient(token=slack_token)
 
+todays_date = datetime.today()
+
 
 
 # === SETTINGS === 
@@ -44,13 +46,13 @@ client = WebClient(token=slack_token)
 limited_sources = ['BetMGM', 'Fanatics', 'Betrivers']
 sources = ['Fanduel','Fliff','Draftkings','Betrivers','Caesars', 'Fanatics', 'BetMGM']
 big_market_min = 0.5 # sharper big market but can put more down
-min_value = 0.9
+min_value = 0.7 # when only few sports/games today, accept down to 0.8 for unlimited player props
+player_prop_min_val = min_value #1.2 # take big markets at 1% but need slightly higher val to take player prop???
 # if value too high then likely too temp to hit or read error so avoid
 # sources differ so provide list
 normal_max_val = 5
 max_value = 7 # 5-10?
 alt_max_val = 8
-player_prop_min_val = 1 #1.2 # take big markets at 1% but need slightly higher val to take player prop???
 betrivers_min_val = 1.5
 limited_min_val = 2.5
 new_arb_rules = {'normal max': normal_max_val, 
@@ -61,7 +63,7 @@ new_arb_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-sports = ['baseball','hockey'] # big markets to stay subtle
+sports = ['baseball']#,'hockey'] # big markets to stay subtle
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 
 # include game times so we can find first and last
@@ -97,6 +99,9 @@ odds1_idx = 5
 odds2_idx = 6
 link1_idx = 7
 link2_idx = 8
+size1_idx = 9
+size2_idx = 10
+game_date_idx = 11
 
 
 # input all arbs read this scan
@@ -104,6 +109,7 @@ link2_idx = 8
 # so diff users only see arbs that apply to them
 def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, new_arb_rules):
 	# print('\n===Monitor New Arbs===\n')
+	# print('Input: arb_data = [[...],...]')# + str(arb_data))
 	# print('\nOutput: new_arbs = [[%, $, ...], ...]\n')
 
 	val_idx = 0
@@ -139,15 +145,43 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 			# complex version:
 			# check if existing game and market
 			arb_game = converter.convert_game_teams_to_abbrevs(arb_row[game_idx])
+			#print('arb_game: ' + str(arb_game))
+
+			arb_bet1 = arb_row[bet1_idx]
+			arb_bet2 = arb_row[bet2_idx]
 
 
 			# check if game today
+			# game_date_data = game_date_str.split()
+			# game_mth = game_date_data[1]
+			# game_day = game_date_data[2][:-1] # remove comma
+			# game_date_str = game_mth + ' ' + game_day
+			# print('game_date_str: ' + str(game_date_str))
+			# # need month and day of month to check same day, assuming same yr for all
+			# game_date = datetime.strptime(game_date_str, '%b %d')
+			# print('game_date: ' + str(game_date))
+			# if game_date != todays_date:
+			# recently added date to arb row
+			game_date = arb_row[game_date_idx]
+			#print('game_date: ' + game_date)
+			if not re.search('Today', game_date):
+				# if either side is unlimited source, 
+				# avoid game not today bc suspicious
+				# but if both sides already limited 
+				# then need to take all available, even diff days
+				if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
+					print('AVOID Game Not Today: ' + str(arb_game) + ', ' + game_date)
+					continue
+
 			if arb_game not in todays_schedule:
 				# check reverse away home teams bc sometimes labeled backwards
 				arb_game = (arb_game[1], arb_game[0])
 				if arb_game not in todays_schedule:
-					print('AVOID arb_game: ' + str(arb_game))
-					continue
+					# if either side still not limited, avoid future games
+					# bc obvious red flag
+					if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
+						print('AVOID arb_game: ' + str(arb_game))
+						continue
 
 			# AVOID baseball player Home Run props 
 			# bc most common market inefficiency so obvious honeypot
@@ -167,13 +201,15 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 
 
 
-			# if player prop, need higher min val to justify use 
+			
 			# bc otherwise short term profit not worth long term loss due to obvious samples with edge
 			arb_val = float(arb_row[val_idx])
 			if arb_val < new_arb_rules['min'] or arb_val > new_arb_rules['max']:
 				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
 				continue
-			#allow home runs if already limited on other markets
+
+			# if player prop, need higher min val to justify use 
+			# but still allow home runs if already limited on other markets
 			if not re.search('Moneyline|Spread|Total|Home', arb_market) and arb_val < new_arb_rules['player min']:
 				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
 				continue
@@ -182,8 +218,7 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 			# Betrivers is usually off by 5 odds so need higher limit to avoid false alarm
 			# if limited by betrivers only take >3%
 			# EXCEPT big markets, moneyline, spread, total bc higher limits
-			arb_bet1 = arb_row[bet1_idx]
-			arb_bet2 = arb_row[bet2_idx]
+			
 			if arb_bet1 == 'Betrivers' or arb_bet2 == 'Betrivers':
 				# less limited markets such as home runs bc very extreme odds
 				# so accept lower min bc invest more
@@ -231,26 +266,30 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 	#if len(prematch_arb_data) > 0 and init_prematch_arb_data != prematch_arb_data and prev_prematch_arb_data != prematch_arb_data:
 	if len(new_picks) > 0:
 		#beepy.beep() # first notify so i can get moving
-		os.system('say "Go Fuck Yourself."')
+		#say_str = 'say "Go Fuck Yourself."'
+		# list each arb details
+		arb_type = 'pre-match'
+		say_str = 'say "' + arb_type + ' pick"'
+		os.system(say_str)
 
 		print('\n' + str(idx) + ': Found New Picks')
 
 
-		post_arbs = []
-		for pick in new_picks:
-			arb_market = pick[market_idx]
-			if not re.search('Home Run', arb_market):
-				post_arbs.append(pick)
+		# post_arbs = []
+		# for pick in new_picks:
+		# 	arb_market = pick[market_idx]
+		# 	if not re.search('Home Run', arb_market):
+		# 		post_arbs.append(pick)
 
 
 
 		# format string to post
-		writer.write_arbs_to_post(post_arbs, client, 'ball', True)
+		writer.write_arbs_to_post(new_picks, client, True)
 
 	
 
 
-	#return new_picks
+	return new_picks
 
 # use time of day to tell arb type
 # if before first game, only pre
@@ -326,12 +365,15 @@ while True:
 	if arb_type == 'live':
 		# if on pre-page, click live btn
 		# init on live page so not extra btn to press
-		arb_data = reader.read_live_arb_data(driver, sources)
+		arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 	elif arb_type == 'pre':
 		# if on live-page, click pre btn
 		arb_data = reader.read_prematch_arb_data(driver, sources)
 	# live_arb_data = arb_data[0]
 	# prematch_arb_data = arb_data[1]
+	else: # both
+		# read live twice before
+		arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 	
 
 	# if keyboard interrupt return blank so we know to break loop
@@ -343,15 +385,29 @@ while True:
 	# monitor either live or pre, not both
 	new_arbs = monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, game_teams, new_arb_rules)
 	
-	
-	
 	# new_live_arbs = new_arbs[0]
 	# new_prematch_arbs = new_arbs[1]
+
+
+	# open all picks in separate windows
+	# and automate as much as possible to place bets
+	#for new_arb in new_arbs:
+	# TEST 1
+	# if len(new_arbs) > 0:
+	# 	new_arb = new_arbs[0]
+	# 	arb_url1 = new_arb[link1_idx]
+	# 	arb_url2 = new_arb[link2_idx]
+	# 	if not re.search('fliff|fanatics|fanduel', arb_url1):
+	# 		arb_driver1 = reader.open_react_website(arb_url1)
+	# 	if not re.search('fliff|fanatics|fanduel', arb_url2):
+	# 		arb_driver2 = reader.open_react_website(arb_url2)
 	
 
 
 	idx += 1
 	
+	# could save all arb data or just new picks
+	# to compare bt loops
 	prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
 	writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
 

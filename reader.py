@@ -2987,7 +2987,7 @@ def read_live_arb_data(driver, sources=[], max_retries=3):
 						except:
 							print('No Game')
 							continue
-						#print('game: ' + str(game))
+						print('game: ' + str(game))
 						# check same day game bc less suspicious
 						# if game not in todays_schedule:
 						# 	continue
@@ -3245,7 +3245,7 @@ def read_prematch_arb_data(driver, sources=[], max_retries=3):
 						arb_str = arb.get_attribute('innerHTML')
 					except:
 						print('No Arb')
-						continue
+						break # break not continue, bc no arbs will loop thru all rows
 
 					if re.search('<tr ', arb_str):
 						#print("\nArb " + str(num) + ": " + arb_str)
@@ -3276,11 +3276,20 @@ def read_prematch_arb_data(driver, sources=[], max_retries=3):
 						# 	break
 
 						try:
-							game = arb_data[2].find_elements('tag name', 'p')[1].get_attribute('innerHTML')
+							game_data = arb_data[2].find_elements('tag name', 'p')
+							# Mon Jul 1, 4:00 AM -> Jul 1
+							# OR Today, 9:00 PM
+							# remove comma for csv
+							game_date = game_data[0].get_attribute('innerHTML').split(',')[0]
+							#print('game_date: ' + str(game_date))
+							
+							game = game_data[1].get_attribute('innerHTML')
+							
 						except:
 							print('No Game')
 							continue
 						#print('game: ' + str(game))
+						
 						# check same day game bc less suspicious
 						# if game not in todays_schedule:
 						# 	continue
@@ -3335,7 +3344,7 @@ def read_prematch_arb_data(driver, sources=[], max_retries=3):
 							#print('link1: ' + link1)
 
 							#V3
-							val1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
+							size1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
 
 						except:
 							print('No Val 1')
@@ -3355,7 +3364,7 @@ def read_prematch_arb_data(driver, sources=[], max_retries=3):
 							#print('link2: ' + link2)
 
 							#V3
-							val2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
+							size2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
 
 						except:
 							print('No Val 2')
@@ -3444,7 +3453,7 @@ def read_prematch_arb_data(driver, sources=[], max_retries=3):
 						
 						
 						# game_date, 
-						arb_row = [value, game, market, bet1, bet2, odds1, odds2, link1, link2, val1, val2]
+						arb_row = [value, game, market, bet1, bet2, odds1, odds2, link1, link2, size1, size2, game_date]
 						#print('arb_row: ' + str(arb_row))
 
 						prematch_arb_data.append(arb_row)
@@ -3491,6 +3500,11 @@ def open_react_website(url, mobile=False):
 	options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
 	# Turn-off userAutomationExtension 
 	options.add_experimental_option("useAutomationExtension", False) 
+
+	# add option to sign into profile so can login quickly
+	# Specify the path to your Chrome profile directory
+	# profile_dir = r"/Users/m/Library/Application Support/Google/Chrome/Max Novick"
+	# options.add_argument(f"user-data-dir={profile_dir}")
 	
 	#driver = webdriver.Chrome(ChromeDriverManager().install())
 	
@@ -3508,6 +3522,8 @@ def open_react_website(url, mobile=False):
 	return driver
 
 
+
+
 def open_dynamic_website(url, max_retries=3):
 	#print('\n===Open Dynamic Website===\n')
 
@@ -3517,6 +3533,7 @@ def open_dynamic_website(url, max_retries=3):
 		try:
 
 			driver = open_react_website(url)
+			#driver = open_react_website_profile(url)
 			#time.sleep(100)
 			dialog_element = driver.find_element('id', 'radix-:r5:')
 			#print("dialog_element: " + dialog_element.get_attribute('innerHTML'))

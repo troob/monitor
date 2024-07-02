@@ -108,7 +108,7 @@ def convert_odds_to_bet_size(odds1, odds2, max_limit):
 
     # bigger bet on more likely outcome
     # rounder bet on less likely outcome bc less suspicious
-    likely_stake = str(round(math.ceil(max_limit * percent_odds1 / percent_odds2), -1))
+    likely_stake = round(math.ceil(max_limit * percent_odds1 / percent_odds2), -1)
     # simply round based on scale
     # more advanced will iteratively round both stakes until both are ideally round
     #likely_stake = round_stakes(likely_stake, max_limit)

@@ -28,7 +28,7 @@ import converter # convert dicts to lists AND number formats
 
 
 
-def write_arbs_to_post(arbs, client, channel, post=False):
+def write_arbs_to_post(arbs, client, post=False):
     # print('\n===Write Arbs to Post===\n')
     # print('arbs: ' + str(arbs))
 
@@ -53,6 +53,9 @@ def write_arbs_to_post(arbs, client, channel, post=False):
     # for test_pick in test_picks:
     # 	print('\n' + str(test_pick))
 
+    # all props str
+    all_props_str = '' # advanced when limited need to find more exploits
+    new_user_props_str = '' # changes constantly as user needs to blend in as normal
     for arb in arbs:
         value = arb[val_idx]
         #value_str = 'Value:\t' + value + '%'
@@ -60,6 +63,7 @@ def write_arbs_to_post(arbs, client, channel, post=False):
         #game_str = 'Game:\t' + game
         market = arb[market_idx]
         #market_str = 'Market:\t' + market
+
         bet1 = arb[bet1_idx]
         # bet1_str = 'Bet 1:\t' + bet1
         bet2 = arb[bet2_idx]
@@ -68,6 +72,8 @@ def write_arbs_to_post(arbs, client, channel, post=False):
         # odds1_str = 'Odds 1:\t' + odds1
         odds2 = arb[odds2_idx]
         # bet2_str = 'Bet 2:\t' + bet2
+        link1 = arb[link1_idx]
+        link2 = arb[link2_idx]
 
         
         # Make list of sizes depending on limit, from 1000 to 100, every 100
@@ -75,8 +81,16 @@ def write_arbs_to_post(arbs, client, channel, post=False):
         size2_options = []
         max_limit = 1000
         # Better to make hedge bet rounder number bc seems more normal/rec
-        size1_str = '$' + converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
+        size1 = converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
+        size1_str = '$' + str(size1)
         size2_str = '$' + str(max_limit)
+
+        # compute payout, given odds and bet size
+        # For positive American odds, divide the betting odds by 100 and multiply the result by the amount of your wager (Profit = odds/100 x wager). 
+        # With negative odds, you divide 100 by the betting odds, then multiply that number by the wager amount (Profit = 100/odds x wager).
+        # take positive side bc = both sides
+        profit = str(converter.round_half_up(int(odds2) / 100 * max_limit) - size1)
+        #print('profit: ' + profit)
 
 
         # Format Message
@@ -95,10 +109,32 @@ def write_arbs_to_post(arbs, client, channel, post=False):
         # props_str += '\n' + bet1 + ', ' + bet2 + '\t\n'
         # props_str += odds1 + ', ' + odds2 + ' - \n' # + '\t'#|\t'
 
-        props_str += '\n' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n'
-        props_str += game + ' - \n'
-        props_str += market + ' - \n'
-        props_str += value + '%' + ' - \n'
+        props_str = ''
+        props_str += '\n' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
+        props_str += game + ' - \n\n'
+        props_str += market + ' - \n\n'
+        props_str += value + '%' + ' - \n\n'
+        
+
+        # split player and market in given market field
+        # so we can see market at the top and decide if we can take the bet or if limited or suspicious
+        player = ''
+        if re.search('-', market):
+            market_data = market.split('-')
+            player = market_data[0].strip()
+            market = market_data[1].strip()
+        #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
+        props_str += '\nBET 1: ' + bet1 + ', ' + odds1 + ' \n'
+        props_str += 'BET 2: ' + bet2 + ', ' + odds2 + ' \n\n'
+        props_str += 'MARKET: ' + market + ' \n\n'
+        props_str += 'GAME: ' + game + ' \n\n'
+        if player != '':
+            props_str += 'PLAYER: ' + player + ' \n\n'
+        props_str += 'VALUE: ' + value + '% \n\n'
+        props_str += 'PROFIT: $' + profit + ' \n\n'
+        props_str += 'LINK 1: ' + link1 + ' \n'
+        props_str += 'LINK 2: ' + link2 + ' \n\n'
+        
 
         # if Betrivers show range bc inaccurate reading
         # props_str += '\n' + value + '%\n'
@@ -124,8 +160,18 @@ def write_arbs_to_post(arbs, client, channel, post=False):
 
         props_str += '\n==================\n==================\n\n'
 
-    print(props_str)
+        # always add to all props str
+        all_props_str += props_str
+        # but selectively add to select channels
+        if not re.search('Home Run', market):
+            # add to new user str bc they avoid home runs
+            new_user_props_str += props_str
+
+    print('All Arbs')
+    print(all_props_str)
     #print(tabulate(arb_table))
+    # print('New User Arbs')
+    # print(new_user_props_str)
 
     # separate props into diff channels for specific types of users
     # 1 channel for all possible
@@ -141,12 +187,27 @@ def write_arbs_to_post(arbs, client, channel, post=False):
 
     #send msg on slack app
     print('Post: ' + str(post) + '\n\n')
-    if post and props_str != '':
-        client.chat_postMessage(
-            channel=channel,
-            text=props_str,
-            username='Ball'
-        )
+    if post:
+        # to avoid double msg, 
+        # only apply 1 channel per user
+        # OR do not repeat arbs
+        # BUT all will repeat all which are separated into channels
+        post_all = True # for testing all arbs before finalizing all category channels
+        if all_props_str != '' and post_all:
+            client.chat_postMessage(
+                channel='all-arbs',
+                text=props_str,
+                username='Ball'
+            )
+
+        elif new_user_props_str != '':
+            client.chat_postMessage(
+                channel='ball', # arbitrary name given to first channel
+                text=props_str,
+                username='Ball'
+            )
+        
+        
     
 
 
