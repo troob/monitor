@@ -56,7 +56,9 @@ def write_arbs_to_post(arbs, client, post=False):
     # all props str
     all_props_str = '' # advanced when limited need to find more exploits
     new_user_props_str = '' # changes constantly as user needs to blend in as normal
-    for arb in arbs:
+    for arb_idx in range(len(arbs)):
+        arb = arbs[arb_idx]
+
         value = arb[val_idx]
         #value_str = 'Value:\t' + value + '%'
         game = arb[game_idx]
@@ -109,7 +111,8 @@ def write_arbs_to_post(arbs, client, post=False):
         # props_str += '\n' + bet1 + ', ' + bet2 + '\t\n'
         # props_str += odds1 + ', ' + odds2 + ' - \n' # + '\t'#|\t'
 
-        props_str = ''
+        arb_num = str(arb_idx + 1)
+        props_str = '\n===Arb ' + arb_num + '===\n'
         props_str += '\n' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
         props_str += game + ' - \n\n'
         props_str += market + ' - \n\n'
@@ -167,7 +170,7 @@ def write_arbs_to_post(arbs, client, post=False):
             # add to new user str bc they avoid home runs
             new_user_props_str += props_str
 
-    print('All Arbs')
+    print('\n===All Arbs===\n')
     print(all_props_str)
     #print(tabulate(arb_table))
     # print('New User Arbs')
