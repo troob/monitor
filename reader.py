@@ -26,7 +26,8 @@ from webdriver_manager.chrome import ChromeDriverManager # need to access dynami
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import Select
 #import undetected_chromedriver as uc
-#from selenium.webdriver.chrome.options import Options # block ads
+from selenium.webdriver.chrome.options import Options # block ads
+
 
 from urllib.error import URLError
 from urllib.request import Request, urlopen # request website, open webpage given req
@@ -3508,11 +3509,11 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 			# retry in case of error
 			# problem is login dialog box blocks btns 
 			# after a minute on page
-			try:
-				pre_btn.click()
-				arb_btn.click()
-			except:
-				print('Error clicking pre or arb btn')
+			# try:
+			# 	pre_btn.click()
+			# 	arb_btn.click()
+			# except:
+			# 	print('Error clicking pre or arb btn')
 
 
 			# Read Cur Pre Arbs
@@ -3809,7 +3810,95 @@ def open_react_website(url, mobile=False):
 	#print('\n===Open React Website===\n')
 
 	# Create Chromeoptions instance 
-	options = webdriver.ChromeOptions() 
+	# options = webdriver.ChromeOptions() 
+	# # Adding argument to disable the AutomationControlled flag 
+	# options.add_argument("--disable-blink-features=AutomationControlled") 
+	# # Exclude the collection of enable-automation switches 
+	# options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
+	# # Turn-off userAutomationExtension 
+	# options.add_experimental_option("useAutomationExtension", False) 
+
+	# # add option to sign into profile so can login quickly
+	# # Specify the path to your Chrome profile directory
+	# # profile_dir = r"/Users/m/Library/Application Support/Google/Chrome/Max Novick"
+	# # options.add_argument(f"user-data-dir={profile_dir}")
+	
+	# #driver = webdriver.Chrome(ChromeDriverManager().install())
+	
+	# # Setting the driver path and requesting a page 
+	# driver = None
+	# if mobile:
+	# 	driver = web_driver()
+	# else:
+	# 	driver = webdriver.Chrome(ChromeDriverManager().install(), options=options) 
+	# driver.implicitly_wait(3)
+	# # Changing the property of the navigator value for webdriver to undefined 
+	# # so bot not detected
+	# driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
+	# driver.get(url) # Open the URL on a google chrome window
+
+
+
+	# TEST SIGNIN PROFILE
+	# V1
+	# init webdriver chrome options object
+	# options = webdriver.ChromeOptions()
+	# # stop crash error
+	# #options.add_argument('--no-sandbox')
+	# #options.add_argument('--disable-dev-shm-usage')
+	# #options.add_argument('--headless')
+	# # # add path to chrome user data
+	# #options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome") #e.g. C:\Users\You\AppData\Local\Google\Chrome\User Data
+	# # # add path to profile directory
+	# # adding profle without user data above does nothing
+	# options.add_argument(r'--profile-directory=Default') #e.g. Profile 3
+	# # init chrome driver object with options
+	# # adding exec path makes it stop crashing but does not close on exit or control by bot
+	# #driver = webdriver.Chrome(executable_path=r'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', options=options)
+	# # adding chromedrivermanager install makes it load properly with bot controlling
+	# # but no profile
+	# driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+	
+	
+	
+	# V2
+	#options = webdriver.ChromeOptions()
+	# # # add path to chrome user data
+	# options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome") #e.g. C:\Users\You\AppData\Local\Google\Chrome\User Data
+	# # add path to profile directory
+	#options.add_argument(r'--profile-directory=Default') #e.g. Profile 3
+	# # init chrome driver object with options
+	# driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+	
+	
+
+
+	# V3
+	# options = webdriver.ChromeOptions()
+	# options.add_argument('--no-sandbox')
+	# options.add_argument('--disable-dev-shm-usage')
+	# options.add_argument('--headless')
+	# options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
+	# driver = webdriver.Chrome('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', options=options)
+	
+
+
+	# V4 
+	# options = webdriver.ChromeOptions()
+	# options.add_argument('--no-sandbox')
+	# options.add_argument('--headless') # need headless or else no profile
+	# options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
+	# options.add_argument(r'--profile-directory=Default')
+	# driver = webdriver.Chrome(options=options)
+
+
+	# V5: NEED all chrome windows fully closed and quit
+	options = webdriver.ChromeOptions()
+	
+	# Login to Chrome Profile
+	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
+	options.add_argument(r'--profile-directory=Default')
+
 	# Adding argument to disable the AutomationControlled flag 
 	options.add_argument("--disable-blink-features=AutomationControlled") 
 	# Exclude the collection of enable-automation switches 
@@ -3817,23 +3906,19 @@ def open_react_website(url, mobile=False):
 	# Turn-off userAutomationExtension 
 	options.add_experimental_option("useAutomationExtension", False) 
 
-	# add option to sign into profile so can login quickly
-	# Specify the path to your Chrome profile directory
-	# profile_dir = r"/Users/m/Library/Application Support/Google/Chrome/Max Novick"
-	# options.add_argument(f"user-data-dir={profile_dir}")
+	driver = webdriver.Chrome(options=options)
+
 	
-	#driver = webdriver.Chrome(ChromeDriverManager().install())
-	
-	# Setting the driver path and requesting a page 
-	driver = None
-	if mobile:
-		driver = web_driver()
-	else:
-		driver = webdriver.Chrome(ChromeDriverManager().install(), options=options) 
+	# Always same
+	# Open the URL on a google chrome window
 	driver.implicitly_wait(3)
-	# Changing the property of the navigator value for webdriver to undefined 
+	# so bot not detected
 	driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
-	driver.get(url) # Open the URL on a google chrome window
+	driver.get(url)
+
+
+	# TEST time to observe
+	time.sleep(100)
 
 	return driver
 
@@ -3851,97 +3936,100 @@ def open_dynamic_website(url, max_retries=3):
 
 	retries = 0
 
-	while retries < max_retries:
-		try:
+	# COMMENT OUT TRY LOOP AND BLOCK FOR TEST
+	# while retries < max_retries:
+	# 	try:
 
-			driver = open_react_website(url)
-			#driver = open_react_website_profile(url)
-			#time.sleep(100)
-			dialog_element = driver.find_element('id', 'radix-:r5:')
-			#print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
-
-			close_btn = dialog_element.find_element('xpath','button')
-			#print("close_btn: " + close_btn.get_attribute('innerHTML'))
-			close_btn.click()
-			time.sleep(0.2)
+	driver = open_react_website(url)
+	#driver = open_react_website_profile(url)
+	#time.sleep(100)
+	# dialog_element = driver.find_element('id', 'radix-:r5:')
+	# print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
 
 
-			# data panel, right side
-			data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
-			#print("data_elements: " + data_elements.get_attribute('innerHTML'))
 
-			# print('\nElements:')
-			# for idx in range(len(data_elements)):
-			# 	#if idx == 3:
-			# 	e = data_elements[idx]
-			# 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
-			# 	#break
+	# close_btn = dialog_element.find_element('xpath','button')
+	# #print("close_btn: " + close_btn.get_attribute('innerHTML'))
+	# close_btn.click()
+	# time.sleep(0.2)
 
-			data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
-			#print("data_table: " + data_table.get_attribute('innerHTML'))
 
+	# # data panel, right side
+	# data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
+	# #print("data_elements: " + data_elements.get_attribute('innerHTML'))
+
+	# # print('\nElements:')
+	# # for idx in range(len(data_elements)):
+	# # 	#if idx == 3:
+	# # 	e = data_elements[idx]
+	# # 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
+	# # 	#break
+
+	# data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
+	# #print("data_table: " + data_table.get_attribute('innerHTML'))
+
+	
+	# #print('\nButtons:')
+	# # arb btn has id but prematch btn only has relative idx to arb btn
+	# # so need arb btn idx either way
+	# #arb_btn = data_table.find_element('id', 'radix-:r16:-trigger-arbitrage') #data_table.find_elements('tag name', 'button')[36] #
+	# btns = data_table.find_elements('tag name', 'button')
+	# arb_btn_idx = pre_btn_idx = live_btn_idx = ev_btn_idx = 0
+	# for idx in range(len(btns)):
+	# 	btn = btns[idx]
+	# 	btn_str = btn.get_attribute('innerHTML')
+	# 	#print("btn " + str(idx) + ": " + btn_str)
+
+	# 	if btn_str == 'Arbitrage':
+	# 		arb_btn_idx = idx
+	# 		live_btn_idx = arb_btn_idx + 1
+	# 		pre_btn_idx = arb_btn_idx + 2
+	# 		ev_btn_idx = arb_btn_idx - 1
+	# 		break
+
+
+	# arb_btn = btns[arb_btn_idx]
+	# #print("arb_btn: " + arb_btn.get_attribute('innerHTML'))
+	# arb_btn.click()
+
+	# ev_btn = btns[ev_btn_idx]
+	# #print("ev_btn: " + ev_btn.get_attribute('innerHTML'))
+
+
+
+	# # Wait to click pre/live depending on arb type tod
+	# live_btn = btns[live_btn_idx]
+	# # IF arb type = prematch
+	# # Click Prematch Btn
+	# #prematch_btn = data_table.find_elements('tag name', 'button')[39] #find_element('id', 'radix-:rv:-trigger-arbitrage')
+	# prematch_btn = btns[pre_btn_idx]
+	# # for idx in range(len(btns)):
+	# # 	btn = btns[idx]
+	# # 	print("btn " + str(idx) + ": " + btn.get_attribute('innerHTML'))
+	
+	# # print("live_btn: " + live_btn.get_attribute('innerHTML'))
+	# # print("prematch_btn: " + prematch_btn.get_attribute('innerHTML'))
+	
+	# # Wait to click pre/live depending on arb type tod
+	# # prematch_btn.click()
+	# # # need sleep to load dynamic data otherwise blank
+	# # time.sleep(1)
+
+
+	# # login to website
+	# # dialog box pops up with google signin
+	# #login_website(driver)
+
+	
+
+	# return driver, live_btn, prematch_btn, arb_btn, ev_btn
+
+
+		# except Exception as e:
 			
-			#print('\nButtons:')
-			# arb btn has id but prematch btn only has relative idx to arb btn
-			# so need arb btn idx either way
-			#arb_btn = data_table.find_element('id', 'radix-:r16:-trigger-arbitrage') #data_table.find_elements('tag name', 'button')[36] #
-			btns = data_table.find_elements('tag name', 'button')
-			arb_btn_idx = pre_btn_idx = live_btn_idx = ev_btn_idx = 0
-			for idx in range(len(btns)):
-				btn = btns[idx]
-				btn_str = btn.get_attribute('innerHTML')
-				#print("btn " + str(idx) + ": " + btn_str)
-
-				if btn_str == 'Arbitrage':
-					arb_btn_idx = idx
-					live_btn_idx = arb_btn_idx + 1
-					pre_btn_idx = arb_btn_idx + 2
-					ev_btn_idx = arb_btn_idx - 1
-					break
-
-
-			arb_btn = btns[arb_btn_idx]
-			#print("arb_btn: " + arb_btn.get_attribute('innerHTML'))
-			arb_btn.click()
-
-			ev_btn = btns[ev_btn_idx]
-			#print("ev_btn: " + ev_btn.get_attribute('innerHTML'))
-
-
-
-			# Wait to click pre/live depending on arb type tod
-			live_btn = btns[live_btn_idx]
-			# IF arb type = prematch
-			# Click Prematch Btn
-			#prematch_btn = data_table.find_elements('tag name', 'button')[39] #find_element('id', 'radix-:rv:-trigger-arbitrage')
-			prematch_btn = btns[pre_btn_idx]
-			# for idx in range(len(btns)):
-			# 	btn = btns[idx]
-			# 	print("btn " + str(idx) + ": " + btn.get_attribute('innerHTML'))
-			
-			# print("live_btn: " + live_btn.get_attribute('innerHTML'))
-			# print("prematch_btn: " + prematch_btn.get_attribute('innerHTML'))
-			
-			# Wait to click pre/live depending on arb type tod
-			# prematch_btn.click()
-			# # need sleep to load dynamic data otherwise blank
-			# time.sleep(1)
-
-
-			# login to website
-			# dialog box pops up with google signin
-			login_website(driver)
-
-			
-
-			return driver, live_btn, prematch_btn, arb_btn, ev_btn
-
-
-		except Exception as e:
-			
-			retries += 1
-			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
-			print('Warning: No SGP element!\n', e)
+		# 	retries += 1
+		# 	print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+		# 	print('Warning: No SGP element!\n', e)
 
 
 # finding element by class name will return 1st instance of class

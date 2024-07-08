@@ -485,136 +485,137 @@ def monitor_website():
 	# only need to read once per day, not every run
 	# save team list and times separately
 	# bc diff formats and we only need to get times once per day
-	todays_schedule_file = 'data/todays schedule.csv'
-	game_time_file = 'data/game times.txt' # first, last
-	init_todays_schedule = reader.extract_data(todays_schedule_file, header=True)
-	todays_schedule = reader.read_todays_schedule(sports)
-	game_teams = todays_schedule[0]
-	first_live_time = todays_schedule[1] # first game start
-	last_pre_time = todays_schedule[2] # last game start
+	# todays_schedule_file = 'data/todays schedule.csv'
+	# game_time_file = 'data/game times.txt' # first, last
+	# init_todays_schedule = reader.extract_data(todays_schedule_file, header=True)
+	# todays_schedule = reader.read_todays_schedule(sports)
+	# game_teams = todays_schedule[0]
+	# first_live_time = todays_schedule[1] # first game start
+	# last_pre_time = todays_schedule[2] # last game start
 
 	# diff from read react website bc we keep site open and loop read data
 	url = 'https://www.oddsview.com/odds'
 	website = reader.open_dynamic_website(url)
 	# need to switch bt live and prematch on same page
-	driver = website[0]
-	live_btn = website[1]
-	pre_btn = website[2]
-	arb_btn = website[3]
-	ev_btn = website[4]
+	# driver = website[0]
+	# live_btn = website[1]
+	# pre_btn = website[2]
+	# arb_btn = website[3]
+	# ev_btn = website[4]
 
-	monitor_idx = 1
+	# monitor_idx = 1
 
-	prev_arb_data = [] # first loop init=prev or None?
+	# prev_arb_data = [] # first loop init=prev or None?
 
-	
+	# if arb_type == 'pre':
+	# 	pre_btn.click()
 
-	# keep looping every 5 seconds for change
-	while True:
+	# # keep looping every 5 seconds for change
+	# while True:
 
-		# DO we need to separate live and prematch in 2 files???
-		# no bc just checking if any change overall
-		# BUT we need to make diff notice for live vs prematch 
-		# so we know which page to go to for link
-		arb_data_file = 'data/arb data.csv'
-		ev_data_file = 'data/ev data.csv'
-		init_arb_data = reader.extract_data(arb_data_file, header=True)
-		init_ev_data = []#reader.extract_data(ev_data_file, header=True)
+	# 	# DO we need to separate live and prematch in 2 files???
+	# 	# no bc just checking if any change overall
+	# 	# BUT we need to make diff notice for live vs prematch 
+	# 	# so we know which page to go to for link
+	# 	arb_data_file = 'data/arb data.csv'
+	# 	ev_data_file = 'data/ev data.csv'
+	# 	init_arb_data = reader.extract_data(arb_data_file, header=True)
+	# 	init_ev_data = []#reader.extract_data(ev_data_file, header=True)
 
-		# only 1 file for efficiency but in file it separates live and prematch arbs
-		# init_live_arb_data = init_arb_data[0]
-		# init_prematch_arb_data = init_arb_data[1]
+	# 	# only 1 file for efficiency but in file it separates live and prematch arbs
+	# 	# init_live_arb_data = init_arb_data[0]
+	# 	# init_prematch_arb_data = init_arb_data[1]
 
-		if monitor_idx == 1:
-			print('init_arb_data: ' + str(init_arb_data))
-			print('init_ev_data: ' + str(init_ev_data))
+	# 	if monitor_idx == 1:
+	# 		print('init_arb_data: ' + str(init_arb_data))
+	# 		print('init_ev_data: ' + str(init_ev_data))
 
 
-		# use time of day to tell arb type
-		# if before first game, only pre
-		# if after last game started, only live
-		# else both
-		#arb_type = monitor_arb_type(first_live_time, last_pre_time)
-		# read live first bc changes faster
-		# if arb_type == 'live':
-		# 	arb_data = reader.read_live_arb_data(driver, sources)
-		# elif arb_type == 'pre':
-		# 	arb_data = reader.read_prematch_arb_data(driver, sources)
-		# else:
-		# 	arb_data = reader.read_prematch_arb_data(driver, sources)
+	# 	# use time of day to tell arb type
+	# 	# if before first game, only pre
+	# 	# if after last game started, only live
+	# 	# else both
+	# 	#arb_type = monitor_arb_type(first_live_time, last_pre_time)
+	# 	# read live first bc changes faster
+	# 	# if arb_type == 'live':
+	# 	# 	arb_data = reader.read_live_arb_data(driver, sources)
+	# 	# elif arb_type == 'pre':
+	# 	# 	arb_data = reader.read_prematch_arb_data(driver, sources)
+	# 	# else:
+	# 	# 	arb_data = reader.read_prematch_arb_data(driver, sources)
 		
 
-		# first check Live and then Prematch
-		# notify bt each so no delay for live arbs
-		# read either live or pre, not both
-		arb_data = []
-		if arb_type == 'live':
-			# if on pre-page, click live btn
-			# init on live page so not extra btn to press
-			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
-		elif arb_type == 'pre':
-			# if on live-page, click pre btn
-			arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
-		# live_arb_data = arb_data[0]
-		# prematch_arb_data = arb_data[1]
-		else: # both
-			# read live twice before
-			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+	# 	# first check Live and then Prematch
+	# 	# notify bt each so no delay for live arbs
+	# 	# read either live or pre, not both
+	# 	arb_data = []
+	# 	if arb_type == 'live':
+	# 		# if on pre-page, click live btn
+	# 		# init on live page so not extra btn to press
+	# 		arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+	# 	elif arb_type == 'pre':
+	# 		# if on live-page, click pre btn
+	# 		arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
+	# 	# live_arb_data = arb_data[0]
+	# 	# prematch_arb_data = arb_data[1]
+	# 	else: # both
+	# 		# read live twice before
+	# 		arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 		
 
-		# if keyboard interrupt return blank so we know to break loop
-		if arb_data == '':
-			break
+	# 	# if keyboard interrupt return blank so we know to break loop
+	# 	if arb_data == '':
+	# 		break
 
-		if arb_data is not None:
+	# 	if arb_data is not None:
 		
-			# monitor either live or pre, not both
-			monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, game_teams, new_arb_rules, monitor_idx)
+	# 		# monitor either live or pre, not both
+	# 		monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, game_teams, new_arb_rules, monitor_idx)
 			
-			# new_live_arbs = new_arbs[0]
-			# new_prematch_arbs = new_arbs[1]
+	# 		# new_live_arbs = new_arbs[0]
+	# 		# new_prematch_arbs = new_arbs[1]
 
-			# could save all arb data or just new picks
-			# to compare bt loops
-			prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
-			writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
-
-
-		# open all picks in separate windows
-		# and automate as much as possible to place bets
-		#for new_arb in new_arbs:
-		# TEST 1
-		# if len(new_arbs) > 0:
-		# 	new_arb = new_arbs[0]
-		# 	arb_url1 = new_arb[link1_idx]
-		# 	arb_url2 = new_arb[link2_idx]
-		# 	if not re.search('fliff|fanatics|fanduel', arb_url1):
-		# 		arb_driver1 = reader.open_react_website(arb_url1)
-		# 	if not re.search('fliff|fanatics|fanduel', arb_url2):
-		# 		arb_driver2 = reader.open_react_website(arb_url2)
+	# 		# could save all arb data or just new picks
+	# 		# to compare bt loops
+	# 		prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
+	# 		writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
 
 
-		# Monitor New +EV picks
-		#ev_btn.click()
-		# need sleep to load dynamic data otherwise blank
-		# time.sleep(0.5)
-		# ev_data = reader.read_prematch_ev_data(driver, sources)
-		# if ev_data == '': # if keyboard interrupt return blank so we know to break loop
-		# 	break
-		# if arb_data is not None:
-		# 	new_evs = monitor_new_evs(ev_data, init_ev_data)
-		# 	prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
-		# 	writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
+	# 	# open all picks in separate windows
+	# 	# and automate as much as possible to place bets
+	# 	#for new_arb in new_arbs:
+	# 	# TEST 1
+	# 	# if len(new_arbs) > 0:
+	# 	# 	new_arb = new_arbs[0]
+	# 	# 	arb_url1 = new_arb[link1_idx]
+	# 	# 	arb_url2 = new_arb[link2_idx]
+	# 	# 	if not re.search('fliff|fanatics|fanduel', arb_url1):
+	# 	# 		arb_driver1 = reader.open_react_website(arb_url1)
+	# 	# 	if not re.search('fliff|fanatics|fanduel', arb_url2):
+	# 	# 		arb_driver2 = reader.open_react_website(arb_url2)
+
+
+	# 	# Monitor New +EV picks
+	# 	#ev_btn.click()
+	# 	# need sleep to load dynamic data otherwise blank
+	# 	# time.sleep(0.5)
+	# 	# ev_data = reader.read_prematch_ev_data(driver, sources)
+	# 	# if ev_data == '': # if keyboard interrupt return blank so we know to break loop
+	# 	# 	break
+	# 	# if arb_data is not None:
+	# 	# 	new_evs = monitor_new_evs(ev_data, init_ev_data)
+	# 	# 	prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
+	# 	# 	writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
 		
 
 
-		monitor_idx += 1 # used only for first loop
+	# 	monitor_idx += 1 # used only for first loop
 		
 		
 
-		# if prematch, keep looping every 5 seconds for change
-		# if live, loop every 2 seconds bc fast change
-		time.sleep(4)
+	# 	# if prematch, keep looping every 5 seconds for change
+	# 	# if live, loop every 2 seconds bc fast change
+	# 	time.sleep(4)
 
 
 
