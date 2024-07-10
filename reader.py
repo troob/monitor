@@ -3495,12 +3495,6 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 	# need to login manually 
 	# then the sportsbook filter btn appears so filter manually
 
-	pre_btn.click()
-	arb_btn.click()
-	time.sleep(1)
-
-	
-
 	retries = 0
 
 	while retries < max_retries:
@@ -3515,45 +3509,13 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 			# retry in case of error
 			# problem is login dialog box blocks btns 
 			# after a minute on page
-			# try:
-			# 	pre_btn.click()
-			# 	arb_btn.click()
-			# except:
-			# 	print('Error clicking pre or arb btn')
+			try:
+				pre_btn.click()
+				arb_btn.click()
+				time.sleep(1)
+			except:
+				print('Error clicking pre or arb btn')
 
-
-			# Read Cur Pre Arbs
-			# try:
-			# 	data_elements = driver.find_element('tag name', 'body').find_element('xpath', 'div[2]').find_elements('tag name', 'div')#[4]
-			# 	#print("data_elements: " + data_elements.get_attribute('innerHTML'))
-			# except:
-			# 	print('No Data')
-			# 	return '' # null so it breaks outer loop
-
-			# # print('\nElements:')
-			# # for idx in range(len(data_elements)):
-			# # 	#if idx == 3:
-			# # 	e = data_elements[idx]
-			# # 	print('line ' + str(idx) + ': ' + e.get_attribute('innerHTML'))
-			# # 	#break
-
-			# data_table = data_elements[12]#.find_element('class name', 'md:pr-0')
-			# #print("data_table: " + data_table.get_attribute('innerHTML'))
-
-			# # see if table or not?
-			# #arb_tables = data_table.find_elements('class name', 'pb-2')
-			# arb_tables = data_table.find_elements('tag name', 'table')
-			# # print('\nTables:')
-			# # for idx in range(len(arb_tables)):
-			# # 	table = arb_tables[idx]
-			# # 	print("table " + str(idx) + ": " + table.get_attribute('innerHTML'))
-			# # prematch_arb_data = ''
-			
-			# if len(arb_tables) > 3:
-			# 	# always last table?
-			# 	#prematch_arb_data = str(arb_tables[5].get_attribute('innerHTML'))
-			# 	prematch_arb_table = arb_tables[-1]
-			#print("prematch_arb_data: " + str(prematch_arb_data))
 
 			# arb table changes so wait to call table each monitor loop
 			prematch_arb_table = driver.find_elements('tag name', 'table')[-1]

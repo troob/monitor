@@ -266,20 +266,16 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 	# print('Input: arb_data = [[...],...]')# + str(arb_data))
 	# print('\nOutput: new_arbs = [[%, $, ...], ...]\n')
 
-	val_idx = 0
-	game_idx = 1
-	market_idx = 2
-	bet1_idx = 3
-	bet2_idx = 4
-	game_date_idx = 11
-	sport_idx = 12
-
+	arb_type = 'pre-match'
+	say_str = 'say "' + arb_type + ' pick"'
+	
 	# if just check diff then will alert when arb disappears
 	# which we do not want
 	new_pick = False
 	new_picks = []
 	test_picks = []
-	for arb_row in arb_data:
+	for arb_idx in range(len(arb_data)):
+		arb_row = arb_data[arb_idx]
 
 		# TEST
 		test_picks.append(arb_row)
@@ -289,142 +285,59 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 		# 1. existing arb goes from below min val to above = Any Diff bc pick not added if below min val
 		# 2. diff game and market
 		if arb_row not in init_arb_data and arb_row not in prev_arb_data:
-			
-			
 
 
-			
-			# complex version:
-			# check if existing game and market
-			arb_game = converter.convert_game_teams_to_abbrevs(arb_row[game_idx])
-			#print('arb_game: ' + str(arb_game))
-
-			arb_bet1 = arb_row[bet1_idx]
-			arb_bet2 = arb_row[bet2_idx]
-
-			sport = arb_row[sport_idx]
-			if sport not in valid_sports:
-				if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
-					print('Avoid sport: ' + sport)
-					continue
-
-
-			# check if game today
-			# game_date_data = game_date_str.split()
-			# game_mth = game_date_data[1]
-			# game_day = game_date_data[2][:-1] # remove comma
-			# game_date_str = game_mth + ' ' + game_day
-			# print('game_date_str: ' + str(game_date_str))
-			# # need month and day of month to check same day, assuming same yr for all
-			# game_date = datetime.strptime(game_date_str, '%b %d')
-			# print('game_date: ' + str(game_date))
-			# if game_date != todays_date:
-			# recently added date to arb row
-			game_date = arb_row[game_date_idx]
-			#print('game_date: ' + game_date)
-			if not re.search('Today', game_date):
-				# if either side is unlimited source, 
-				# avoid game not today bc suspicious
-				# but if both sides already limited 
-				# then need to take all available, even diff days
-				if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
-					print('AVOID Game Not Today: ' + str(arb_game) + ', ' + game_date)
-					continue
-
-			# if arb_game not in todays_schedule:
-			# 	# check reverse away home teams bc sometimes labeled backwards
-			# 	arb_game = (arb_game[1], arb_game[0])
-			# 	if arb_game not in todays_schedule:
-			# 		# if either side still not limited, avoid future games
-			# 		# bc obvious red flag
-			# 		if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
-			# 			print('AVOID arb_game: ' + str(arb_game))
-			# 			continue
-
-			# AVOID baseball player Home Run props 
-			# bc most common market inefficiency so obvious honeypot
-			arb_market = arb_row[market_idx]
-			# if re.search('Home Run', arb_market):
-			# 	print('AVOID arb_market: ' + str(arb_market))
-			# 	continue
-
-			# AVOID small markets
-			# AVOID non-star role player props
-			# especially low rebound numbers
-			# How to tell if main player
-			# for basketball, based on minutes or specific stat level
-			# bc players may have large minutes but low rebounds or assists 
-			# so still small market
-			# So use specific stat level
-
-
-
-			
-			# bc otherwise short term profit not worth long term loss due to obvious samples with edge
-			arb_val = float(arb_row[val_idx])
-			if arb_val < new_arb_rules['min'] or arb_val > new_arb_rules['max']:
-				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
+			# all criteria
+			if not determiner.determine_valid_arb(arb_row, valid_sports, limited_sources, new_arb_rules, init_arb_data):
 				continue
-
-			# if player prop, need higher min val to justify use 
-			# but still allow home runs if already limited on other markets
-			if not re.search('Moneyline|Spread|Total|Home', arb_market) and arb_val < new_arb_rules['player min']:
-				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
-				continue
-
-
-			# Betrivers is usually off by 5 odds so need higher limit to avoid false alarm
-			# if limited by betrivers only take >3%
-			# EXCEPT big markets, moneyline, spread, total bc higher limits
-			
-			if arb_bet1 == 'Betrivers' or arb_bet2 == 'Betrivers':
-				# less limited markets such as home runs bc very extreme odds
-				# so accept lower min bc invest more
-				
-				if arb_val < new_arb_rules['betrivers min'] and not re.search('Moneyline|Spread|Total|Home', arb_market):
-					print('AVOID Betrivers arb_val: ' + str(arb_val) + ', ' + str(arb_market))
-					continue
-
-
-			# limited sites need higher val to be worth it
-			if arb_bet1 in limited_sources or arb_bet2 in limited_sources:
-				if arb_val < new_arb_rules['limited min'] and not re.search('Moneyline|Spread|Total|Home', arb_market):
-					print('AVOID limited arb_val: ' + str(arb_val) + ', ' + str(arb_market))
-					continue
-
-			# AVOID picking same prop twice bc obvious strategy suspicious
-			same_arb = False
-			for init_arb_row in init_arb_data:
-				init_arb_game = converter.convert_game_teams_to_abbrevs(init_arb_row[game_idx])
-				init_arb_market = init_arb_row[market_idx]
-				# print('\narb_game: ' + str(arb_game))
-				# print('arb_market: ' + str(arb_market))
-				# print('init_arb_game: ' + str(init_arb_game))
-				# print('init_arb_market: ' + str(init_arb_market))
-				if arb_game == init_arb_game and arb_market == init_arb_market:
-					init_arb_val = init_arb_row[val_idx]
-					#print('init_arb_val: ' + str(init_arb_val))
-					# if prev arb val already greater than min val we already took prop so do not double take
-					if float(init_arb_val) > 2:
-						#print('Found Same Arb')
-						same_arb = True
-						break
-						
-			if same_arb:	
-				print('AVOID same arb: ' + str(arb_val) + ', ' + str(arb_game) + ', ' + str(arb_market))
-				continue
-
-
 
 
 			# === Check Real Odds === 
 			# only needed bc source is flawed but since opening window here, leave it open
 			# and pass drivers to the writer
-			if not determiner.determine_valid_arb(arb_row):
+			# if not determiner.determine_valid_arb_odds(arb_row):
+			# 	continue
+			# INSTEAD of checking valid odds and closing window
+			# simply check odds and return no arb if invalid
+			# close window if invalid
+			# we want to get the drivers for each website
+			# so we can read info and press btns next step
+			# return no arb bets if invalid odds
+			# so we do not proceed to next step
+			# and continue to next arb
+			arb_bets = open_arb_bets(arb_row)
+
+			if len(arb_bets) == 0:
 				continue
 
+			# only beep once on desktop after first arb so I can respond fast as possible
+			# but send notification after each arb???
+			# currently phone not used but ideally sends link to phone
+			# so we want to handle one at a time ideally
+			# so phone should get notice for each arb so it can start processing asap
+			if arb_idx == 0:
+				os.system(say_str)
+				print('\n' + str(monitor_idx) + ': Found New Picks')
 
+
+
+			# === Place Bets === 
+			# to get limits
+			# and then see min payout
+			# and then calc other side based on limit on side with min payout
+			writer.place_arb_bets(arb_bets)
+
+			# format string to post
+			writer.write_arb_to_post(arb_row, client, True)
+
+			# CHANGE so instead of batching
+			# handle each arb 1 at a time to be as fast as possible
 			# simple version: if any diff, notify
+			# so open both side bet windows, check if valid
+			# and then notify
+			# and then fill in bet size (test limit and calc bet sizes)
+			# and then keep those windows open
+			# and move to the next arb
 			new_picks.append(arb_row)
 
 	# notify immediately after reading new live arbs
@@ -549,7 +462,7 @@ def open_arb_bets(arb):
 	# notify as soon as we know 1 is valid
 	# so we can immediately take it and not waste time checking others
 	# bc by the time we are done checking a lot the first 1 will be gone
-	if determiner.determine_valid_arb(real_odds):
+	if determiner.determine_valid_arb_odds(real_odds):
 		notify_arb = arb
 
 	return notify_arb
