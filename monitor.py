@@ -1,6 +1,6 @@
 # Web Monitor for constantly updating websites
 
-import reader, writer, converter, time, beepy
+import reader, writer, converter, determiner, time, beepy
 
 import re, os
 
@@ -64,7 +64,7 @@ new_arb_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-sports = ['baseball']#,'hockey'] # big markets to stay subtle
+valid_sports = ['mlb']#,'hockey'] # big markets to stay subtle
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 monitor_ev = True
 
@@ -261,7 +261,7 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, todays_schedule, new_ev
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, new_arb_rules, monitor_idx):
+def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, monitor_idx, valid_sports):
 	# print('\n===Monitor New Arbs===\n')
 	# print('Input: arb_data = [[...],...]')# + str(arb_data))
 	# print('\nOutput: new_arbs = [[%, $, ...], ...]\n')
@@ -272,6 +272,7 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 	bet1_idx = 3
 	bet2_idx = 4
 	game_date_idx = 11
+	sport_idx = 12
 
 	# if just check diff then will alert when arb disappears
 	# which we do not want
@@ -301,6 +302,12 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 			arb_bet1 = arb_row[bet1_idx]
 			arb_bet2 = arb_row[bet2_idx]
 
+			sport = arb_row[sport_idx]
+			if sport not in valid_sports:
+				if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
+					print('Avoid sport: ' + sport)
+					continue
+
 
 			# check if game today
 			# game_date_data = game_date_str.split()
@@ -324,15 +331,15 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 					print('AVOID Game Not Today: ' + str(arb_game) + ', ' + game_date)
 					continue
 
-			if arb_game not in todays_schedule:
-				# check reverse away home teams bc sometimes labeled backwards
-				arb_game = (arb_game[1], arb_game[0])
-				if arb_game not in todays_schedule:
-					# if either side still not limited, avoid future games
-					# bc obvious red flag
-					if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
-						print('AVOID arb_game: ' + str(arb_game))
-						continue
+			# if arb_game not in todays_schedule:
+			# 	# check reverse away home teams bc sometimes labeled backwards
+			# 	arb_game = (arb_game[1], arb_game[0])
+			# 	if arb_game not in todays_schedule:
+			# 		# if either side still not limited, avoid future games
+			# 		# bc obvious red flag
+			# 		if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
+			# 			print('AVOID arb_game: ' + str(arb_game))
+			# 			continue
 
 			# AVOID baseball player Home Run props 
 			# bc most common market inefficiency so obvious honeypot
@@ -407,15 +414,35 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, todays_schedule, ne
 				print('AVOID same arb: ' + str(arb_val) + ', ' + str(arb_game) + ', ' + str(arb_market))
 				continue
 
+
+
+
+			# === Check Real Odds === 
+			# only needed bc source is flawed but since opening window here, leave it open
+			# and pass drivers to the writer
+			if not determiner.determine_valid_arb(arb_row):
+				continue
+
+
 			# simple version: if any diff, notify
 			new_picks.append(arb_row)
 
 	# notify immediately after reading new live arbs
 	# before checking prematch
 
+
+	# Complete 1 Arb at a Time
+	# Do NOT batch bc it is better to get 1 than 0
+	# after getting new picks from oddsview source
+	# open bet links in new windows
+	# and if passes check then add to list of new picks to notify
+	notify_picks = open_new_arb_bets(new_picks)
+
+	# notify user after opening and checking
+	# BUT before placing bet
 	# check 2 prev arb tables bc sometimes disappear and reappear so not new
 	#if len(prematch_arb_data) > 0 and init_prematch_arb_data != prematch_arb_data and prev_prematch_arb_data != prematch_arb_data:
-	if len(new_picks) > 0:
+	if len(notify_picks) > 0:
 		#beepy.beep() # first notify so i can get moving
 		#say_str = 'say "Go Fuck Yourself."'
 		# list each arb details
@@ -478,8 +505,73 @@ def monitor_arb_type(first_live_time, last_pre_time):
 # need sleep to load dynamic data otherwise blank
 #time.sleep(1)
 
+# open, check, and close if false flag
+# open all picks in separate windows
+# and automate as much as possible to place bets
+#for new_arb in new_arbs:
+# TEST 1
+def open_arb_bets(arb):
+	print('\n===Open Arb Bets===\n')
+	print('\n===')
+	
+	notify_arb = None
 
-def monitor_website():
+	# if len(bets) > 0:
+	# 	new_arb = bets[0]
+
+	market_idx = 2
+	bet1_idx = 3
+	bet2_idx = 4
+	link1_idx = 7
+	link2_idx = 8
+
+	arb_url1 = arb[link1_idx]
+	arb_url2 = arb[link2_idx]
+
+
+
+	if not re.search('fliff|fanatics', arb_url1):
+		arb_driver1 = reader.open_react_website(arb_url1)
+	# if not re.search('fliff|fanatics', arb_url2):
+	# 	arb_driver2 = reader.open_react_website(arb_url2)
+
+	bet1 = arb[bet1_idx]
+	bet2 = arb[bet2_idx]
+	neg_odds = reader.read_bet_odds(bet1, arb_driver1)
+	#pos_odds = reader.read_bet_odds(bet2, arb_url2)
+
+	neg_odds = -105 #arb_driver1.find_element('id', 'odds')
+	pos_odds = 100 #arb_driver2
+
+	# read odds direct from webpage
+	real_odds = (neg_odds, pos_odds)
+
+	# notify as soon as we know 1 is valid
+	# so we can immediately take it and not waste time checking others
+	# bc by the time we are done checking a lot the first 1 will be gone
+	if determiner.determine_valid_arb(real_odds):
+		notify_arb = arb
+
+	return notify_arb
+
+# open all arb windows at the same time
+# open, check, and close if false flag
+def open_new_arb_bets(new_arbs):
+	print('\n===Open New Arb Bets===\n')
+	
+	notify_arbs = []
+	
+	for arb in new_arbs:
+		notify_arb = open_arb_bets(arb)
+
+		if notify_arb is not None:
+			notify_arbs.append(notify_arb)
+
+
+# open website once 
+# and then loop over it 
+# simulate human behavior to avoid getting blocked
+def monitor_website(url):
 
 	# include game times so we can find first and last
 	# only need to read once per day, not every run
@@ -493,130 +585,117 @@ def monitor_website():
 	# first_live_time = todays_schedule[1] # first game start
 	# last_pre_time = todays_schedule[2] # last game start
 
-	# diff from read react website bc we keep site open and loop read data
-	url = 'https://www.oddsview.com/odds'
+	# get website driver all elements
+	# and specific navigation buttons which remain on screen the whole time
+	# no matter which page you navigate to
 	website = reader.open_dynamic_website(url)
 	# need to switch bt live and prematch on same page
-	# driver = website[0]
-	# live_btn = website[1]
-	# pre_btn = website[2]
-	# arb_btn = website[3]
-	# ev_btn = website[4]
+	driver = website[0]
+	arb_btn = website[1]
+	pre_btn = website[2]
 
-	# monitor_idx = 1
+	monitor_idx = 1
 
-	# prev_arb_data = [] # first loop init=prev or None?
+	prev_arb_data = [] # first loop init=prev or None?
 
 	# if arb_type == 'pre':
 	# 	pre_btn.click()
 
-	# # keep looping every 5 seconds for change
-	# while True:
+	# keep looping every 5 seconds for change
+	while True:
 
-	# 	# DO we need to separate live and prematch in 2 files???
-	# 	# no bc just checking if any change overall
-	# 	# BUT we need to make diff notice for live vs prematch 
-	# 	# so we know which page to go to for link
-	# 	arb_data_file = 'data/arb data.csv'
-	# 	ev_data_file = 'data/ev data.csv'
-	# 	init_arb_data = reader.extract_data(arb_data_file, header=True)
-	# 	init_ev_data = []#reader.extract_data(ev_data_file, header=True)
+		# DO we need to separate live and prematch in 2 files???
+		# no bc just checking if any change overall
+		# BUT we need to make diff notice for live vs prematch 
+		# so we know which page to go to for link
+		arb_data_file = 'data/arb data.csv'
+		ev_data_file = 'data/ev data.csv'
+		init_arb_data = reader.extract_data(arb_data_file, header=True)
+		init_ev_data = []#reader.extract_data(ev_data_file, header=True)
 
-	# 	# only 1 file for efficiency but in file it separates live and prematch arbs
-	# 	# init_live_arb_data = init_arb_data[0]
-	# 	# init_prematch_arb_data = init_arb_data[1]
+		# only 1 file for efficiency but in file it separates live and prematch arbs
+		# init_live_arb_data = init_arb_data[0]
+		# init_prematch_arb_data = init_arb_data[1]
 
-	# 	if monitor_idx == 1:
-	# 		print('init_arb_data: ' + str(init_arb_data))
-	# 		print('init_ev_data: ' + str(init_ev_data))
+		if monitor_idx == 1:
+			print('init_arb_data: ' + str(init_arb_data))
+			print('init_ev_data: ' + str(init_ev_data))
 
 
-	# 	# use time of day to tell arb type
-	# 	# if before first game, only pre
-	# 	# if after last game started, only live
-	# 	# else both
-	# 	#arb_type = monitor_arb_type(first_live_time, last_pre_time)
-	# 	# read live first bc changes faster
-	# 	# if arb_type == 'live':
-	# 	# 	arb_data = reader.read_live_arb_data(driver, sources)
-	# 	# elif arb_type == 'pre':
-	# 	# 	arb_data = reader.read_prematch_arb_data(driver, sources)
-	# 	# else:
-	# 	# 	arb_data = reader.read_prematch_arb_data(driver, sources)
+		# use time of day to tell arb type
+		# if before first game, only pre
+		# if after last game started, only live
+		# else both
+		#arb_type = monitor_arb_type(first_live_time, last_pre_time)
+		
+		# first check Live and then Prematch
+		# notify bt each so no delay for live arbs
+		# read either live or pre, not both
+		arb_data = []
+		if arb_type == 'live':
+			# if on pre-page, click live btn
+			# init on live page so not extra btn to press
+			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+		elif arb_type == 'pre':
+			# if on live-page, click pre btn
+			arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
+		# live_arb_data = arb_data[0]
+		# prematch_arb_data = arb_data[1]
+		else: # both
+			# read live twice before
+			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 		
 
-	# 	# first check Live and then Prematch
-	# 	# notify bt each so no delay for live arbs
-	# 	# read either live or pre, not both
-	# 	arb_data = []
-	# 	if arb_type == 'live':
-	# 		# if on pre-page, click live btn
-	# 		# init on live page so not extra btn to press
-	# 		arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
-	# 	elif arb_type == 'pre':
-	# 		# if on live-page, click pre btn
-	# 		arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
-	# 	# live_arb_data = arb_data[0]
-	# 	# prematch_arb_data = arb_data[1]
-	# 	else: # both
-	# 		# read live twice before
-	# 		arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
-		
+		# if keyboard interrupt return blank so we know to break loop
+		if arb_data == '':
+			break
 
-	# 	# if keyboard interrupt return blank so we know to break loop
-	# 	if arb_data == '':
-	# 		break
-
-	# 	if arb_data is not None:
+		if arb_data is not None:
 		
-	# 		# monitor either live or pre, not both
-	# 		monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, game_teams, new_arb_rules, monitor_idx)
+			# monitor either live or pre, not both
+			new_arbs = monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, monitor_idx, valid_sports)
 			
-	# 		# new_live_arbs = new_arbs[0]
-	# 		# new_prematch_arbs = new_arbs[1]
+			# new_live_arbs = new_arbs[0]
+			# new_prematch_arbs = new_arbs[1]
 
-	# 		# could save all arb data or just new picks
-	# 		# to compare bt loops
-	# 		prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
-	# 		writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
-
-
-	# 	# open all picks in separate windows
-	# 	# and automate as much as possible to place bets
-	# 	#for new_arb in new_arbs:
-	# 	# TEST 1
-	# 	# if len(new_arbs) > 0:
-	# 	# 	new_arb = new_arbs[0]
-	# 	# 	arb_url1 = new_arb[link1_idx]
-	# 	# 	arb_url2 = new_arb[link2_idx]
-	# 	# 	if not re.search('fliff|fanatics|fanduel', arb_url1):
-	# 	# 		arb_driver1 = reader.open_react_website(arb_url1)
-	# 	# 	if not re.search('fliff|fanatics|fanduel', arb_url2):
-	# 	# 		arb_driver2 = reader.open_react_website(arb_url2)
+			# could save all arb data or just new picks
+			# to compare bt loops
+			prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
+			writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
 
 
-	# 	# Monitor New +EV picks
-	# 	#ev_btn.click()
-	# 	# need sleep to load dynamic data otherwise blank
-	# 	# time.sleep(0.5)
-	# 	# ev_data = reader.read_prematch_ev_data(driver, sources)
-	# 	# if ev_data == '': # if keyboard interrupt return blank so we know to break loop
-	# 	# 	break
-	# 	# if arb_data is not None:
-	# 	# 	new_evs = monitor_new_evs(ev_data, init_ev_data)
-	# 	# 	prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
-	# 	# 	writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
+		
+
+		#open_all_arbs_bets(new_arbs)
+
+
+		# Monitor New +EV picks
+		#ev_btn.click()
+		# need sleep to load dynamic data otherwise blank
+		# time.sleep(0.5)
+		# ev_data = reader.read_prematch_ev_data(driver, sources)
+		# if ev_data == '': # if keyboard interrupt return blank so we know to break loop
+		# 	break
+		# if arb_data is not None:
+		# 	new_evs = monitor_new_evs(ev_data, init_ev_data)
+		# 	prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
+		# 	writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
 		
 
 
-	# 	monitor_idx += 1 # used only for first loop
+		monitor_idx += 1 # used only for first loop
 		
 		
 
-	# 	# if prematch, keep looping every 5 seconds for change
-	# 	# if live, loop every 2 seconds bc fast change
-	# 	time.sleep(4)
+		# if prematch, keep looping every 5 seconds for change
+		# if live, loop every 2 seconds bc fast change
+		time.sleep(4)
 
 
 
-monitor_website()
+# diff from read react website bc we keep site open and loop read data
+# oodsview was free but now charges
+# So instead scrape sites directly
+url = 'https://www.oddsview.com/odds'
+#url = 'https://sportsbook.draftkings.com'
+monitor_website(url)

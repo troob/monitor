@@ -6,7 +6,7 @@
 # ideally would make code understand what is happening but that is more work
 
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+#from selenium.webdriver.chrome.options import Options
 import time
 
 #create chromeoptions instance
