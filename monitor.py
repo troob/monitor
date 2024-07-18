@@ -274,6 +274,7 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 	new_pick = False
 	new_picks = []
 	test_picks = []
+	valid_arb_idx = 0
 	for arb_idx in range(len(arb_data)):
 		arb_row = arb_data[arb_idx]
 
@@ -305,30 +306,30 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 			# return no arb bets if invalid odds
 			# so we do not proceed to next step
 			# and continue to next arb
-			arb_bets = open_arb_bets(arb_row)
+			# arb_bets = open_arb_bets(arb_row)
 
-			if len(arb_bets) == 0:
-				continue
+			# if len(arb_bets) == 0:
+			# 	continue
 
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
 			# currently phone not used but ideally sends link to phone
 			# so we want to handle one at a time ideally
 			# so phone should get notice for each arb so it can start processing asap
-			if arb_idx == 0:
+			if valid_arb_idx == 0:
 				os.system(say_str)
 				print('\n' + str(monitor_idx) + ': Found New Picks')
-
+				valid_arb_idx += 1
 
 
 			# === Place Bets === 
 			# to get limits
 			# and then see min payout
 			# and then calc other side based on limit on side with min payout
-			writer.place_arb_bets(arb_bets)
+			# writer.place_arb_bets(arb_bets)
 
-			# format string to post
-			writer.write_arb_to_post(arb_row, client, True)
+			# # format string to post
+			# writer.write_arb_to_post(arb_row, client, True)
 
 			# CHANGE so instead of batching
 			# handle each arb 1 at a time to be as fast as possible
@@ -349,21 +350,21 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 	# after getting new picks from oddsview source
 	# open bet links in new windows
 	# and if passes check then add to list of new picks to notify
-	notify_picks = open_new_arb_bets(new_picks)
+	#notify_picks = open_new_arb_bets(new_picks)
 
 	# notify user after opening and checking
 	# BUT before placing bet
 	# check 2 prev arb tables bc sometimes disappear and reappear so not new
 	#if len(prematch_arb_data) > 0 and init_prematch_arb_data != prematch_arb_data and prev_prematch_arb_data != prematch_arb_data:
-	if len(notify_picks) > 0:
+	if len(new_picks) > 0:
 		#beepy.beep() # first notify so i can get moving
 		#say_str = 'say "Go Fuck Yourself."'
 		# list each arb details
-		arb_type = 'pre-match'
-		say_str = 'say "' + arb_type + ' pick"'
-		os.system(say_str)
+		# arb_type = 'pre-match'
+		# say_str = 'say "' + arb_type + ' pick"'
+		# os.system(say_str)
 
-		print('\n' + str(monitor_idx) + ': Found New Picks')
+		# print('\n' + str(monitor_idx) + ': Found New Picks')
 
 
 		# post_arbs = []
@@ -599,10 +600,26 @@ def monitor_website(url):
 		monitor_idx += 1 # used only for first loop
 		
 		
+		# see middle cookies
+		# cookies = driver.get_cookies()
+		# print('cookies: ', cookies)
+
+		# creds = driver.get_credentials()
+		# print('creds:', creds)
+
 
 		# if prematch, keep looping every 5 seconds for change
 		# if live, loop every 2 seconds bc fast change
 		time.sleep(4)
+
+
+
+	# see final cookies
+	# cookies = driver.get_cookies()
+	# print('Final cookies: ', cookies)
+
+	# creds = driver.get_credentials()
+	# print('Final creds:', creds)
 
 
 

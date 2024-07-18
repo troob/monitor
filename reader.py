@@ -3792,6 +3792,9 @@ def open_react_website(url, mobile=False):
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
 	options.add_argument(r'--profile-directory=Profile 3') 
+	# enable password manager to autofill
+	#options.add_experimental_option("credentials_enable_service", True)
+	options.add_experimental_option("prefs", {"profile.password_manager_enabled": True})
 
 	# Adding argument to disable the AutomationControlled flag 
 	options.add_argument("--disable-blink-features=AutomationControlled") 
@@ -3813,6 +3816,13 @@ def open_react_website(url, mobile=False):
 	
 	# wait after get url to ensure reads all data!
 	time.sleep(1)
+
+	# see init cookies
+	# cookies = driver.get_cookies()
+	# print('cookies: ', cookies)
+
+	# creds = driver.get_credentials()
+	# print('creds:', creds)
 
 	return driver
 
@@ -3847,92 +3857,111 @@ def read_bet_odds(bet, driver):
 def open_oddsview_website(driver, max_retries=3):
 	print('\n===Open Oddsview===\n')
 
-	retries = 0
-	while retries < max_retries:
+	# retries = 0
+	# while retries < max_retries:
+	# 	try:
+	# intro dialog shows if cache cleared bc assumes first time user
+	# but now changed to login profile so skip intro dialog
+	# dialog_element = driver.find_element('id', 'radix-:r5:')
+	# print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
+
+	# close_btn = dialog_element.find_element('xpath','button')
+	# #print("close_btn: " + close_btn.get_attribute('innerHTML'))
+	# close_btn.click()
+	# time.sleep(0.2)
+
+
+	# # data panel, right side
+	body = driver.find_element('tag name', 'body')
+	#print('body: ' + body.get_attribute('innerHTML'))
+
+	pre_btn = arb_btn = sportsbook_btn = None
+
+	divs = body.find_elements('tag name', 'div')
+	arb_divs = []
+	#print('Body Divs:')
+	for idx in range(len(divs)):
+		div = divs[idx]
+
 		try:
-			# intro dialog shows if cache cleared bc assumes first time user
-			# but now changed to login profile so skip intro dialog
-			# dialog_element = driver.find_element('id', 'radix-:r5:')
-			# print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
+			div_str = div.get_attribute('innerHTML')
 
-			# close_btn = dialog_element.find_element('xpath','button')
-			# #print("close_btn: " + close_btn.get_attribute('innerHTML'))
-			# close_btn.click()
-			# time.sleep(0.2)
+			# arb btn is last div with arb str
+			if re.search('Arbitrage', div_str):
+				#print('Div ' + str(idx) + ': ' + div_str)
 
+				arb_divs.append(div)
 
-			# # data panel, right side
-			body = driver.find_element('tag name', 'body')
-			#print('body: ' + body.get_attribute('innerHTML'))
+			elif div_str == 'Prematch':
+				pre_btn = div
 
-			pre_btn = arb_btn = None
+			#elif re.search('Sportsbook', div_str):
+			# elif div_str == 'Sportsbooks':
+			# 	#print('Div ' + str(idx) + ': ' + div_str)
+			# 	sportsbook_btn = div
+			# 	sportsbook_combobox = divs[idx-1]
 
-			divs = body.find_elements('tag name', 'div')
-			arb_divs = []
-			#print('Body Divs:')
-			for idx in range(len(divs)):
-				div = divs[idx]
+			# elif re.search('table', div_str):
+			# 	print('Table ' + str(idx) + ': ' + div_str)
 
-				try:
-					div_str = div.get_attribute('innerHTML')
-
-					# arb btn is last div with arb str
-					if re.search('Arbitrage', div_str):
-						#print('Div ' + str(idx) + ': ' + div_str)
-
-						arb_divs.append(div)
-
-					elif div_str == 'Prematch':
-						pre_btn = div
-
-					# elif re.search('table', div_str):
-					# 	print('Table ' + str(idx) + ': ' + div_str)
-
-					# elif div_str == 'Arbitrage':
-					# 	arb_btn = div
-
-				except Exception as e:
-					#print('Exception at div ' + str(idx))# + ': ', e)
-					continue
-
-
-			# Live Now: Div 132
-			# Prematch: Div 136
-			# 3 section btns: Div 146
-
-
-			# click arb btn
-			arb_btn = arb_divs[-1].find_elements('tag name', 'button')[-1]
-			print('arb_btn: ' + arb_btn.get_attribute('innerHTML'))
-			#arb_btn.click()
-
-			# click prematch btn
-			print('pre_btn: ' + pre_btn.get_attribute('innerHTML'))
-			#pre_btn.click()
-
-			# wait to get to new table?
-			#time.sleep(1)
-
-			# tables = driver.find_elements('tag name', 'table')
-			# print('Tables:')
-			# for idx in range(len(tables)):
-			# 	table = tables[idx]
-			# 	print('Table ' + str(idx) + ': ' + table.get_attribute('innerHTML'))
-
-			# arb table changes so wait to call table each monitor loop
-			# arb_table = driver.find_elements('tag name', 'table')[-1]
-			# print('arb_table: ' + arb_table.get_attribute('innerHTML'))
-
-			# time.sleep(1000)
-
-		
-
-			return driver, arb_btn, pre_btn
+			# elif div_str == 'Arbitrage':
+			# 	arb_btn = div
 
 		except Exception as e:
+			#print('Exception at div ' + str(idx))# + ': ', e)
+			continue
+
+
+	# Live Now: Div 132
+	# Prematch: Div 136
+	# 3 section btns: Div 146
+
+
+	# click arb btn
+	arb_btn = arb_divs[-1].find_elements('tag name', 'button')[-1]
+	print('arb_btn: ' + arb_btn.get_attribute('innerHTML'))
+	#arb_btn.click()
+
+	# click prematch btn
+	print('pre_btn: ' + pre_btn.get_attribute('innerHTML'))
+	#pre_btn.click()
+
+	# add 
+	# print('sportsbook_btn: ' + sportsbook_btn.get_attribute('innerHTML'))
+	# sportsbook_btn.click()
+	# time.sleep(5)
+	# sportsbook_combobox.send_keys('Fliff')
+	# time.sleep(5)
+	# sportsbook_combobox.send_keys('\t\t')
+
+	#time.sleep(0.1)
+
+	# fliff_checkbox = ''
+	# if fliff_checkbox
+
+	# wait to get to new table?
+	#time.sleep(1000)
+
+	# tables = driver.find_elements('tag name', 'table')
+	# print('Tables:')
+	# for idx in range(len(tables)):
+	# 	table = tables[idx]
+	# 	print('Table ' + str(idx) + ': ' + table.get_attribute('innerHTML'))
+
+	# arb table changes so wait to call table each monitor loop
+	# arb_table = driver.find_elements('tag name', 'table')[-1]
+	# print('arb_table: ' + arb_table.get_attribute('innerHTML'))
+
+	# time.sleep(1000)
+
+
+
+	return driver, arb_btn, pre_btn, sportsbook_btn
+
+		# except Exception as e:
 			
-			retries += 1
-			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+		# 	retries += 1
+		# 	print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
 
 
 # each league has a known url
