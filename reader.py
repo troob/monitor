@@ -3783,18 +3783,26 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 	#print('prematch_arb_data:\n' + str(prematch_arb_data))
 	#return prematch_arb_data
 
-def open_react_website(url, mobile=False):
+def open_react_website(url, size=(1212,1144), position=(0,0), first_window=False, mobile=False):
 	#print('\n===Open React Website===\n')
 
 	options = webdriver.ChromeOptions()
+
+	dims = str(size[0]) + ',' + str(size[1])
+	size_str = "window-size=" + dims
+	options.add_argument(size_str)
+	pos = str(position[0]) + ',' + str(position[1])
+	pos_str = "window-position=" + pos
+	options.add_argument(pos_str)
 
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
 	options.add_argument(r'--profile-directory=Profile 3') 
-	# enable password manager to autofill
+	
+	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)
-	options.add_experimental_option("prefs", {"profile.password_manager_enabled": True})
+	#options.add_experimental_option("prefs", {"profile.password_manager_enabled": True})
 
 	# Adding argument to disable the AutomationControlled flag 
 	options.add_argument("--disable-blink-features=AutomationControlled") 
@@ -3810,6 +3818,7 @@ def open_react_website(url, mobile=False):
 	# Open the URL on a google chrome window
 	driver.implicitly_wait(3)
 	# so bot not detected
+	#if first_window:
 	driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
 	driver.get(url)
 
