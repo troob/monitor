@@ -26,7 +26,8 @@ from webdriver_manager.chrome import ChromeDriverManager # need to access dynami
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import Select
 #import undetected_chromedriver as uc
-from selenium.webdriver.chrome.options import Options # block ads
+#from selenium.webdriver.chrome.options import Options # block ads
+from selenium.webdriver.safari.options import Options
 
 
 from urllib.error import URLError
@@ -3709,6 +3710,59 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	return driver
 
 
+def open_safari_website(url, size=(1250,1144), position=(0,0), first_window=False, mobile=False):
+	#print('\n===Open React Website===\n')
+
+	options = Options()
+
+	dims = str(size[0]) + ',' + str(size[1])
+	size_str = "window-size=" + dims
+	options.add_argument(size_str)
+	pos = str(position[0]) + ',' + str(position[1])
+	pos_str = "window-position=" + pos
+	options.add_argument(pos_str)
+
+	# Login to Chrome Profile
+	# V5: NEED all chrome windows fully closed and quit
+	# options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
+	# options.add_argument(r'--profile-directory=Profile 4') 
+	
+	# FAIL: enable password manager to autofill
+	#options.add_experimental_option("credentials_enable_service", True)
+	#options.add_experimental_option("prefs", {"profile.password_manager_enabled": True})
+
+	# Adding argument to disable the AutomationControlled flag 
+	options.add_argument("--disable-blink-features=AutomationControlled") 
+	# Exclude the collection of enable-automation switches 
+	# options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
+	# # Turn-off userAutomationExtension 
+	# options.add_experimental_option("useAutomationExtension", False) 
+
+	driver = webdriver.Safari(options=options)
+
+	
+	# Always same
+	# Open the URL on a google chrome window
+	driver.implicitly_wait(3)
+	# so bot not detected
+	#if first_window:
+	driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
+	driver.get(url)
+
+	
+	# wait after get url to ensure reads all data!
+	time.sleep(1)
+
+	# see init cookies
+	# cookies = driver.get_cookies()
+	# print('cookies: ', cookies)
+
+	# creds = driver.get_credentials()
+	# print('creds:', creds)
+
+	return driver
+
+
 def login_website(driver):
 	print('\n===Login Website===\n')
 
@@ -3945,14 +3999,14 @@ def open_dynamic_website(url, max_retries=3):
 
 	# each specific website needs to extract nav buttons
 	# that show on all pages or only get used once to init
-	website = open_oddsview_website(driver)
-	driver = website[0]
-	arb_btn = website[1]
-	pre_btn = website[2]
-	ev_btn = website[3]
+	# website = open_oddsview_website(driver)
+	# driver = website[0]
+	# arb_btn = website[1]
+	# pre_btn = website[2]
+	# ev_btn = website[3]
 
 
-	return driver, arb_btn, pre_btn, ev_btn
+	return driver#, arb_btn, pre_btn, ev_btn
 
 # finding element by class name will return 1st instance of class
 # but unusual error may occur

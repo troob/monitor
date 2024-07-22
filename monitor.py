@@ -110,7 +110,9 @@ def open_bet(ev_row, driver):
 	# to avoid detection
 	# only open 1 window at a time
 	# and close before opening new one on same source
-	time.sleep(30) # wait before opening next page to seem human
+	time.sleep(100) # wait before opening next page to seem human
+	cookies = driver.get_cookies()
+	print('cookies:\n' + str(cookies))
 	driver.close()
 
 	print('ev_bet: ' + str(ev_bet))
@@ -167,12 +169,12 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_i
 			
 			# if mobile only, then do not open website
 			# instead open emulator
-			ev_source = ev_row[source_idx]
-			mobile_sources = ['Fanatics', 'Fliff']
-			if ev_source not in mobile_sources:
-				ev_bet = open_bet(ev_row, driver)
-				if ev_bet is False:
-					continue
+			# ev_source = ev_row[source_idx]
+			# mobile_sources = ['Fanatics', 'Fliff']
+			# if ev_source not in mobile_sources:
+			# 	ev_bet = open_bet(ev_row, driver)
+			# 	if ev_bet is False:
+			# 		continue
 
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
@@ -475,27 +477,32 @@ def monitor_website(url):
 	# get website driver all elements
 	# and specific navigation buttons which remain on screen the whole time
 	# no matter which page you navigate to
-	website = reader.open_dynamic_website(url)
+	driver = reader.open_dynamic_website(url)
 	# need to switch bt live and prematch on same page
-	driver = website[0]
-	arb_btn = website[1]
-	pre_btn = website[2]
-	ev_btn = website[3]
+	# driver = website[0]
+	# arb_btn = website[1]
+	# pre_btn = website[2]
+	# ev_btn = website[3]
+
+	time.sleep(100) # wait before opening next page to seem human
+	cookies = driver.get_cookies()
+	print('cookies:\n' + str(cookies))
 
 	# open new tabs for testing
 	# so I can see live diff leagues and markets isolated
 	# Window 2: Live Big Markets
 	# OR TEST: see EVs 
-	driver.switch_to.new_window()
-	driver.get(url)
-	time.sleep(1)
-
-	# # Window 3: Live Small Markets
 	# driver.switch_to.new_window()
 	# driver.get(url)
 	# time.sleep(1)
 
-	driver.switch_to.window(driver.window_handles[0])
+	# # # Window 3: Live Small Markets
+	# # driver.switch_to.new_window()
+	# # driver.get(url)
+	# # time.sleep(1)
+
+	# driver.switch_to.window(driver.window_handles[0])
+ 	# https://sportsbook.fanduel.com/
 
 	monitor_idx = 1
 
