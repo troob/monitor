@@ -46,9 +46,10 @@ limited_sources = ['BetMGM', 'Fanatics', 'Betrivers']
 sources = ['Fanduel','Fliff','Draftkings','Betrivers','Caesars', 'Fanatics', 'BetMGM']
 big_market_min = 0.5 # sharper big market but can put more down
 # on slow days, need to accept player props at 0.4 on unlimited sources
-min_value = 0.4
+# sometimes betmgm-fanduel home runs are worth taking at 0.3%?
+min_value = 0.3
 ideal_min_value = 0.7 # when only few sports/games today, accept down to 0.8 for unlimited player props
-player_prop_min_val = min_value #1.2 # take big markets at 1% but need slightly higher val to take player prop???
+player_prop_min_val = 0.4 #1.2 # take big markets at 1% but need slightly higher val to take player prop???
 # if value too high then likely too temp to hit or read error so avoid
 # sources differ so provide list
 normal_max_val = 5
@@ -56,7 +57,7 @@ max_value = 7 # 5-10?
 alt_max_val = 8
 betrivers_min_val = 1.5
 limited_min_val = 2.5
-new_arb_rules = {'normal max': normal_max_val, 
+new_pick_rules = {'normal max': normal_max_val, 
 				 'max': max_value, 
 				 'min': min_value,
 				 'player min': player_prop_min_val, 
@@ -68,32 +69,72 @@ valid_sports = ['mlb']#,'hockey'] # big markets to stay subtle
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 monitor_ev = True
 
+# Indexes for Data Scraped from Web
+val_idx = 0
+game_idx = 1
+game_date_idx = 2
+market_idx = 3
+bet_idx = 4
+odds_idx = 5
+size_idx = 6
+link_idx = 7
+source_idx = 8
 
 
-# input all arbs read this scan
-# output only valid arbs into proper channels
+
+
+# Open the website on the bet page
+# And navigate to bet if no direct link
+def open_bet(ev_row, driver):
+	print('\n===Open Bet===\n')
+	print('Input: ev_row = ' + str(ev_row))
+	print('\nOutput: ev_bet = [odds, size]\n')
+
+	ev_bet = False
+
+	link_idx = 7
+
+	ev_url = ev_row[link_idx]
+
+	# get size of window 1 to determine window 2 x
+	size = driver.get_window_size()
+
+	driver.switch_to.new_window(type_hint='window')
+	window2_x = size['width'] + 1
+	driver.set_window_position(window2_x, 0)
+	driver.get(ev_url)
+
+	# if real odds match source odds
+	# then valid ev bet
+
+	# to avoid detection
+	# only open 1 window at a time
+	# and close before opening new one on same source
+	time.sleep(30) # wait before opening next page to seem human
+	driver.close()
+
+	print('ev_bet: ' + str(ev_bet))
+	return ev_bet
+
+
+# input all EVs read this scan
+# output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, todays_schedule, new_ev_rules, monitor_idx):
+def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_idx, valid_sports, driver):
 	# print('\n===Monitor New EVs===\n')
-	# print('Input: arb_data = [[...],...]')# + str(arb_data))
-	# print('\nOutput: new_arbs = [[%, $, ...], ...]\n')
+	# print('Input: ev_data = [[...],...]')# + str(ev_data))
+	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
 
-	val_idx = 0
-	game_idx = 1
-	market_idx = 2
-	bet1_idx = 3
-	bet2_idx = 4
-	odds1_idx = 5
-	odds2_idx = 6
-	link1_idx = 7
-	link2_idx = 8
-
+	ev_type = 'pre-match'
+	say_str = 'say "' + ev_type + ' E.V."'
+	
 	# if just check diff then will alert when arb disappears
 	# which we do not want
-	new_pick = False
 	new_picks = []
 	test_picks = []
-	for ev_row in ev_data:
+	valid_ev_idx = 0
+	for ev_idx in range(len(ev_data)):
+		ev_row = ev_data[ev_idx]
 
 		# TEST
 		test_picks.append(ev_row)
@@ -103,151 +144,84 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, todays_schedule, new_ev
 		# 1. existing arb goes from below min val to above = Any Diff bc pick not added if below min val
 		# 2. diff game and market
 		if ev_row not in init_ev_data and ev_row not in prev_ev_data:
-			
-			
 
 
-			
-			# complex version:
-			# check if existing game and market
-			arb_game = converter.convert_game_teams_to_abbrevs(ev_row[game_idx])
-			#print('arb_game: ' + str(arb_game))
-
-			arb_bet1 = ev_row[bet1_idx]
-			arb_bet2 = ev_row[bet2_idx]
+			# all criteria
+			if not determiner.determine_valid_pick(ev_row, valid_sports, limited_sources, new_ev_rules, init_ev_data):
+				continue
 
 
-			# check if game today
-			# game_date_data = game_date_str.split()
-			# game_mth = game_date_data[1]
-			# game_day = game_date_data[2][:-1] # remove comma
-			# game_date_str = game_mth + ' ' + game_day
-			# print('game_date_str: ' + str(game_date_str))
-			# # need month and day of month to check same day, assuming same yr for all
-			# game_date = datetime.strptime(game_date_str, '%b %d')
-			# print('game_date: ' + str(game_date))
-			# if game_date != todays_date:
-			# recently added date to arb row
-			game_date = ev_row[game_date_idx]
-			#print('game_date: ' + game_date)
-			if not re.search('Today', game_date):
-				# if either side is unlimited source, 
-				# avoid game not today bc suspicious
-				# but if both sides already limited 
-				# then need to take all available, even diff days
-				if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
-					print('AVOID Game Not Today: ' + str(arb_game) + ', ' + game_date)
-					continue
-
-			if arb_game not in todays_schedule:
-				# check reverse away home teams bc sometimes labeled backwards
-				arb_game = (arb_game[1], arb_game[0])
-				if arb_game not in todays_schedule:
-					# if either side still not limited, avoid future games
-					# bc obvious red flag
-					if arb_bet1 not in limited_sources or arb_bet2 not in limited_sources:
-						print('AVOID arb_game: ' + str(arb_game))
-						continue
-
-			# AVOID baseball player Home Run props 
-			# bc most common market inefficiency so obvious honeypot
-			arb_market = ev_row[market_idx]
-			# if re.search('Home Run', arb_market):
-			# 	print('AVOID arb_market: ' + str(arb_market))
+			# === Check Real Odds === 
+			# only needed bc source is flawed but since opening window here, leave it open
+			# and pass drivers to the writer
+			# if not determiner.determine_valid_arb_odds(arb_row):
 			# 	continue
-
-			# AVOID small markets
-			# AVOID non-star role player props
-			# especially low rebound numbers
-			# How to tell if main player
-			# for basketball, based on minutes or specific stat level
-			# bc players may have large minutes but low rebounds or assists 
-			# so still small market
-			# So use specific stat level
-
-
-
+			# INSTEAD of checking valid odds and closing window
+			# simply check odds and return no arb if invalid
+			# close window if invalid
+			# we want to get the drivers for each website
+			# so we can read info and press btns next step
+			# return no arb bets if invalid odds
+			# so we do not proceed to next step
+			# and continue to next arb
 			
-			# bc otherwise short term profit not worth long term loss due to obvious samples with edge
-			arb_val = float(ev_row[val_idx])
-			if arb_val < new_arb_rules['min'] or arb_val > new_arb_rules['max']:
-				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
-				continue
-
-			# if player prop, need higher min val to justify use 
-			# but still allow home runs if already limited on other markets
-			if not re.search('Moneyline|Spread|Total|Home', arb_market) and arb_val < new_arb_rules['player min']:
-				print('AVOID arb_val: ' + str(arb_val) + ', ' + str(arb_market))
-				continue
-
-
-			# Betrivers is usually off by 5 odds so need higher limit to avoid false alarm
-			# if limited by betrivers only take >3%
-			# EXCEPT big markets, moneyline, spread, total bc higher limits
-			
-			if arb_bet1 == 'Betrivers' or arb_bet2 == 'Betrivers':
-				# less limited markets such as home runs bc very extreme odds
-				# so accept lower min bc invest more
-				
-				if arb_val < new_arb_rules['betrivers min'] and not re.search('Moneyline|Spread|Total|Home', arb_market):
-					print('AVOID Betrivers arb_val: ' + str(arb_val) + ', ' + str(arb_market))
+			# if mobile only, then do not open website
+			# instead open emulator
+			ev_source = ev_row[source_idx]
+			mobile_sources = ['Fanatics', 'Fliff']
+			if ev_source not in mobile_sources:
+				ev_bet = open_bet(ev_row, driver)
+				if ev_bet is False:
 					continue
 
+			# only beep once on desktop after first arb so I can respond fast as possible
+			# but send notification after each arb???
+			# currently phone not used but ideally sends link to phone
+			# so we want to handle one at a time ideally
+			# so phone should get notice for each arb so it can start processing asap
+			if valid_ev_idx == 0:
+				os.system(say_str)
+				# Also say if still need to check mobile only sources
+				#os.system(say_mobile)
+				print('\n' + str(monitor_idx) + ': Found New EVs')
+				valid_ev_idx += 1
 
-			# limited sites need higher val to be worth it
-			if arb_bet1 in limited_sources or arb_bet2 in limited_sources:
-				if arb_val < new_arb_rules['limited min'] and not re.search('Moneyline|Spread|Total|Home', arb_market):
-					print('AVOID limited arb_val: ' + str(arb_val) + ', ' + str(arb_market))
-					continue
 
-			# AVOID picking same prop twice bc obvious strategy suspicious
-			same_arb = False
-			for init_arb_row in init_ev_data:
-				init_arb_game = converter.convert_game_teams_to_abbrevs(init_arb_row[game_idx])
-				init_arb_market = init_arb_row[market_idx]
-				# print('\narb_game: ' + str(arb_game))
-				# print('arb_market: ' + str(arb_market))
-				# print('init_arb_game: ' + str(init_arb_game))
-				# print('init_arb_market: ' + str(init_arb_market))
-				if arb_game == init_arb_game and arb_market == init_arb_market:
-					init_arb_val = init_arb_row[val_idx]
-					#print('init_arb_val: ' + str(init_arb_val))
-					# if prev arb val already greater than min val we already took prop so do not double take
-					if float(init_arb_val) > 2:
-						#print('Found Same Arb')
-						same_arb = True
-						break
-						
-			if same_arb:	
-				print('AVOID same arb: ' + str(arb_val) + ', ' + str(arb_game) + ', ' + str(arb_market))
-				continue
+			# === Place Bet === 
+			# to get limits
+			# and then see min payout
+			# and then calc other side based on limit on side with min payout
+			# writer.place_arb_bets(arb_bets)
 
+			# # format string to post
+			# writer.write_arb_to_post(arb_row, client, True)
+
+			# CHANGE so instead of batching
+			# handle each arb 1 at a time to be as fast as possible
 			# simple version: if any diff, notify
+			# so open both side bet windows, check if valid
+			# and then notify
+			# and then fill in bet size (test limit and calc bet sizes)
+			# and then keep those windows open
+			# and move to the next arb
 			new_picks.append(ev_row)
 
 	# notify immediately after reading new live arbs
 	# before checking prematch
 
+
+	# Complete 1 Arb at a Time
+	# Do NOT batch bc it is better to get 1 than 0
+	# after getting new picks from oddsview source
+	# open bet links in new windows
+	# and if passes check then add to list of new picks to notify
+	#notify_picks = open_new_arb_bets(new_picks)
+
+	# notify user after opening and checking
+	# BUT before placing bet
 	# check 2 prev arb tables bc sometimes disappear and reappear so not new
 	#if len(prematch_arb_data) > 0 and init_prematch_arb_data != prematch_arb_data and prev_prematch_arb_data != prematch_arb_data:
 	if len(new_picks) > 0:
-		#beepy.beep() # first notify so i can get moving
-		#say_str = 'say "Go Fuck Yourself."'
-		# list each arb details
-		ev_type = 'pre-match'
-		say_str = 'say "' + ev_type + ' EV pick"'
-		os.system(say_str)
-
-		print('\n' + str(idx) + ': Found New +EV Picks')
-
-
-		# post_arbs = []
-		# for pick in new_picks:
-		# 	arb_market = pick[market_idx]
-		# 	if not re.search('Home Run', arb_market):
-		# 		post_arbs.append(pick)
-
-
 
 		# format string to post
 		writer.write_evs_to_post(new_picks, client, True)
@@ -267,11 +241,10 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 	# print('\nOutput: new_arbs = [[%, $, ...], ...]\n')
 
 	arb_type = 'pre-match'
-	say_str = 'say "' + arb_type + ' pick"'
+	say_str = 'say "' + arb_type + ' Arb"'
 	
 	# if just check diff then will alert when arb disappears
 	# which we do not want
-	new_pick = False
 	new_picks = []
 	test_picks = []
 	valid_arb_idx = 0
@@ -318,7 +291,7 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 			# so phone should get notice for each arb so it can start processing asap
 			if valid_arb_idx == 0:
 				os.system(say_str)
-				print('\n' + str(monitor_idx) + ': Found New Picks')
+				print('\n' + str(monitor_idx) + ': Found New Arbs')
 				valid_arb_idx += 1
 
 
@@ -507,10 +480,27 @@ def monitor_website(url):
 	driver = website[0]
 	arb_btn = website[1]
 	pre_btn = website[2]
+	ev_btn = website[3]
+
+	# open new tabs for testing
+	# so I can see live diff leagues and markets isolated
+	# Window 2: Live Big Markets
+	# OR TEST: see EVs 
+	driver.switch_to.new_window()
+	driver.get(url)
+	time.sleep(1)
+
+	# # Window 3: Live Small Markets
+	# driver.switch_to.new_window()
+	# driver.get(url)
+	# time.sleep(1)
+
+	driver.switch_to.window(driver.window_handles[0])
 
 	monitor_idx = 1
 
 	prev_arb_data = [] # first loop init=prev or None?
+	prev_ev_data = []
 
 	# if arb_type == 'pre':
 	# 	pre_btn.click()
@@ -525,7 +515,7 @@ def monitor_website(url):
 		arb_data_file = 'data/arb data.csv'
 		ev_data_file = 'data/ev data.csv'
 		init_arb_data = reader.extract_data(arb_data_file, header=True)
-		init_ev_data = []#reader.extract_data(ev_data_file, header=True)
+		init_ev_data = reader.extract_data(ev_data_file, header=True)
 
 		# only 1 file for efficiency but in file it separates live and prematch arbs
 		# init_live_arb_data = init_arb_data[0]
@@ -545,6 +535,8 @@ def monitor_website(url):
 		# first check Live and then Prematch
 		# notify bt each so no delay for live arbs
 		# read either live or pre, not both
+		# === Monitor New Arb picks ===
+
 		arb_data = []
 		if arb_type == 'live':
 			# if on pre-page, click live btn
@@ -567,7 +559,7 @@ def monitor_website(url):
 		if arb_data is not None:
 		
 			# monitor either live or pre, not both
-			new_arbs = monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, monitor_idx, valid_sports)
+			new_arbs = monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_pick_rules, monitor_idx, valid_sports)
 			
 			# new_live_arbs = new_arbs[0]
 			# new_prematch_arbs = new_arbs[1]
@@ -583,17 +575,16 @@ def monitor_website(url):
 		#open_all_arbs_bets(new_arbs)
 
 
-		# Monitor New +EV picks
-		#ev_btn.click()
-		# need sleep to load dynamic data otherwise blank
-		# time.sleep(0.5)
-		# ev_data = reader.read_prematch_ev_data(driver, sources)
-		# if ev_data == '': # if keyboard interrupt return blank so we know to break loop
-		# 	break
-		# if arb_data is not None:
-		# 	new_evs = monitor_new_evs(ev_data, init_ev_data)
-		# 	prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
-		# 	writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
+		# === Monitor New +EV picks ===
+
+		ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, sources)
+		
+		if ev_data == '': # if keyboard interrupt return blank so we know to break loop
+			break
+		if ev_data is not None:
+			new_evs = monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_pick_rules, monitor_idx, valid_sports, driver)
+			prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
+			writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
 		
 
 
