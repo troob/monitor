@@ -1,6 +1,6 @@
 # Web Monitor for constantly updating websites
 
-import reader, writer, converter, determiner, time, beepy
+import reader, writer, isolator, determiner, time, beepy
 
 import re, os
 
@@ -65,7 +65,7 @@ new_pick_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-valid_sports = ['mlb']#,'hockey'] # big markets to stay subtle
+valid_sports = ['mlb', 'olympics (men)', 'olympics (women)']#,'hockey'] # big markets to stay subtle
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 monitor_ev = True
 
@@ -92,8 +92,6 @@ def open_bet(ev_row, driver):
 
 	ev_bet = False
 
-	link_idx = 7
-
 	ev_url = ev_row[link_idx]
 
 	# get size of window 1 to determine window 2 x
@@ -106,14 +104,27 @@ def open_bet(ev_row, driver):
 
 	# if real odds match source odds
 	# then valid ev bet
+	# check odds match before logging in
+	# bc if odds dont match then close windows without saving cookies
+	source_odds = ev_row[source_idx]
+	real_odds = driver.find_element('', '')
 
-	# to avoid detection
-	# only open 1 window at a time
-	# and close before opening new one on same source
-	time.sleep(100) # wait before opening next page to seem human
-	cookies = driver.get_cookies()
-	print('cookies:\n' + str(cookies))
-	driver.close()
+	if source_odds == real_odds:
+		logged_in = determiner.determine_logged_in(website_name, driver)
+
+		# to avoid detection
+		# only open 1 window at a time
+		# and close before opening new one on same source
+		time.sleep(100) # wait before opening next page to seem human
+		
+		cookies = driver.get_cookies()
+		print('cookies:\n' + str(cookies))
+		
+		if logged_in:
+			saved_cookies[website_name] = cookies
+			writer.write_json_to_file(saved_cookies, cookies_file)	
+		
+		driver.close()
 
 	print('ev_bet: ' + str(ev_bet))
 	return ev_bet
@@ -122,7 +133,7 @@ def open_bet(ev_row, driver):
 # input all EVs read this scan
 # output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_idx, valid_sports, driver):
+def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver):
 	# print('\n===Monitor New EVs===\n')
 	# print('Input: ev_data = [[...],...]')# + str(ev_data))
 	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
@@ -132,7 +143,7 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_i
 	
 	# if just check diff then will alert when arb disappears
 	# which we do not want
-	new_picks = []
+	new_picks = {}
 	test_picks = []
 	valid_ev_idx = 0
 	for ev_idx in range(len(ev_data)):
@@ -145,11 +156,11 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_i
 		# must be either 
 		# 1. existing arb goes from below min val to above = Any Diff bc pick not added if below min val
 		# 2. diff game and market
-		if ev_row not in init_ev_data and ev_row not in prev_ev_data:
+		if ev_row not in init_evs.values():# and ev_row not in prev_ev_data:
 
 
 			# all criteria
-			if not determiner.determine_valid_pick(ev_row, valid_sports, limited_sources, new_ev_rules, init_ev_data):
+			if not determiner.determine_valid_pick(ev_row, valid_sports, limited_sources, new_ev_rules, init_evs):
 				continue
 
 
@@ -170,11 +181,14 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_i
 			# if mobile only, then do not open website
 			# instead open emulator
 			# ev_source = ev_row[source_idx]
-			# mobile_sources = ['Fanatics', 'Fliff']
+			# # Fanduel has bot blockers so take extra precaution
+			# mobile_sources = ['Fanatics', 'Fliff', 'Fanduel']
 			# if ev_source not in mobile_sources:
 			# 	ev_bet = open_bet(ev_row, driver)
 			# 	if ev_bet is False:
 			# 		continue
+
+			new_picks[valid_ev_idx] = ev_row
 
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
@@ -206,7 +220,7 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_i
 			# and then fill in bet size (test limit and calc bet sizes)
 			# and then keep those windows open
 			# and move to the next arb
-			new_picks.append(ev_row)
+			
 
 	# notify immediately after reading new live arbs
 	# before checking prematch
@@ -228,6 +242,11 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_i
 		# format string to post
 		writer.write_evs_to_post(new_picks, client, True)
 
+		# write ev to file
+		# so we do not repeat it
+		# overwrite each day
+		#saved_ev_file = 'data/ev data ' + todays_date_str + '.csv'
+
 	
 
 
@@ -237,17 +256,18 @@ def monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_ev_rules, monitor_i
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, monitor_idx, valid_sports):
+def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports):
 	# print('\n===Monitor New Arbs===\n')
-	# print('Input: arb_data = [[...],...]')# + str(arb_data))
-	# print('\nOutput: new_arbs = [[%, $, ...], ...]\n')
+	# print('Input: arb_data = [{...},...]')# + str(arb_data))
+	# print('Input: init_arbs = {0:{...},...}')
+	# print('\nOutput: new_arbs = [{%, $, ...}, ...]\n')
 
 	arb_type = 'pre-match'
 	say_str = 'say "' + arb_type + ' Arb"'
 	
 	# if just check diff then will alert when arb disappears
 	# which we do not want
-	new_picks = []
+	new_picks = {}
 	test_picks = []
 	valid_arb_idx = 0
 	for arb_idx in range(len(arb_data)):
@@ -260,11 +280,13 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 		# must be either 
 		# 1. existing arb goes from below min val to above = Any Diff bc pick not added if below min val
 		# 2. diff game and market
-		if arb_row not in init_arb_data and arb_row not in prev_arb_data:
+		# if no init arb data, then first loop so we eval all arbs
+		# init_arb_data is None or ()
+		if arb_row not in init_arbs.values():# and arb_row not in prev_arb_data:
 
 
 			# all criteria
-			if not determiner.determine_valid_arb(arb_row, valid_sports, limited_sources, new_arb_rules, init_arb_data):
+			if not determiner.determine_valid_pick(arb_row, valid_sports, limited_sources, new_arb_rules, init_arbs, pick_type='arb'):
 				continue
 
 
@@ -285,6 +307,8 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 
 			# if len(arb_bets) == 0:
 			# 	continue
+
+			new_picks[valid_arb_idx] = arb_row
 
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
@@ -314,7 +338,7 @@ def monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_arb_rules, moni
 			# and then fill in bet size (test limit and calc bet sizes)
 			# and then keep those windows open
 			# and move to the next arb
-			new_picks.append(arb_row)
+			
 
 	# notify immediately after reading new live arbs
 	# before checking prematch
@@ -460,7 +484,13 @@ def open_new_arb_bets(new_arbs):
 # open website once 
 # and then loop over it 
 # simulate human behavior to avoid getting blocked
-def monitor_website(url):
+def monitor_website(url, max_retries=3):
+
+	# loop until keyboard interrupt
+	retries = 0
+	driver = None
+	# while retries < max_retries:
+	# 	try:
 
 	# include game times so we can find first and last
 	# only need to read once per day, not every run
@@ -477,32 +507,31 @@ def monitor_website(url):
 	# get website driver all elements
 	# and specific navigation buttons which remain on screen the whole time
 	# no matter which page you navigate to
-	driver = reader.open_dynamic_website(url)
+	website = reader.open_dynamic_website(url)
 	# need to switch bt live and prematch on same page
-	# driver = website[0]
-	# arb_btn = website[1]
-	# pre_btn = website[2]
-	# ev_btn = website[3]
+	driver = website[0]
+	arb_btn = website[1]
+	pre_btn = website[2]
+	ev_btn = website[3]
 
-	time.sleep(100) # wait before opening next page to seem human
-	cookies = driver.get_cookies()
-	print('cookies:\n' + str(cookies))
+	# time.sleep(100) # wait before opening next page to seem human
+	# cookies = driver.get_cookies()
+	# print('cookies:\n' + str(cookies))
 
 	# open new tabs for testing
 	# so I can see live diff leagues and markets isolated
 	# Window 2: Live Big Markets
 	# OR TEST: see EVs 
-	# driver.switch_to.new_window()
-	# driver.get(url)
-	# time.sleep(1)
+	driver.switch_to.new_window()
+	driver.get(url)
+	time.sleep(1)
 
 	# # # Window 3: Live Small Markets
 	# # driver.switch_to.new_window()
 	# # driver.get(url)
 	# # time.sleep(1)
 
-	# driver.switch_to.window(driver.window_handles[0])
- 	# https://sportsbook.fanduel.com/
+	driver.switch_to.window(driver.window_handles[0])
 
 	monitor_idx = 1
 
@@ -519,19 +548,32 @@ def monitor_website(url):
 		# no bc just checking if any change overall
 		# BUT we need to make diff notice for live vs prematch 
 		# so we know which page to go to for link
-		arb_data_file = 'data/arb data.csv'
-		ev_data_file = 'data/ev data.csv'
-		init_arb_data = reader.extract_data(arb_data_file, header=True)
-		init_ev_data = reader.extract_data(ev_data_file, header=True)
+		# arb_data_file = 'data/arb data.csv'
+		# ev_data_file = 'data/ev data.csv' # todays_date not needed bc simply keep all in 1 file and remove rows of past games in first loop
+		arbs_file = 'data/arbs.json'
+		evs_file = 'data/evs.json'
+		
+		# if no file yet today, then delete file from yesterday
+		# bc we know first loop
+		# init_arb_data = reader.extract_data(arb_data_file, header=True)
+		# init_ev_data = reader.extract_data(ev_data_file, header=True)
+		init_arbs = reader.read_json(arbs_file)
+		init_evs = reader.read_json(evs_file)	
+
 
 		# only 1 file for efficiency but in file it separates live and prematch arbs
 		# init_live_arb_data = init_arb_data[0]
 		# init_prematch_arb_data = init_arb_data[1]
 
 		if monitor_idx == 1:
-			print('init_arb_data: ' + str(init_arb_data))
-			print('init_ev_data: ' + str(init_ev_data))
+			# print('init_arb_data: ' + str(init_arb_data))
+			# print('init_ev_data: ' + str(init_ev_data))
+			print('init_arbs: ' + str(init_arbs))
+			print('init_evs: ' + str(init_evs))
 
+			# # simply keep all in 1 file and remove rows of past games in first loop
+			# init_arbs = isolator.isolate_future_games(init_arbs, todays_date)
+			# init_evs = isolator.isolate_future_games(init_evs, todays_date)
 
 		# use time of day to tell arb type
 		# if before first game, only pre
@@ -544,39 +586,54 @@ def monitor_website(url):
 		# read either live or pre, not both
 		# === Monitor New Arb picks ===
 
-		arb_data = []
-		if arb_type == 'live':
-			# if on pre-page, click live btn
-			# init on live page so not extra btn to press
-			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
-		elif arb_type == 'pre':
-			# if on live-page, click pre btn
-			arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
-		# live_arb_data = arb_data[0]
-		# prematch_arb_data = arb_data[1]
-		else: # both
-			# read live twice before
-			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+		# arb_data = []
+		# if arb_type == 'live':
+		# 	# if on pre-page, click live btn
+		# 	# init on live page so not extra btn to press
+		# 	arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+		# elif arb_type == 'pre':
+		# 	# if on live-page, click pre btn
+		# 	arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
+		# 	#arb_dict = reader.read_prematch_arb_dict(driver, pre_btn, arb_btn, sources)
+		# # live_arb_data = arb_data[0]
+		# # prematch_arb_data = arb_data[1]
+		# else: # both
+		# 	# read live twice before
+		# 	arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 		
 
-		# if keyboard interrupt return blank so we know to break loop
-		if arb_data == '':
-			break
+		# # if keyboard interrupt return blank so we know to break loop
+		# if arb_data == '':
+		# 	break
 
-		if arb_data is not None:
+		# if arb_data is not None:
 		
-			# monitor either live or pre, not both
-			new_arbs = monitor_new_arbs(arb_data, init_arb_data, prev_arb_data, new_pick_rules, monitor_idx, valid_sports)
+		# 	# monitor either live or pre, not both
+		# 	new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports)
 			
-			# new_live_arbs = new_arbs[0]
-			# new_prematch_arbs = new_arbs[1]
+		# 	# new_live_arbs = new_arbs[0]
+		# 	# new_prematch_arbs = new_arbs[1]
 
-			# could save all arb data or just new picks
-			# to compare bt loops
-			prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
-			writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
+		# 	# could save all arb data or just new picks
+		# 	# to compare bt loops
+		# 	#prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
+		# 	#writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
 
+		# 	all_arbs = init_arbs
+		# 	arb_idx = len(all_arbs)
 
+		# 	for arb in arb_data:
+		# 		if arb in all_arbs.values():
+		# 			continue
+			
+		# 		all_arbs[arb_idx] = arb
+		# 		arb_idx += 1
+
+		# 	# for new_arb in new_arbs.values():
+		# 	# 	all_arbs[arb_idx] = new_arb
+		# 	# 	arb_idx += 1
+		# 	# save new arbs as json and remove if past
+		# 	writer.write_json_to_file(all_arbs, arbs_file)
 		
 
 		#open_all_arbs_bets(new_arbs)
@@ -589,10 +646,22 @@ def monitor_website(url):
 		if ev_data == '': # if keyboard interrupt return blank so we know to break loop
 			break
 		if ev_data is not None:
-			new_evs = monitor_new_evs(ev_data, init_ev_data, prev_ev_data, new_pick_rules, monitor_idx, valid_sports, driver)
-			prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
-			writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
+			new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver)
+			
+			# prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
+			# writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
 		
+			all_evs = init_evs
+			ev_idx = len(all_evs)
+
+			for ev in ev_data:
+				if ev in all_evs.values():
+					continue
+			
+				all_evs[ev_idx] = ev
+				ev_idx += 1
+			# save new evs as json and remove if past
+			writer.write_json_to_file(all_evs, evs_file)
 
 
 		monitor_idx += 1 # used only for first loop
@@ -611,6 +680,13 @@ def monitor_website(url):
 		time.sleep(4)
 
 
+	# if keyboard interrupt quit
+	# then exit outer loop
+	# if arb_data == '' or ev_data == '':
+	# 	print('QUIT')
+	# 	break
+
+
 
 	# see final cookies
 	# cookies = driver.get_cookies()
@@ -618,6 +694,15 @@ def monitor_website(url):
 
 	# creds = driver.get_credentials()
 	# print('Final creds:', creds)
+
+		# except KeyboardInterrupt:
+		# 	print('QUIT')
+		# 	break
+
+		# except Exception as e:
+		# 	print('Unknown Error: ', e)
+		# 	driver.quit()
+		# 	retries += 1
 
 
 

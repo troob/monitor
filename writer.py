@@ -31,187 +31,190 @@ import converter # convert dicts to lists AND number formats
 
 
 
-def write_arb_to_post(arb, client, post=False):
-    # print('\n===Write Arb to Post===\n')
-    # print('arb: ' + str(arb))
+# def write_arb_to_post(arb, client, post=False):
+#     # print('\n===Write Arb to Post===\n')
+#     # print('arb: ' + str(arb))
 
-    props_str = ''
+#     props_str = ''
 
-    val_idx = 0
-    game_idx = 1
-    market_idx = 2
-    bet1_idx = 3
-    bet2_idx = 4
-    odds1_idx = 5
-    odds2_idx = 6
-    link1_idx = 7
-    link2_idx = 8
+#     val_idx = 0
+#     game_idx = 1
+#     market_idx = 2
+#     bet_idx = 3
+#     source1_idx = 4
+#     source2_idx = 5
+#     odds1_idx = 6
+#     odds2_idx = 7
+#     link1_idx = 8
+#     link2_idx = 9
 
     
-	# Need diff string for each channel:
-    # 1. all
-    # 2. home runs
-    # 3. new user
+# 	# Need diff string for each channel:
+#     # 1. all
+#     # 2. home runs
+#     # 3. new user
 		
-    # for test_pick in test_picks:
-    # 	print('\n' + str(test_pick))
+#     # for test_pick in test_picks:
+#     # 	print('\n' + str(test_pick))
 
-    # all props str
-    new_user_props_str = '' # changes constantly as user needs to blend in as normal
+#     # all props str
+#     new_user_props_str = '' # changes constantly as user needs to blend in as normal
 
 
-    value = arb[val_idx]
-    #value_str = 'Value:\t' + value + '%'
-    game = arb[game_idx]
-    #game_str = 'Game:\t' + game
-    market = arb[market_idx]
-    #market_str = 'Market:\t' + market
+#     value = arb[val_idx]
+#     #value_str = 'Value:\t' + value + '%'
+#     game = arb[game_idx]
+#     #game_str = 'Game:\t' + game
+#     market = arb[market_idx]
+#     #market_str = 'Market:\t' + market
+#     bet = arb[bet_idx]
 
-    bet1 = arb[bet1_idx]
-    # bet1_str = 'Bet 1:\t' + bet1
-    bet2 = arb[bet2_idx]
-    # bet2_str = 'Bet 2:\t' + bet2
-    odds1 = arb[odds1_idx]
-    # odds1_str = 'Odds 1:\t' + odds1
-    odds2 = arb[odds2_idx]
-    # bet2_str = 'Bet 2:\t' + bet2
-    link1 = arb[link1_idx]
-    link2 = arb[link2_idx]
+#     source1 = arb[source1_idx]
+#     # bet1_str = 'Bet 1:\t' + bet1
+#     source2 = arb[source2_idx]
+#     # bet2_str = 'Bet 2:\t' + bet2
+#     odds1 = arb[odds1_idx]
+#     # odds1_str = 'Odds 1:\t' + odds1
+#     odds2 = arb[odds2_idx]
+#     # bet2_str = 'Bet 2:\t' + bet2
+#     link1 = arb[link1_idx]
+#     link2 = arb[link2_idx]
 
     
-    # Make list of sizes depending on limit, from 1000 to 100, every 100
-    size1_options = []
-    size2_options = []
-    max_limit = 1000
-    # Better to make hedge bet rounder number bc seems more normal/rec
-    size1 = converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
-    size1_str = '$' + str(size1)
-    size2_str = '$' + str(max_limit)
+#     # Make list of sizes depending on limit, from 1000 to 100, every 100
+#     size1_options = []
+#     size2_options = []
+#     max_limit = 1000
+#     # Better to make hedge bet rounder number bc seems more normal/rec
+#     size1 = converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
+#     size1_str = '$' + str(size1)
+#     size2_str = '$' + str(max_limit)
 
-    # compute payout, given odds and bet size
-    # For positive American odds, divide the betting odds by 100 and multiply the result by the amount of your wager (Profit = odds/100 x wager). 
-    # With negative odds, you divide 100 by the betting odds, then multiply that number by the wager amount (Profit = 100/odds x wager).
-    # take positive side bc = both sides
-    profit = str(converter.round_half_up(int(odds2) / 100 * max_limit) - size1)
-    #print('profit: ' + profit)
+#     # compute payout, given odds and bet size
+#     # For positive American odds, divide the betting odds by 100 and multiply the result by the amount of your wager (Profit = odds/100 x wager). 
+#     # With negative odds, you divide 100 by the betting odds, then multiply that number by the wager amount (Profit = 100/odds x wager).
+#     # take positive side bc = both sides
+#     profit = str(converter.round_half_up(int(odds2) / 100 * max_limit) - size1)
+#     #print('profit: ' + profit)
 
 
-    # Format Message
-    # Top part 4 lines of msg shows in notification preview 
-    # so show useful info to decide if need to see more
-    # 1. which books to avoid limits
-    # 2. market/prop to go to
-    # 3. odds to double check
-    # 4. value to see how important/valuable
-    # props_str += bet1 + ', ' + bet2 + '\t\t\t\t'
-    # props_str += game + '\t'
-    # props_str += market + '\t|\t'
-    # props_str += odds1 + ', ' + odds2 + '\t|\t'
-    # props_str += value + '%' + '\t|\t'
+#     # Format Message
+#     # Top part 4 lines of msg shows in notification preview 
+#     # so show useful info to decide if need to see more
+#     # 1. which books to avoid limits
+#     # 2. market/prop to go to
+#     # 3. odds to double check
+#     # 4. value to see how important/valuable
+#     # props_str += bet1 + ', ' + bet2 + '\t\t\t\t'
+#     # props_str += game + '\t'
+#     # props_str += market + '\t|\t'
+#     # props_str += odds1 + ', ' + odds2 + '\t|\t'
+#     # props_str += value + '%' + '\t|\t'
 
-    # props_str += '\n' + bet1 + ', ' + bet2 + '\t\n'
-    # props_str += odds1 + ', ' + odds2 + ' - \n' # + '\t'#|\t'
+#     # props_str += '\n' + bet1 + ', ' + bet2 + '\t\n'
+#     # props_str += odds1 + ', ' + odds2 + ' - \n' # + '\t'#|\t'
 
-    props_str = '\n===Arb===\n'
-    props_str += '\n' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
-    props_str += game + ' - \n\n'
-    props_str += market + ' - \n\n'
-    props_str += value + '%' + ' - \n\n'
+#     props_str = '\n===Arb===\n'
+#     props_str += '\n' + source1 + ' ' + odds1 + ', ' + source2 + ' ' + odds2 +'. \n\n'
+#     props_str += game + ' - \n\n'
+#     props_str += market + ' - \n\n'
+#     props_str += bet + ' - \n\n'
+#     props_str += value + '%' + ' - \n\n'
     
 
-    # split player and market in given market field
-    # so we can see market at the top and decide if we can take the bet or if limited or suspicious
-    player = ''
-    if re.search('-', market):
-        market_data = market.split('-')
-        player = market_data[0].strip()
-        market = market_data[1].strip()
-    #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
-    props_str += '\nBET 1: ' + bet1 + ', ' + odds1 + ' \n'
-    props_str += 'BET 2: ' + bet2 + ', ' + odds2 + ' \n\n'
-    props_str += 'MARKET: ' + market + ' \n\n'
-    props_str += 'GAME: ' + game + ' \n\n'
-    if player != '':
-        props_str += 'PLAYER: ' + player + ' \n\n'
-    props_str += 'VALUE: ' + value + '% \n\n'
-    props_str += 'PROFIT: $' + profit + ' \n\n'
-    props_str += 'LINK 1: ' + link1 + ' \n'
-    props_str += 'LINK 2: ' + link2 + ' \n\n'
+#     # split player and market in given market field
+#     # so we can see market at the top and decide if we can take the bet or if limited or suspicious
+#     player = ''
+#     if re.search('-', market):
+#         market_data = market.split('-')
+#         player = market_data[0].strip()
+#         market = market_data[1].strip()
+#     #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
+#     props_str += '\nSOURCE 1: ' + source1 + ', ' + odds1 + ' \n'
+#     props_str += 'SOURCE 2: ' + source2 + ', ' + odds2 + ' \n\n'
+#     props_str += 'MARKET: ' + market + ', ' + bet + ' \n\n'
+#     props_str += 'GAME: ' + game + ' \n\n'
+#     if player != '':
+#         props_str += 'PLAYER: ' + player + ' \n\n'
+#     props_str += 'VALUE: ' + value + '% \n\n'
+#     props_str += 'PROFIT: $' + profit + ' \n\n'
+#     props_str += 'LINK 1: ' + link1 + ' \n'
+#     props_str += 'LINK 2: ' + link2 + ' \n\n'
     
 
-    # if Betrivers show range bc inaccurate reading
-    # props_str += '\n' + value + '%\n'
+#     # if Betrivers show range bc inaccurate reading
+#     # props_str += '\n' + value + '%\n'
 
-    # props_str += '\n' + game + '\n'
+#     # props_str += '\n' + game + '\n'
 
-    # props_str += '\n' + market + '\n'
+#     # props_str += '\n' + market + '\n'
 
-    # Betrivers		Fanatics
-    # -110			+110
-    # $1200			$1000
-    # -105			+110
-    # $1250			$1000
-    # props_str += '\n' + bet1 + '\t' + bet2
+#     # Betrivers		Fanatics
+#     # -110			+110
+#     # $1200			$1000
+#     # -105			+110
+#     # $1250			$1000
+#     # props_str += '\n' + bet1 + '\t' + bet2
 
-    # props_str += '\n' + odds1 + '\t' + odds2
+#     # props_str += '\n' + odds1 + '\t' + odds2
 
-    # props_str += '\n' + size1_str + '\t' + size2_str
+#     # props_str += '\n' + size1_str + '\t' + size2_str
 
-    arb_table = [[bet1, '', bet2], [odds1, '', odds2], [size1_str, '', size2_str]]
+#     arb_table = [[source1, '', source2], [odds1, '', odds2], [size1_str, '', size2_str]]
 
-    props_str += '\n' + tabulate(arb_table)
+#     props_str += '\n' + tabulate(arb_table)
 
-    props_str += '\n==================\n==================\n\n'
-
-
-    # but selectively add to select channels
-    # if not re.search('Home Run', market):
-    #     # add to new user str bc they avoid home runs
-    #     new_user_channel = True
+#     props_str += '\n==================\n==================\n\n'
 
 
-    #print(tabulate(arb_table))
-    # print('New User Arbs')
-    # print(new_user_props_str)
-
-    # separate props into diff channels for specific types of users
-    # 1 channel for all possible
-    # 1 channel for new user avoiding home runs
-    # 1 channel for limited users who can take home runs on specific apps
-    # Do not post home runs to general channel bc only use on limited apps
-    # post_arbs = []
-    # for pick in new_picks:
-    #     arb_market = pick[market_idx]
-    #     if not re.search('Home Run', arb_market):
-    #         post_arbs.append(pick)
+#     # but selectively add to select channels
+#     # if not re.search('Home Run', market):
+#     #     # add to new user str bc they avoid home runs
+#     #     new_user_channel = True
 
 
-    #send msg on slack app
-    print('Post: ' + str(post) + '\n\n')
-    if post:
-        # to avoid double msg, 
-        # only apply 1 channel per user
-        # OR do not repeat arbs
-        # BUT all will repeat all which are separated into channels
-        post_all = True # for testing all arbs before finalizing all category channels
-        if props_str != '' and post_all:
-            client.chat_postMessage(
-                channel='all-arbs',
-                text=props_str,
-                username='Ball'
-            )
+#     #print(tabulate(arb_table))
+#     # print('New User Arbs')
+#     # print(new_user_props_str)
 
-        elif new_user_props_str != '':
-            client.chat_postMessage(
-                channel='ball', # arbitrary name given to first channel
-                text=props_str,
-                username='Ball'
-            )
+#     # separate props into diff channels for specific types of users
+#     # 1 channel for all possible
+#     # 1 channel for new user avoiding home runs
+#     # 1 channel for limited users who can take home runs on specific apps
+#     # Do not post home runs to general channel bc only use on limited apps
+#     # post_arbs = []
+#     # for pick in new_picks:
+#     #     arb_market = pick[market_idx]
+#     #     if not re.search('Home Run', arb_market):
+#     #         post_arbs.append(pick)
+
+
+#     #send msg on slack app
+#     print('Post: ' + str(post) + '\n\n')
+#     if post:
+#         # to avoid double msg, 
+#         # only apply 1 channel per user
+#         # OR do not repeat arbs
+#         # BUT all will repeat all which are separated into channels
+#         post_all = True # for testing all arbs before finalizing all category channels
+#         if props_str != '' and post_all:
+#             client.chat_postMessage(
+#                 channel='all-arbs',
+#                 text=props_str,
+#                 username='Ball'
+#             )
+
+#         elif new_user_props_str != '':
+#             client.chat_postMessage(
+#                 channel='ball', # arbitrary name given to first channel
+#                 text=props_str,
+#                 username='Ball'
+#             )
 
 
 def write_evs_to_post(evs, client, post=False):
-    # print('\n===Write EVs to Post===\n')
-    # print('evs: ' + str(evs))
+    print('\n===Write EVs to Post===\n')
+    print('evs: ' + str(evs))
 
     props_str = ''
 
@@ -237,24 +240,25 @@ def write_evs_to_post(evs, client, post=False):
     # all props str
     all_props_str = '' # advanced when limited need to find more exploits
     new_user_props_str = '' # changes constantly as user needs to blend in as normal
-    for ev_idx in range(len(evs)):
-        ev = evs[ev_idx]
+    #for ev_idx in range(len(evs)):
+    for ev_idx, ev in evs.items():
+        #ev = evs[ev_idx]
 
-        value = ev[val_idx]
+        value = ev['value']
         #value_str = 'Value:\t' + value + '%'
-        game = ev[game_idx]
+        game = ev['game']
         #game_str = 'Game:\t' + game
-        market = ev[market_idx]
+        market = ev['market']
         #market_str = 'Market:\t' + market
-        bet = ev[bet_idx]
+        bet = ev['bet']
 
-        source = ev[source_idx]
+        source = ev['source']
         # bet1_str = 'Bet 1:\t' + bet1
-        odds = ev[odds_idx]
+        odds = ev['odds']
         # odds1_str = 'Odds 1:\t' + odds1
-        link = ev[link_idx]
+        link = ev['link']
 
-        size = ev[size_idx]
+        size = ev['size']
 
 
 
@@ -352,9 +356,11 @@ def write_evs_to_post(evs, client, post=False):
                 username='Ball'
             )
 
+
+# write all arbs in 1 post
 def write_arbs_to_post(arbs, client, post=False):
-    # print('\n===Write Arbs to Post===\n')
-    # print('arbs: ' + str(arbs))
+    print('\n===Write Arbs to Post===\n')
+    print('arbs = {val:x, ...} = ' + str(arbs)) 
 
     props_str = ''
 
@@ -380,26 +386,29 @@ def write_arbs_to_post(arbs, client, post=False):
     # all props str
     all_props_str = '' # advanced when limited need to find more exploits
     new_user_props_str = '' # changes constantly as user needs to blend in as normal
-    for arb_idx in range(len(arbs)):
-        arb = arbs[arb_idx]
+    #for arb_idx in range(len(arbs)):
+    for arb_idx, arb in arbs.items():
+       #arb = arbs[arb_idx]
 
-        value = arb[val_idx]
+        value = arb['value']
         #value_str = 'Value:\t' + value + '%'
-        game = arb[game_idx]
+        game = arb['game']
         #game_str = 'Game:\t' + game
-        market = arb[market_idx]
+        market = arb['market']
         #market_str = 'Market:\t' + market
 
-        bet1 = arb[bet1_idx]
+        bet1 = arb['bet1']
         # bet1_str = 'Bet 1:\t' + bet1
-        bet2 = arb[bet2_idx]
+        bet2 = arb['bet2']
         # bet2_str = 'Bet 2:\t' + bet2
-        odds1 = arb[odds1_idx]
+        odds1 = arb['odds1']
         # odds1_str = 'Odds 1:\t' + odds1
-        odds2 = arb[odds2_idx]
+        odds2 = arb['odds2']
         # bet2_str = 'Bet 2:\t' + bet2
-        link1 = arb[link1_idx]
-        link2 = arb[link2_idx]
+        link1 = arb['link1']
+        link2 = arb['link2']
+        source1 = arb['source1']
+        source2 = arb['source2']
 
         
         # Make list of sizes depending on limit, from 1000 to 100, every 100
@@ -437,9 +446,10 @@ def write_arbs_to_post(arbs, client, post=False):
 
         arb_num = str(arb_idx + 1)
         props_str = '\n===Arb ' + arb_num + '===\n'
-        props_str += '\n' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
+        props_str += '\n' + source1 + ' ' + odds1 + ', ' + source2 + ' ' + odds2 +'. \n\n'
         props_str += game + ' - \n\n'
         props_str += market + ' - \n\n'
+        props_str += bet1 + ', ' + bet2 + ' - \n\n'
         props_str += value + '%' + ' - \n\n'
         
 
@@ -451,9 +461,10 @@ def write_arbs_to_post(arbs, client, post=False):
             player = market_data[0].strip()
             market = market_data[1].strip()
         #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
-        props_str += '\nBET 1: ' + bet1 + ', ' + odds1 + ' \n'
-        props_str += 'BET 2: ' + bet2 + ', ' + odds2 + ' \n\n'
+        props_str += '\nSOURCE 1: ' + source1 + ', ' + odds1 + ' \n'
+        props_str += 'SOURCE 2: ' + source2 + ', ' + odds2 + ' \n\n'
         props_str += 'MARKET: ' + market + ' \n\n'
+        props_str += 'BETS: ' + bet1 + ', ' + bet2 + ' \n\n'
         props_str += 'GAME: ' + game + ' \n\n'
         if player != '':
             props_str += 'PLAYER: ' + player + ' \n\n'
@@ -481,7 +492,7 @@ def write_arbs_to_post(arbs, client, post=False):
 
         # props_str += '\n' + size1_str + '\t' + size2_str
 
-        arb_table = [[bet1, '', bet2], [odds1, '', odds2], [size1_str, '', size2_str]]
+        arb_table = [[source1, '', source2], [odds1, '', odds2], [size1_str, '', size2_str]]
 
         props_str += '\n' + tabulate(arb_table)
 
@@ -535,7 +546,14 @@ def write_arbs_to_post(arbs, client, post=False):
             )
         
         
-    
+# write each arb in separate post
+def write_all_arbs_to_post(arbs):
+
+    for arb_idx in range(len(arbs)):
+        arb = arbs[arb_idx]
+        arb['id'] = arb_idx
+
+        write_arb_to_post(arb)
 
 
 

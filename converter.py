@@ -720,8 +720,8 @@ def convert_team_name_to_abbrev(team_name):
     # so if name not here then consider not needed
     if team_name in team_abbrevs.keys():
         abbrev = team_abbrevs[team_name]
-    else:
-        print('Warning: Unknown team name! ' + team_name)
+    # else:
+    #     print('Warning: Unknown team name! ' + team_name)
 
     #print('abbrev: ' + abbrev)
     return abbrev
