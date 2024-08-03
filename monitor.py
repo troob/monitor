@@ -56,7 +56,7 @@ normal_max_val = 5
 max_value = 7 # 5-10?
 alt_max_val = 8
 betrivers_min_val = 1.5
-limited_min_val = 2.5
+limited_min_val = 2.4
 new_pick_rules = {'normal max': normal_max_val, 
 				 'max': max_value, 
 				 'min': min_value,
@@ -117,10 +117,12 @@ def open_bet(ev_row, driver):
 		# and close before opening new one on same source
 		time.sleep(100) # wait before opening next page to seem human
 		
-		cookies = driver.get_cookies()
-		print('cookies:\n' + str(cookies))
+		
 		
 		if logged_in:
+			# Need logged in cookies each login
+			cookies = driver.get_cookies()
+			print('cookies:\n' + str(cookies))
 			saved_cookies[website_name] = cookies
 			writer.write_json_to_file(saved_cookies, cookies_file)	
 		
@@ -188,8 +190,6 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# 	if ev_bet is False:
 			# 		continue
 
-			new_picks[valid_ev_idx] = ev_row
-
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
 			# currently phone not used but ideally sends link to phone
@@ -200,7 +200,10 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 				# Also say if still need to check mobile only sources
 				#os.system(say_mobile)
 				print('\n' + str(monitor_idx) + ': Found New EVs')
-				valid_ev_idx += 1
+				
+				
+			new_picks[valid_ev_idx] = ev_row
+			valid_ev_idx += 1
 
 
 			# === Place Bet === 
@@ -308,7 +311,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# if len(arb_bets) == 0:
 			# 	continue
 
-			new_picks[valid_arb_idx] = arb_row
+			
 
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
@@ -318,7 +321,11 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			if valid_arb_idx == 0:
 				os.system(say_str)
 				print('\n' + str(monitor_idx) + ': Found New Arbs')
-				valid_arb_idx += 1
+				
+				
+			# add arb to new picks and go to next idx
+			new_picks[valid_arb_idx] = arb_row
+			valid_arb_idx += 1
 
 
 			# === Place Bets === 
@@ -557,6 +564,9 @@ def monitor_website(url, max_retries=3):
 		# bc we know first loop
 		# init_arb_data = reader.extract_data(arb_data_file, header=True)
 		# init_ev_data = reader.extract_data(ev_data_file, header=True)
+		# unique row for every item read today
+		# including invalid picks
+		# no duplicates
 		init_arbs = reader.read_json(arbs_file)
 		init_evs = reader.read_json(evs_file)	
 
@@ -586,54 +596,59 @@ def monitor_website(url, max_retries=3):
 		# read either live or pre, not both
 		# === Monitor New Arb picks ===
 
-		# arb_data = []
-		# if arb_type == 'live':
-		# 	# if on pre-page, click live btn
-		# 	# init on live page so not extra btn to press
-		# 	arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
-		# elif arb_type == 'pre':
-		# 	# if on live-page, click pre btn
-		# 	arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
-		# 	#arb_dict = reader.read_prematch_arb_dict(driver, pre_btn, arb_btn, sources)
-		# # live_arb_data = arb_data[0]
-		# # prematch_arb_data = arb_data[1]
-		# else: # both
-		# 	# read live twice before
-		# 	arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+		arb_data = []
+		if arb_type == 'live':
+			# if on pre-page, click live btn
+			# init on live page so not extra btn to press
+			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+		elif arb_type == 'pre':
+			# if on live-page, click pre btn
+			# all arbs read this loop, incuding invalid picks
+			arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
+			#arb_dict = reader.read_prematch_arb_dict(driver, pre_btn, arb_btn, sources)
+		# live_arb_data = arb_data[0]
+		# prematch_arb_data = arb_data[1]
+		else: # both
+			# read live twice before
+			arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 		
 
-		# # if keyboard interrupt return blank so we know to break loop
-		# if arb_data == '':
-		# 	break
+		# if keyboard interrupt return blank so we know to break loop
+		if arb_data == '':
+			break
 
-		# if arb_data is not None:
+		if arb_data is not None:
 		
-		# 	# monitor either live or pre, not both
-		# 	new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports)
+			# monitor either live or pre, not both
+			new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports)
 			
-		# 	# new_live_arbs = new_arbs[0]
-		# 	# new_prematch_arbs = new_arbs[1]
+			# new_live_arbs = new_arbs[0]
+			# new_prematch_arbs = new_arbs[1]
 
-		# 	# could save all arb data or just new picks
-		# 	# to compare bt loops
-		# 	#prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
-		# 	#writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
+			# could save all arb data or just new picks
+			# to compare bt loops
+			#prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
+			#writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
 
-		# 	all_arbs = init_arbs
-		# 	arb_idx = len(all_arbs)
+			# init final arbs as init arbs in case no new arbs
+			all_arbs = init_arbs
+			# add uid for reference
+			# 0 is first, N is last
+			arb_idx = len(all_arbs)
 
-		# 	for arb in arb_data:
-		# 		if arb in all_arbs.values():
-		# 			continue
+			for arb in arb_data:
+				if arb in all_arbs.values():
+					#sprint('Found saved arb')
+					continue
 			
-		# 		all_arbs[arb_idx] = arb
-		# 		arb_idx += 1
+				all_arbs[arb_idx] = arb
+				arb_idx += 1
 
-		# 	# for new_arb in new_arbs.values():
-		# 	# 	all_arbs[arb_idx] = new_arb
-		# 	# 	arb_idx += 1
-		# 	# save new arbs as json and remove if past
-		# 	writer.write_json_to_file(all_arbs, arbs_file)
+			# for new_arb in new_arbs.values():
+			# 	all_arbs[arb_idx] = new_arb
+			# 	arb_idx += 1
+			# save new arbs as json and remove if past
+			writer.write_json_to_file(all_arbs, arbs_file)
 		
 
 		#open_all_arbs_bets(new_arbs)
@@ -656,6 +671,7 @@ def monitor_website(url, max_retries=3):
 
 			for ev in ev_data:
 				if ev in all_evs.values():
+					#print('Found saved ev')
 					continue
 			
 				all_evs[ev_idx] = ev
