@@ -436,70 +436,39 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
     
     abbrev = ''
 
-    # even tho 2 teams in LA 1 labeled LA and other Los Angeles
-    team_locs = {'atlanta':'atl', 
-                    'boston':'bos', 
-                    'brooklyn':'bkn', 
-                    'charlotte':'cha', 
-                    'chicago':'chi',
-                    'cleveland':'cle',
-                    'dallas':'dal',
-                    'denver':'den',
-                    'detroit':'det',
-                    'golden state':'gsw',
-                    'houston':'hou',
-                    'indiana':'ind',
-                    'la':'lac',
-                    'los angeles':'lal',
-                    'memphis':'mem',
-                    'miami':'mia',
-                    'milwaukee':'mil',
-                    'minnesota':'min',
-                    'new orleans':'nop',
-                    'new york':'nyk',
-                    'oklahoma city':'okc',
-                    'orlando':'orl',
-                    'philadelphia':'phi',
-                    'phoenix':'phx',
-                    'portland':'por',
-                    'sacramento':'sac',
-                    'san antonio':'sas',
-                    'toronto':'tor',
-                    'utah':'uta',
-                    'washington':'wsh'} # could get from fantasy pros table but simpler to make once bc only 30 immutable vals
     
     # for baseball, need logo info bc multiple teams same city
     if sport == 'baseball':
-        team_locs = {'chicago white sox':'chw',
+        team_locs = {'chicago white sox':'chi',
                         'cleveland':'cle',
                         'detroit':'det',
-                        'kansas city':'kcr', #KC
+                        'kansas city':'kc', #KC
                         'minnesota':'min',
                         'baltimore':'bal',
                         'boston':'bos',
-                        'new york yankees':'nyy',
-                        'tampa bay':'tbr',
+                        'new york yankees':'ny',
+                        'tampa bay':'tb',
                         'toronto':'tor',
                         'houston':'hou',
-                        'los angeles angels':'laa',
+                        'los angeles angels':'la',
                         'oakland':'oak',
                         'seattle':'sea',
                         'texas':'tex',
-                        'chicago cubs':'chc',
+                        'chicago cubs':'chi',
                         'cincinnati':'cin',
                         'milwaukee':'mil',
                         'pittsburgh':'pit',
                         'st louis':'stl',
                         'atlanta':'atl',
                         'miami':'mia',
-                        'new york mets':'nym',
+                        'new york mets':'ny',
                         'philadelphia':'phi',
-                        'washington':'wsh',
+                        'washington':'was',
                         'arizona':'ari',
                         'colorado':'col',
-                        'los angeles dodgers':'lad',
-                        'san diego':'sdp',
-                        'san francisco':'sfg'}
+                        'los angeles dodgers':'la',
+                        'san diego':'sd',
+                        'san francisco':'sf'}
         
     elif sport == 'hockey':
         team_locs = {'boston':'bos',
@@ -567,6 +536,40 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
                         'los angeles rams':'lar',
                         'san francisco':'sff',
                         'seattle':'sea'}
+        
+    else: # basketball
+        # even tho 2 teams in LA 1 labeled LA and other Los Angeles
+        team_locs = {'atlanta':'atl', 
+                    'boston':'bos', 
+                    'brooklyn':'bkn', 
+                    'charlotte':'cha', 
+                    'chicago':'chi',
+                    'cleveland':'cle',
+                    'dallas':'dal',
+                    'denver':'den',
+                    'detroit':'det',
+                    'golden state':'gsw',
+                    'houston':'hou',
+                    'indiana':'ind',
+                    'la':'lac',
+                    'los angeles':'lal',
+                    'memphis':'mem',
+                    'miami':'mia',
+                    'milwaukee':'mil',
+                    'minnesota':'min',
+                    'new orleans':'nop',
+                    'new york':'nyk',
+                    'oklahoma city':'okc',
+                    'orlando':'orl',
+                    'philadelphia':'phi',
+                    'phoenix':'phx',
+                    'portland':'por',
+                    'sacramento':'sac',
+                    'san antonio':'sas',
+                    'toronto':'tor',
+                    'utah':'uta',
+                    'washington':'wsh'} # could get from fantasy pros table but simpler to make once bc only 30 immutable vals
+    
 
 
 

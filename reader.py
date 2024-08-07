@@ -34,7 +34,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen # request website, open webpage given req
 
 # === Local Internal Libraries ===
-import converter # convert year span to current season
+import converter, writer # convert year span to current season
 # #from converter import round_half_up
 # import determiner # determine played season before reading webpage to avoid exception/error
 # import isolator # isolate_player_game_data to read data from file
@@ -42,10 +42,154 @@ import converter # convert year span to current season
 
 
 
+def add_cookies(driver, website_name, cookies_file):
+
+	# Add saved cookies before opening new window
+	
+	saved_cookies = read_json(cookies_file)
+	website_cookies = []
+	# save cookies if no cookies saved for this website yet???
+	# No actually NEED to save cookies every session
+	# Simplest to save every time new window opened
+	#save_cookies = True
+	if website_name in saved_cookies.keys(): 
+		#save_cookies = False
+
+		website_cookies = saved_cookies[website_name]
+		#print('website_cookies: ' + str(website_cookies))
+		for cookie in website_cookies:
+			# Adds the cookie into current browser context
+			driver.add_cookie(cookie)
+
+	return saved_cookies
 
 
+def save_cookies(driver, website_name, cookies_file, saved_cookies):
+	print('\nSave Cookies')
+	cookies = driver.get_cookies()
+	saved_cookies[website_name] = cookies
+	writer.write_json_to_file(saved_cookies, cookies_file)
+	print('Done')
+
+# get all categories on page
+# Betrivers:
+# Prematch:
+# -Most Popular
+# --Moneyline
+# --Run Line
+# --Total Runs
+# -Listed Pitcher
+# -Team Totals
+# --Total Runs
+# -Game Props
+# -Inning 1
+# -Innings
+# Live:
+# -Selected Markets
+# --Moneyline
+# --Run Line
+# --Total Runs
+# --Batter to record a Hit or Walk - Excluding Hit by Pitch
+# --Inning <#>
+# --Total Runs - Inning <#>
+# --Total Hits
+# --Result of Pitch Thrown
+# -Instant Betting
+# -Game Lines
+# -Innings
+# -Pitch by Pitch
+# -Batter Specials
+# -Races
+
+#selected_markets = ['moneyline', 'run line', 'total runs']
+def read_actual_odds(bet_dict, website_name, driver):
+	print('\n===Read Actual Odds===\n')
+	
+	actual_odds = ''
+	
+	cookies_file = 'data/cookies.json'
+	saved_cookies = add_cookies(driver, website_name, cookies_file)
+	size = driver.get_window_size() # get size of window 1 to determine window 2 x
+	driver.switch_to.new_window(type_hint='window')
+	window2_x = size['width'] + 1
+	driver.set_window_position(window2_x, 0)
+	url = bet_dict['link']
+	driver.get(url)
+	time.sleep(1) # wait to load
+	save_cookies(driver, website_name, cookies_file, saved_cookies)
+
+	
+	section_idx = 0
+	
+	market = bet_dict['market'].lower()
+	print('market: ' + market)
+	
+	market_title, section_idx = read_market_section(market, website_name)
+
+    #offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
+	sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+    # click if not expanded   
+    # print('\nSections:') 
+    # for section in sections:
+    #     print('\nSection: ' + section.get_attribute('innerHTML'))
+	# 
+	if len(sections) > section_idx:
+		section = sections[section_idx]
+        #print('\nsection: ' + section.get_attribute('innerHTML'))
+        # format makes it so it only opens but does not close with same element
+		driver.execute_script("arguments[0].scrollIntoView(true);", section)
+		section.click()
+		print('\nOpened Section ' + str(section_idx))
+		time.sleep(1)
+            
+		# Market
+		found_offer = False
+		markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+		# list_elements = section.find_elements('tag name', 'li')
+		# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
+		for market_idx in range(len(markets)):
+			market_element = markets[market_idx]
+			#list_element = list_elements[market_idx]
+			#market = offer_categories[1]
+			print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
+			# print('\nouter market_element: ' + market_element.get_attribute('outerHTML'))
+			# print('\nlist_element: ' + list_element.get_attribute('innerHTML'))
+			# moneyline always first if available
+			# but others might shift depending if moneyline or others are NA
+			# so need to search for given offer in subcategory label
+			offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower()
+			print('\noffer_label: ' + offer_label)
+
+			# easiest when = but not the case for player props
+			if offer_label == market_title:
+				print('Found Offer')
+				found_offer = True
+
+			# player props market label always has - with spaces on either side
+			# KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant
+			elif re.search(' - ', market):
+				market_keyword = market.split(' - ')[1]
+				market_keyword = re.sub('pitcher ', '', market_keyword)
+				# if re.search('strikeout', market):
+				#     keyword = keyword.split()[-1]
+				print('market_keyword: ' + market_keyword)
+				
+				if re.search(market_keyword, offer_label):
+					print('Found Offer')
+					found_offer = True       
 
 
+			if found_offer:
+				actual_odds = read_market_odds(market, market_element, bet_dict)
+
+				break # done after found market
+
+	# find element by bet dict
+	# first search for type element
+	#offer_element = driver.find_element()
+
+	print('actual_odds: ' + actual_odds)
+	return actual_odds
 
 # get data from a file and format into a list (same as generator version of this fcn but more general)
 # input such as Game Data - All Games

@@ -85,10 +85,10 @@ source_idx = 8
 
 # Open the website on the bet page
 # And navigate to bet if no direct link
-def open_bet(ev_row, driver):
+def open_bet(bet_dict, driver):
 	print('\n===Open Bet===\n')
-	print('Input: ev_row = ' + str(ev_row))
-	print('\nOutput: ev_bet = [odds, size]\n')
+	print('Input: bet_dict = {} = ' + str(bet_dict))
+	print('\nOutput: bet_data = [odds, size]\n')
 
 	ev_bet = False
 
@@ -101,6 +101,9 @@ def open_bet(ev_row, driver):
 	window2_x = size['width'] + 1
 	driver.set_window_position(window2_x, 0)
 	driver.get(ev_url)
+
+	# get cookies immediately after opening page
+	# and then again if login
 
 	# if real odds match source odds
 	# then valid ev bet
@@ -182,13 +185,20 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			
 			# if mobile only, then do not open website
 			# instead open emulator
-			# ev_source = ev_row[source_idx]
-			# # Fanduel has bot blockers so take extra precaution
+			# TEST
+			#ev_row = {'market': 'run line', 'bet': 'chi cubs -4', 'odds': '-175'}
+			ev_source = ev_row['source']
+			# Fanduel has bot blockers so take extra precaution
 			# mobile_sources = ['Fanatics', 'Fliff', 'Fanduel']
 			# if ev_source not in mobile_sources:
 			# 	ev_bet = open_bet(ev_row, driver)
 			# 	if ev_bet is False:
 			# 		continue
+
+			# Make sure source enabled
+			enabled_sources = ['betrivers']
+			if ev_source in enabled_sources:
+				actual_odds = reader.read_actual_odds(ev_row, ev_source, driver)
 
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
@@ -658,6 +668,9 @@ def monitor_website(url, max_retries=3):
 
 		ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, sources)
 		
+		# TEST
+		ev_data = [{'market': 'run line', 'bet': 'chi cubs -4', 'odds': '-175', 'source':'betrivers', 'url':'https://ny.betrivers.com/?page=sportsbook#event/live/1020376366'}]
+
 		if ev_data == '': # if keyboard interrupt return blank so we know to break loop
 			break
 		if ev_data is not None:
@@ -693,7 +706,7 @@ def monitor_website(url, max_retries=3):
 
 		# if prematch, keep looping every 5 seconds for change
 		# if live, loop every 2 seconds bc fast change
-		time.sleep(4)
+		time.sleep(3) # 4 seems too slow bc can see change long before notice
 
 
 	# if keyboard interrupt quit

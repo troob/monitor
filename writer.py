@@ -291,7 +291,8 @@ def write_evs_to_post(evs, client, post=False):
         # split player and market in given market field
         # so we can see market at the top and decide if we can take the bet or if limited or suspicious
         player = ''
-        if re.search('-', market):
+        # need space bt dash so not compound name
+        if re.search(' - ', market):
             market_data = market.split('-')
             player = market_data[0].strip()
             market = market_data[1].strip()
