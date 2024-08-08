@@ -31,6 +31,29 @@ import converter # convert dicts to lists AND number formats
 
 
 
+
+def place_bet(ev_row, website_name, driver, final_outcome):
+    print('\n===Place Bet===\n')
+    print('Input: ev_row = ' + str(ev_row))
+    print('Input: website_name = ' + website_name)
+
+
+    # click bet btn to add to betslip
+    if final_outcome is not None:
+        final_outcome.click()
+
+        # Login after adding to betslip bc then keeps in betslip
+        # login first detects if already logged in
+        #login_to_website(website_name, driver)
+
+
+    # Close Window after placing bet
+    # Close Window before going to next pick
+    # bc only 1 window at a time
+    #driver.close() # comment out to test
+    driver.switch_to.window(driver.window_handles[0])
+
+
 # def write_arb_to_post(arb, client, post=False):
 #     # print('\n===Write Arb to Post===\n')
 #     # print('arb: ' + str(arb))
@@ -212,6 +235,141 @@ import converter # convert dicts to lists AND number formats
 #             )
 
 
+def write_ev_to_post(ev, client, post=False):
+    print('\n===Write EV to Post===\n')
+    print('ev: ' + str(ev))
+
+    props_str = ''
+
+    
+	# Need diff string for each channel:
+    # 1. all
+    # 2. home runs
+    # 3. new user
+		
+    # for test_pick in test_picks:
+    # 	print('\n' + str(test_pick))
+
+    # all props str
+    all_props_str = '' # advanced when limited need to find more exploits
+    new_user_props_str = '' # changes constantly as user needs to blend in as normal
+    #for ev_idx in range(len(evs)):
+    #for ev_idx, ev in evs.items():
+    #ev = evs[ev_idx]
+
+    value = ev['value']
+    #value_str = 'Value:\t' + value + '%'
+    game = ev['game']
+    #game_str = 'Game:\t' + game
+    market = ev['market']
+    #market_str = 'Market:\t' + market
+    bet = ev['bet']
+
+    source = ev['source']
+    # bet1_str = 'Bet 1:\t' + bet1
+    odds = ev['odds']
+    # odds1_str = 'Odds 1:\t' + odds1
+    link = ev['link']
+
+    size = ev['size']
+
+
+
+    # Format Message
+    # Top part 4 lines of msg shows in notification preview 
+    # so show useful info to decide if need to see more
+    # 1. which books to avoid limits
+    # 2. market/prop to go to
+    # 3. odds to double check
+    # 4. value to see how important/valuable
+    # props_str += bet1 + ', ' + bet2 + '\t\t\t\t'
+    # props_str += game + '\t'
+    # props_str += market + '\t|\t'
+    # props_str += odds1 + ', ' + odds2 + '\t|\t'
+    # props_str += value + '%' + '\t|\t'
+
+    # props_str += '\n' + bet1 + ', ' + bet2 + '\t\n'
+    # props_str += odds1 + ', ' + odds2 + ' - \n' # + '\t'#|\t'
+
+    #ev_num = str(ev_idx + 1)
+    props_str = '\n===EV===\n'
+    props_str += '\n' + source + ' ' + odds + '. \n\n'
+    props_str += game + ' - \n\n'
+    props_str += market + ' - \n\n'
+    props_str += bet + ' - \n\n'
+    props_str += size + ' - \n\n'
+    props_str += value + '%' + ' - \n\n'
+    
+
+    # split player and market in given market field
+    # so we can see market at the top and decide if we can take the bet or if limited or suspicious
+    player = ''
+    # need space bt dash so not compound name
+    if re.search(' - ', market):
+        market_data = market.split('-')
+        player = market_data[0].strip()
+        market = market_data[1].strip()
+    #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
+    props_str += '\nSOURCE: ' + source + ', ' + odds + ' \n\n'
+    props_str += 'MARKET: ' + market + ', ' + bet + ' \n\n'
+    props_str += 'GAME: ' + game + ' \n\n'
+    if player != '':
+        props_str += 'PLAYER: ' + player + ' \n\n'
+    props_str += 'SIZE: ' + size + ' \n\n'
+    props_str += 'VALUE: ' + value + '% \n\n'
+    #props_str += 'PROFIT: $' + profit + ' \n\n'
+    props_str += 'LINK: ' + link + ' \n'
+
+
+    props_str += '\n==================\n==================\n\n'
+
+    # always add to all props str
+    all_props_str += props_str
+    # but selectively add to select channels
+    if not re.search('Home Run', market):
+        # add to new user str bc they avoid home runs
+        new_user_props_str += props_str
+
+    print('\n===EV===\n')
+    print(all_props_str)
+    #print(tabulate(arb_table))
+    # print('New User Arbs')
+    # print(new_user_props_str)
+
+    # separate props into diff channels for specific types of users
+    # 1 channel for all possible
+    # 1 channel for new user avoiding home runs
+    # 1 channel for limited users who can take home runs on specific apps
+    # Do not post home runs to general channel bc only use on limited apps
+    # post_arbs = []
+    # for pick in new_picks:
+    #     arb_market = pick[market_idx]
+    #     if not re.search('Home Run', arb_market):
+    #         post_arbs.append(pick)
+
+
+    #send msg on slack app
+    print('Post: ' + str(post) + '\n\n')
+    if post:
+        # to avoid double msg, 
+        # only apply 1 channel per user
+        # OR do not repeat arbs
+        # BUT all will repeat all which are separated into channels
+        post_all = True # for testing all arbs before finalizing all category channels
+        if all_props_str != '' and post_all:
+            client.chat_postMessage(
+                channel='all-evs',
+                text=all_props_str,
+                username='Ball'
+            )
+
+        elif new_user_props_str != '':
+            client.chat_postMessage(
+                channel='ball', # arbitrary name given to first channel
+                text=all_props_str,
+                username='Ball'
+            )
+
 def write_evs_to_post(evs, client, post=False):
     print('\n===Write EVs to Post===\n')
     print('evs: ' + str(evs))
@@ -346,14 +504,14 @@ def write_evs_to_post(evs, client, post=False):
         if all_props_str != '' and post_all:
             client.chat_postMessage(
                 channel='all-evs',
-                text=props_str,
+                text=all_props_str,
                 username='Ball'
             )
 
         elif new_user_props_str != '':
             client.chat_postMessage(
                 channel='ball', # arbitrary name given to first channel
-                text=props_str,
+                text=all_props_str,
                 username='Ball'
             )
 

@@ -138,7 +138,7 @@ def open_bet(bet_dict, driver):
 # input all EVs read this scan
 # output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver):
+def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, pick_type='prematch'):
 	# print('\n===Monitor New EVs===\n')
 	# print('Input: ev_data = [[...],...]')# + str(ev_data))
 	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
@@ -196,9 +196,45 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# 		continue
 
 			# Make sure source enabled
-			enabled_sources = ['betrivers']
-			if ev_source in enabled_sources:
-				actual_odds = reader.read_actual_odds(ev_row, ev_source, driver)
+			enabled_sources = ['Betrivers']
+			# if we do not specify enabled markets
+			# then how can we tell if no odds bc they disappeared or just failed to read?
+			# bc those failed to read bc not yet enabled we still want notice to do manually
+			# None vs '' does not work bc could be blank bc gray or gone
+			# so if we are sure that it would read unless disappeared then None could indicate failed to read
+			enabled_markets = ['Moneyline', 'Run Line']
+			if ev_source in enabled_sources and ev_row['market'] in enabled_markets:
+				actual_odds, final_outcome = reader.read_actual_odds(ev_row, ev_source, driver, pick_type)
+			
+				# Next level: accept different as long as still less than fair odds
+				if actual_odds != ev_row['odds']:
+					if actual_odds == '':
+						print('\nNo Bet')
+					else:
+						print('\nOdds Mismatch')
+						print('actual_odds: ' + actual_odds)
+						print('init_odds: ' + ev_row['odds'])
+
+					driver.close()
+					driver.switch_to.window(driver.window_handles[0])
+					continue
+				else:
+					# continue to place bet
+					print('\nPlace Bet')
+
+				# if actual_odds == ev_row['odds']:
+				# 	# continue to place bet
+				# 	print('\nPlace Bet')
+				# elif actual_odds == '':
+				# 	print('\nNo Bet')
+				# 	driver.close()
+				# 	continue
+				# else:
+				# 	print('\nOdds Mismatch')
+				# 	print('actual_odds: ' + actual_odds)
+				# 	print('init_odds: ' + ev_row['odds'])
+				# 	driver.close()
+				# 	continue
 
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
@@ -216,15 +252,16 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			valid_ev_idx += 1
 
 
+			# notify before placing bet so other devices can start placing bets
+			# format string to post
+			writer.write_ev_to_post(ev_row, client, True)
+
+
 			# === Place Bet === 
-			# to get limits
-			# and then see min payout
-			# and then calc other side based on limit on side with min payout
-			# writer.place_arb_bets(arb_bets)
+			writer.place_bet(ev_row, ev_source, driver, final_outcome)
 
-			# # format string to post
-			# writer.write_arb_to_post(arb_row, client, True)
-
+			
+			
 			# CHANGE so instead of batching
 			# handle each arb 1 at a time to be as fast as possible
 			# simple version: if any diff, notify
@@ -233,6 +270,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# and then fill in bet size (test limit and calc bet sizes)
 			# and then keep those windows open
 			# and move to the next arb
+
 			
 
 	# notify immediately after reading new live arbs
@@ -250,10 +288,10 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 	# BUT before placing bet
 	# check 2 prev arb tables bc sometimes disappear and reappear so not new
 	#if len(prematch_arb_data) > 0 and init_prematch_arb_data != prematch_arb_data and prev_prematch_arb_data != prematch_arb_data:
-	if len(new_picks) > 0:
+	# if len(new_picks) > 0:
 
-		# format string to post
-		writer.write_evs_to_post(new_picks, client, True)
+	# 	# format string to post
+	# 	writer.write_evs_to_post(new_picks, client, True)
 
 		# write ev to file
 		# so we do not repeat it
@@ -539,9 +577,9 @@ def monitor_website(url, max_retries=3):
 	# so I can see live diff leagues and markets isolated
 	# Window 2: Live Big Markets
 	# OR TEST: see EVs 
-	driver.switch_to.new_window()
-	driver.get(url)
-	time.sleep(1)
+	# driver.switch_to.new_window()
+	# driver.get(url)
+	# time.sleep(1)
 
 	# # # Window 3: Live Small Markets
 	# # driver.switch_to.new_window()
@@ -667,10 +705,26 @@ def monitor_website(url, max_retries=3):
 		# === Monitor New +EV picks ===
 
 		ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, sources)
-		
-		# TEST
-		ev_data = [{'market': 'run line', 'bet': 'chi cubs -4', 'odds': '-175', 'source':'betrivers', 'url':'https://ny.betrivers.com/?page=sportsbook#event/live/1020376366'}]
+		if ev_data is None:
+			# exit
+			print('Exit')
+			exit()
 
+		# === START TEST ===
+		test_ev = {'market': 'Run Line', 
+			  		'bet': 'Philadelphia Phillies +1.5', 
+					'odds': '-186', 
+					'source':'Betrivers',
+					'game':'Philadelphia Phillies vs Los Angeles Dodgers',
+					'value':'1.0',
+					'size':'$3.00',
+					'game date':'Today',
+					'sport':'mlb',
+					'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376514'}
+		ev_data = [test_ev] 
+		# === END TEST ===
+
+		#print('ev_data: ' + str(ev_data))
 		if ev_data == '': # if keyboard interrupt return blank so we know to break loop
 			break
 		if ev_data is not None:

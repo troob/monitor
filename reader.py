@@ -42,7 +42,216 @@ import converter, writer # convert year span to current season
 
 
 
+
+
+# diff markets have diff formats
+# moneyline has only 1 div but others have 2
+def read_outcome_label(outcome, market):
+	print('\n===Read Outcome Label===\n')
+	print('Input: outcome: ' + outcome.get_attribute('innerHTML'))
+	print('Input: market = ' + market)
+
+	outcome_sub_element_1 = outcome.find_element('tag name', 'div')
+	parts = outcome_sub_element_1.find_elements('tag name', 'div')
+	print('Parts 1:')
+	for part in parts:
+		print('part: ' + part.get_attribute('innerHTML'))
+
+	# Need to tell if grayed out NA by class or lack of odds???
+	# outcome_sub_element_2 = outcome_sub_element_1.find_element('tag name', 'div')
+	# parts2 = outcome_sub_element_2.find_elements('tag name', 'div')
+	# print('Parts 2:')
+	# for part in parts:
+	#     print('part: ' + part.get_attribute('innerHTML'))
+
+
+	outcome_label = ''
+	# Moneyline
+	if market == 'moneyline':
+		outcome_label = parts[1].get_attribute('innerHTML').lower()
+
+	else:# market == 'run line':
+		# Run Line / Spread
+		# label = div 1 + div 2
+		part1 = parts[1].get_attribute('innerHTML').lower()
+		print('\npart1: ' + part1)
+		part2 = parts[2].get_attribute('innerHTML') # symbols/numbers dont lower
+		print('part2: ' + part2)
+		outcome_label = part1 + ' ' + part2
+
+	# elif market == 'total':
+	#     # label = div 1 + div 2
+	#     part1 = parts[1].get_attribute('innerHTML').lower()
+	#     print('\npart1: ' + part1)
+	#     part2 = parts[2].get_attribute('innerHTML') # symbols/numbers dont lower
+	#     print('part2: ' + part2)
+	#     outcome_label = part1 + ' ' + part2
+
+
+	#elif market == 'hits':
+
+
+	outcome_odds = parts[-1].get_attribute('innerHTML')
+		
+	print('\noutcome_label: ' + outcome_label)
+	print('outcome_odds: ' + outcome_odds)
+	return outcome_label, outcome_odds
+
+def read_market_odds(market, market_element, bet_dict):
+	print('\n===Read Market Odds===\n')
+	print('Input: market = ' + market)
+	print('Input: bet_dict = ' + str(bet_dict))
+
+	market_odds = ''
+
+	bet_outcome = bet_dict['bet'].lower()
+	if bet_dict['source'] == 'Betrivers':
+		# convert team loc to abbrev
+		team_loc = bet_outcome.split()[0]
+		loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
+		bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
+		# bet_outcome = loc_abbrev + team_full_name[1]
+	print('bet_outcome: ' + bet_outcome)
+
+
+	# === Player Props === 
+	# separate outcomes if player prop
+	# Check for specific player
+	# ryne nelson - pitcher strikeouts
+	# player_names = market.split(' - ')[0].split()
+	# first_name = player_names[0]
+	# last_name = player_names[1]
+	# player_title = last_name + ', ' + first_name
+	# print('player_title: ' + player_title)
+
+	# outcomes = []
+	# # cannot simply take all outcomes in market
+	# # need all children to separate players by header
+	# # get 2 columns 'KambiBC-outcomes-list__column'
+	# market_columns = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')
+	# over_column = market_columns[0]
+	# under_column = market_columns[1]
+	# market_children = over_column.find_elements('xpath', './/*')
+	# for child in market_children:
+	#     print('\nMarket_child: ' + child.get_attribute('innerHTML'))
+
+		# if header, use as key
+		# if button, use as outcome
+
+		# start at player name
+		# stop at header or end
+
+		
+	final_outcome = None # pass it on to click in place bet fcn
+
+	# when it is grayed out NA disabled there is no odds section
+	outcomes = market_element.find_elements('class name', 'KambiBC-betty-outcome')
+	# see if given bet matches any of the outcomes
+
+	for outcome in outcomes:
+
+		# phi pillies
+		outcome_label, outcome_odds = read_outcome_label(outcome, market)
+
+		print('outcome_label: ' + outcome_label)
+		print('bet_outcome: ' + bet_outcome)
+		if outcome_label == bet_outcome:
+			print('Found Outcome')
+			outcome_disabled = outcome.get_attribute('disabled')
+			print('outcome_disabled: ' + str(outcome_disabled))
+			#if not re.search('disabled', outcome_class):
+			# get odds if not disabled
+			# disabled is none if not disabled
+			if outcome_disabled is None:
+				market_odds = outcome_odds #parts[-1].get_attribute('innerHTML')
+			final_outcome = outcome
+			break
+
+
+	# if not found bet in main lines
+	# then search alternates
+	alt_markets = ['run line', 'total runs']
+	if market_odds == '' and market in alt_markets:
+		# separate markets with only 1 option
+		#if market != 'moneyline':
+		# click Show list
+		alt_btn = market_element.find_element('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
+		print('alt_btn: ' + alt_btn.get_attribute('innerHTML'))
+		alt_btn.click()
+		time.sleep(1)
+
+		# get altered market element
+		#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
+		# repeat check in outcomes list
+		outcomes = market_element.find_elements('class name', 'KambiBC-betty-outcome')
+		# see if given bet matches any of the outcomes
+		
+		for outcome in outcomes:
+
+			outcome_label, outcome_odds = read_outcome_label(outcome, market)
+
+			if outcome_label == bet_outcome:
+				print('Found Outcome')
+				outcome_disabled = outcome.get_attribute('disabled')
+				#print('outcome_disabled: ' + str(outcome_disabled))
+				#if not re.search('disabled', outcome_class):
+				# get odds if not disabled
+				# disabled is none if not disabled
+				if outcome_disabled is None:
+					market_odds = outcome_odds #parts[-1].get_attribute('innerHTML')
+				final_outcome = outcome
+				break
+
+
+	return market_odds, final_outcome
+
+def read_market_section(market, website_name, pick_time_group):
+    print('\n===Read Market Section===\n')
+    print('Input: market = ' + market)
+    print('Input: website_name = ' + website_name)
+    print('\nOutput: market_title='', section_idx=0\n')
+
+    section_idx = 0
+
+    # need standard market for if statements
+    # but need market title for each diff website
+    market_title = market
+    # if betrivers, team total
+    # <team name> total -> Total Runs by <team name>
+    # '[a-z]{3}\s[a-z]+\stotal'
+    # space before total implies team total
+    if website_name == 'betrivers':
+        if re.search('\stotal', market):
+            # section_name = 'team totals'
+            section_idx = 2
+
+            # oakland athletics -> oak athletics
+            team_full_name = re.sub('\stotal', '', market).split()
+            team_loc = team_full_name[0]
+            loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
+            #team_name = team_full_name[1]
+            team_name = loc_abbrev + ' ' + team_full_name[1]
+            market_title = 'total runs by ' + team_name
+        elif re.search('pitcher', market):
+            # section_name = 'pitcher props'
+            section_idx = 7
+
+        elif pick_time_group == 'live':
+
+            if re.search('run line|total runs', market):
+                section_idx = 2
+
+
+            
+
+    print('market_title: ' + market_title)
+    print('section_idx: ' + str(section_idx))
+    return market_title, section_idx
+
+
 def add_cookies(driver, website_name, cookies_file):
+	print('\n===Add Cookies===\n')
+	print('Input: website_name = ' + website_name)
 
 	# Add saved cookies before opening new window
 	
@@ -53,11 +262,13 @@ def add_cookies(driver, website_name, cookies_file):
 	# Simplest to save every time new window opened
 	#save_cookies = True
 	if website_name in saved_cookies.keys(): 
+		print('Found Saved Cookies')
 		#save_cookies = False
 
 		website_cookies = saved_cookies[website_name]
 		#print('website_cookies: ' + str(website_cookies))
 		for cookie in website_cookies:
+			print('Add Cookie: ' + str(cookie))
 			# Adds the cookie into current browser context
 			driver.add_cookie(cookie)
 
@@ -102,20 +313,25 @@ def save_cookies(driver, website_name, cookies_file, saved_cookies):
 # -Races
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, website_name, driver):
+def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch', max_retries=3):
 	print('\n===Read Actual Odds===\n')
+	print('Input: bet_dict = ' + str(bet_dict))
+	print('Input: website_name = ' + website_name)
+	print('\nOutput: actual_odds = x\n')
 	
 	actual_odds = ''
 	
-	cookies_file = 'data/cookies.json'
-	saved_cookies = add_cookies(driver, website_name, cookies_file)
+	
 	size = driver.get_window_size() # get size of window 1 to determine window 2 x
 	driver.switch_to.new_window(type_hint='window')
 	window2_x = size['width'] + 1
 	driver.set_window_position(window2_x, 0)
 	url = bet_dict['link']
+	# Must navigate to page before adding cookies
 	driver.get(url)
-	time.sleep(1) # wait to load
+	cookies_file = 'data/cookies.json'
+	saved_cookies = add_cookies(driver, website_name, cookies_file)
+	time.sleep(2) # wait to load. sometimes fails at 1 sec
 	save_cookies(driver, website_name, cookies_file, saved_cookies)
 
 	
@@ -124,7 +340,7 @@ def read_actual_odds(bet_dict, website_name, driver):
 	market = bet_dict['market'].lower()
 	print('market: ' + market)
 	
-	market_title, section_idx = read_market_section(market, website_name)
+	market_title, section_idx = read_market_section(market, website_name, pick_time_group)
 
     #offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
 	sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
@@ -138,9 +354,17 @@ def read_actual_odds(bet_dict, website_name, driver):
         #print('\nsection: ' + section.get_attribute('innerHTML'))
         # format makes it so it only opens but does not close with same element
 		driver.execute_script("arguments[0].scrollIntoView(true);", section)
-		section.click()
-		print('\nOpened Section ' + str(section_idx))
-		time.sleep(1)
+		retries = 0
+		while retries < max_retries:
+			try:
+				section.click()
+				print('\nOpened Section ' + str(section_idx))
+				time.sleep(1)
+				break
+			except:
+				print('Error clicking Section')
+				retries += 1
+				time.sleep(1)
             
 		# Market
 		found_offer = False
@@ -180,7 +404,7 @@ def read_actual_odds(bet_dict, website_name, driver):
 
 
 			if found_offer:
-				actual_odds = read_market_odds(market, market_element, bet_dict)
+				actual_odds, final_outcome = read_market_odds(market, market_element, bet_dict)
 
 				break # done after found market
 
@@ -189,7 +413,7 @@ def read_actual_odds(bet_dict, website_name, driver):
 	#offer_element = driver.find_element()
 
 	print('actual_odds: ' + actual_odds)
-	return actual_odds
+	return actual_odds, final_outcome
 
 # get data from a file and format into a list (same as generator version of this fcn but more general)
 # input such as Game Data - All Games
@@ -3345,12 +3569,20 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 		# Comment out try block to pinpoint exact error
 		try:
 
-			try:
-				pre_btn.click()
-				ev_btn.click()
-				time.sleep(1)
-			except:
-				print('Error clicking pre or ev btn')
+			click_retries = 0
+			while click_retries < max_retries:
+				try:
+					pre_btn.click()
+					ev_btn.click()
+					time.sleep(1)
+					break # exit loop after clicking to continue
+				except:
+					print('Error clicking pre or ev btn')
+					click_retries += 1
+
+			if click_retries == 3:
+				return None
+			
 
 			prematch_ev_table = driver.find_elements('tag name', 'table')[-1]
 			#print('prematch_arb_table: ' + prematch_arb_table.get_attribute('innerHTML'))
@@ -3512,7 +3744,7 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 # so can use for either but need to press btn first
 # use input arb type to know which btn to press
 def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
-	#print('\n===Read Prematch Arb Data===\n')
+	# print('\n===Read Prematch Arb Data===\n')
 	# print('\nOutput: prematch_arb_data = [{%, $, ...}, ...]\n')
 
 	prematch_arb_data = []
@@ -3540,12 +3772,26 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 			# retry in case of error
 			# problem is login dialog box blocks btns 
 			# after a minute on page
-			try:
-				pre_btn.click()
-				arb_btn.click()
-				time.sleep(1)
-			except:
-				print('Error clicking pre or arb btn')
+			# try:
+			# 	pre_btn.click()
+			# 	arb_btn.click()
+			# 	time.sleep(1)
+			# except:
+			# 	print('Error clicking pre or arb btn')
+
+			click_retries = 0
+			while click_retries < max_retries:
+				try:
+					pre_btn.click()
+					arb_btn.click()
+					time.sleep(1)
+					break # exit loop after clicking to continue
+				except:
+					print('Error clicking pre or arb btn')
+					click_retries += 1
+
+			if click_retries == 3:
+				return None
 
 
 			# arb table changes so wait to call table each monitor loop
@@ -3850,52 +4096,56 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False, mobile=False):
 	#print('\n===Open React Website===\n')
 
-	options = webdriver.ChromeOptions()
+	try:
 
-	dims = str(size[0]) + ',' + str(size[1])
-	size_str = "window-size=" + dims
-	options.add_argument(size_str)
-	pos = str(position[0]) + ',' + str(position[1])
-	pos_str = "window-position=" + pos
-	options.add_argument(pos_str)
+		options = webdriver.ChromeOptions()
 
-	# Login to Chrome Profile
-	# V5: NEED all chrome windows fully closed and quit
-	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 6') 
-	
-	# FAIL: enable password manager to autofill
-	#options.add_experimental_option("credentials_enable_service", True)
-	#options.add_experimental_option("prefs", {"profile.password_manager_enabled": True})
+		dims = str(size[0]) + ',' + str(size[1])
+		size_str = "window-size=" + dims
+		options.add_argument(size_str)
+		pos = str(position[0]) + ',' + str(position[1])
+		pos_str = "window-position=" + pos
+		options.add_argument(pos_str)
 
-	# Adding argument to disable the AutomationControlled flag 
-	options.add_argument("--disable-blink-features=AutomationControlled") 
-	# Exclude the collection of enable-automation switches 
-	options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
-	# Turn-off userAutomationExtension 
-	options.add_experimental_option("useAutomationExtension", False) 
+		# Login to Chrome Profile
+		# V5: NEED all chrome windows fully closed and quit
+		options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
+		options.add_argument(r'--profile-directory=Profile 6') 
+		
+		# FAIL: enable password manager to autofill
+		#options.add_experimental_option("credentials_enable_service", True)
+		#options.add_experimental_option("prefs", {"profile.password_manager_enabled": True})
 
-	driver = webdriver.Chrome(options=options)
+		# Adding argument to disable the AutomationControlled flag 
+		options.add_argument("--disable-blink-features=AutomationControlled") 
+		# Exclude the collection of enable-automation switches 
+		options.add_experimental_option("excludeSwitches", ["enable-automation"]) 
+		# Turn-off userAutomationExtension 
+		options.add_experimental_option("useAutomationExtension", False) 
 
-	
-	# Always same
-	# Open the URL on a google chrome window
-	driver.implicitly_wait(3)
-	# so bot not detected
-	#if first_window:
-	driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
-	driver.get(url)
+		driver = webdriver.Chrome(options=options)
 
-	
-	# wait after get url to ensure reads all data!
-	time.sleep(1)
+		
+		# Always same
+		# Open the URL on a google chrome window
+		driver.implicitly_wait(3)
+		# so bot not detected
+		#if first_window:
+		driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
+		driver.get(url)
 
-	# see init cookies
-	# cookies = driver.get_cookies()
-	# print('cookies: ', cookies)
+		
+		# wait after get url to ensure reads all data!
+		time.sleep(1)
 
-	# creds = driver.get_credentials()
-	# print('creds:', creds)
+		# see init cookies
+		# cookies = driver.get_cookies()
+		# print('cookies: ', cookies)
+
+		# creds = driver.get_credentials()
+		# print('creds:', creds)
+	except:
+		print('Error Opening React Website')
 
 	return driver
 
@@ -3983,193 +4233,194 @@ def read_bet_odds(bet, driver):
 def open_oddsview_website(driver, max_retries=3):
 	print('\n===Open Oddsview===\n')
 
-	# retries = 0
-	# while retries < max_retries:
-	# 	try:
-	# intro dialog shows if cache cleared bc assumes first time user
-	# but now changed to login profile so skip intro dialog
-	# dialog_element = driver.find_element('id', 'radix-:r5:')
-	# print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
-
-	# close_btn = dialog_element.find_element('xpath','button')
-	# #print("close_btn: " + close_btn.get_attribute('innerHTML'))
-	# close_btn.click()
-	# time.sleep(0.2)
-
-
-	# # data panel, right side
-	#body = driver.find_element('tag name', 'body')
-	#print('body: ' + body.get_attribute('innerHTML'))
-
-	pre_btn = arb_btn = ev_btn = sportsbook_btn = None
-
-	divs = driver.find_elements('tag name', 'div')
-	arb_divs = []
-	ev_divs = []
-	#print('All Divs:')
-	for idx in range(len(divs)):
-		div = divs[idx]
-
+	retries = 0
+	while retries < max_retries:
 		try:
-			div_str = div.get_attribute('innerHTML')
-			#print('Div ' + str(idx) + ': ' + div_str)
 
-			# Arb and EV btns in same div so both ifs run each loop (not elif)
-			# if re.search('-trigger-ev', div_str):
-			# 	ev_btn = div
+			# intro dialog shows if cache cleared bc assumes first time user
+			# but now changed to login profile so skip intro dialog
+			# dialog_element = driver.find_element('id', 'radix-:r5:')
+			# print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
 
-			# if re.search('-trigger-arbitrage', div_str):
-			# 	arb_btn = div
+			# close_btn = dialog_element.find_element('xpath','button')
+			# #print("close_btn: " + close_btn.get_attribute('innerHTML'))
+			# close_btn.click()
+			# time.sleep(0.2)
 
-			if re.search('\\+EV', div_str):
-				# print('Found EV')
-				# print('Div ' + str(idx) + ': ' + div_str)
 
-				ev_divs.append(div)
-				
-			# arb btn is last div with arb str
-			if re.search('Arbitrage', div_str):
-				# print('Found Arb')
-				# print('Div ' + str(idx) + ': ' + div_str)
+			# # data panel, right side
+			#body = driver.find_element('tag name', 'body')
+			#print('body: ' + body.get_attribute('innerHTML'))
 
-				arb_divs.append(div)
+			pre_btn = arb_btn = ev_btn = sportsbook_btn = None
 
-			elif div_str == 'Prematch':
-				#print('Found Prematch')
-				pre_btn = div
-			#elif re.search('Sportsbook', div_str):
-				# elif div_str == 'Sportsbooks':
-				# 	#print('Div ' + str(idx) + ': ' + div_str)
-				# 	sportsbook_btn = div
-				# 	sportsbook_combobox = divs[idx-1]
+			divs = driver.find_elements('tag name', 'div')
+			arb_divs = []
+			ev_divs = []
+			#print('All Divs:')
+			for idx in range(len(divs)):
+				div = divs[idx]
 
-				# elif re.search('table', div_str):
-				# 	print('Table ' + str(idx) + ': ' + div_str)
+				try:
+					div_str = div.get_attribute('innerHTML')
+					#print('Div ' + str(idx) + ': ' + div_str)
 
-				# elif div_str == 'Arbitrage':
-				# 	arb_btn = div
+					# Arb and EV btns in same div so both ifs run each loop (not elif)
+					# if re.search('-trigger-ev', div_str):
+					# 	ev_btn = div
+
+					# if re.search('-trigger-arbitrage', div_str):
+					# 	arb_btn = div
+
+					if re.search('\\+EV', div_str):
+						# print('Found EV')
+						# print('Div ' + str(idx) + ': ' + div_str)
+
+						ev_divs.append(div)
+						
+					# arb btn is last div with arb str
+					if re.search('Arbitrage', div_str):
+						# print('Found Arb')
+						# print('Div ' + str(idx) + ': ' + div_str)
+
+						arb_divs.append(div)
+
+					elif div_str == 'Prematch':
+						#print('Found Prematch')
+						pre_btn = div
+					#elif re.search('Sportsbook', div_str):
+						# elif div_str == 'Sportsbooks':
+						# 	#print('Div ' + str(idx) + ': ' + div_str)
+						# 	sportsbook_btn = div
+						# 	sportsbook_combobox = divs[idx-1]
+
+						# elif re.search('table', div_str):
+						# 	print('Table ' + str(idx) + ': ' + div_str)
+
+						# elif div_str == 'Arbitrage':
+						# 	arb_btn = div
+
+				except Exception as e:
+					#print('Exception at div ' + str(idx))# + ': ', e)
+					continue
+
+			# Find Buttons
+			# 1. Arb
+			# for idx in range(len(divs)):
+			# 	div = divs[idx]
+			# 	try:
+			# 		div_str = div.get_attribute('innerHTML')
+			# 		if re.search('-trigger-arbitrage', div_str):
+			# 			#print('Trigger Arb')
+			# 			btns = div.find_elements('tag name', 'button')
+			# 			for btn in btns:
+			# 				btn_str = btn.get_attribute('innerHTML')
+			# 				#print('btn: ' + btn.get_attribute('innerHTML'))
+			# 				if btn_str == 'Arbitrage':
+			# 					arb_btn = btn
+			# 					break
+			# 	except:
+			# 		continue
+			# # 2. EV
+			# for idx in range(len(divs)):
+			# 	div = divs[idx]
+			# 	try:
+			# 		div_str = div.get_attribute('innerHTML')
+			# 		if re.search('-trigger-ev', div_str):
+			# 			#print('Trigger EV')
+			# 			btns = div.find_elements('tag name', 'button')
+			# 			for btn in btns:
+			# 				btn_str = btn.get_attribute('innerHTML')
+			# 				#print('btn: ' + btn.get_attribute('innerHTML'))
+			# 				if btn_str == '+EV':
+			# 					ev_btn = btn
+			# 					break
+			# 	except:
+			# 		continue
+			# # 3. Prematch
+			# for idx in range(len(divs)):
+			# 	div = divs[idx]
+			# 	try:
+			# 		div_str = div.get_attribute('innerHTML')
+			# 		if div_str == 'Prematch':
+			# 			pre_btn = div
+			# 			break
+			# 	except:
+			# 		continue
+
+
+					
+
+					
+
+
+			# Live Now: Div 132
+			# Prematch: Div 136
+			# 3 section btns: Div 146
+
+			# Dynamic btns to switch tables
+			# 1. Arb
+			arb_btn = arb_divs[-1].find_elements('tag name', 'button')[-1]
+			print('arb_btn: ' + arb_btn.get_attribute('innerHTML'))
+			# 2. Prematch
+			print('pre_btn: ' + pre_btn.get_attribute('innerHTML'))
+			# 3. EV
+			ev_btn = ev_divs[-1].find_elements('tag name', 'button')[-2]
+			print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
+			# 4. Live
+
+			#ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
+			#ev_btn = driver.find_element('xpath', '//button[@id="radix-:rv:-trigger-ev"]')
+			# ev_btn = None
+			# try:
+			# 	ev_btn = driver.find_element('id', 'radix-:r12:-trigger-ev')
+			# 	print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
+			# except:
+			# 	try:
+			# 		ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
+			# 		print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
+			# 	except:
+			# 		print('Unknown EV btn id!')
+			
+			
+			# time.sleep(100)
+
+			# add 
+			# print('sportsbook_btn: ' + sportsbook_btn.get_attribute('innerHTML'))
+			# sportsbook_btn.click()
+			# time.sleep(5)
+			# sportsbook_combobox.send_keys('Fliff')
+			# time.sleep(5)
+			# sportsbook_combobox.send_keys('\t\t')
+
+			#time.sleep(0.1)
+
+			# fliff_checkbox = ''
+			# if fliff_checkbox
+
+			# wait to get to new table?
+			#time.sleep(1000)
+
+			# tables = driver.find_elements('tag name', 'table')
+			# print('Tables:')
+			# for idx in range(len(tables)):
+			# 	table = tables[idx]
+			# 	print('Table ' + str(idx) + ': ' + table.get_attribute('innerHTML'))
+
+			# arb table changes so wait to call table each monitor loop
+			# arb_table = driver.find_elements('tag name', 'table')[-1]
+			# print('arb_table: ' + arb_table.get_attribute('innerHTML'))
+
+			# time.sleep(1000)
+
+
+
+			return driver, arb_btn, pre_btn, ev_btn, sportsbook_btn
 
 		except Exception as e:
-			#print('Exception at div ' + str(idx))# + ': ', e)
-			continue
-
-	# Find Buttons
-	# 1. Arb
-	# for idx in range(len(divs)):
-	# 	div = divs[idx]
-	# 	try:
-	# 		div_str = div.get_attribute('innerHTML')
-	# 		if re.search('-trigger-arbitrage', div_str):
-	# 			#print('Trigger Arb')
-	# 			btns = div.find_elements('tag name', 'button')
-	# 			for btn in btns:
-	# 				btn_str = btn.get_attribute('innerHTML')
-	# 				#print('btn: ' + btn.get_attribute('innerHTML'))
-	# 				if btn_str == 'Arbitrage':
-	# 					arb_btn = btn
-	# 					break
-	# 	except:
-	# 		continue
-	# # 2. EV
-	# for idx in range(len(divs)):
-	# 	div = divs[idx]
-	# 	try:
-	# 		div_str = div.get_attribute('innerHTML')
-	# 		if re.search('-trigger-ev', div_str):
-	# 			#print('Trigger EV')
-	# 			btns = div.find_elements('tag name', 'button')
-	# 			for btn in btns:
-	# 				btn_str = btn.get_attribute('innerHTML')
-	# 				#print('btn: ' + btn.get_attribute('innerHTML'))
-	# 				if btn_str == '+EV':
-	# 					ev_btn = btn
-	# 					break
-	# 	except:
-	# 		continue
-	# # 3. Prematch
-	# for idx in range(len(divs)):
-	# 	div = divs[idx]
-	# 	try:
-	# 		div_str = div.get_attribute('innerHTML')
-	# 		if div_str == 'Prematch':
-	# 			pre_btn = div
-	# 			break
-	# 	except:
-	# 		continue
-
-
 			
-
-			
-
-
-	# Live Now: Div 132
-	# Prematch: Div 136
-	# 3 section btns: Div 146
-
-	# Dynamic btns to switch tables
-	# 1. Arb
-	arb_btn = arb_divs[-1].find_elements('tag name', 'button')[-1]
-	print('arb_btn: ' + arb_btn.get_attribute('innerHTML'))
-	# 2. Prematch
-	print('pre_btn: ' + pre_btn.get_attribute('innerHTML'))
-	# 3. EV
-	ev_btn = ev_divs[-1].find_elements('tag name', 'button')[-2]
-	print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
-	# 4. Live
-
-	#ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
-	#ev_btn = driver.find_element('xpath', '//button[@id="radix-:rv:-trigger-ev"]')
-	# ev_btn = None
-	# try:
-	# 	ev_btn = driver.find_element('id', 'radix-:r12:-trigger-ev')
-	# 	print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
-	# except:
-	# 	try:
-	# 		ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
-	# 		print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
-	# 	except:
-	# 		print('Unknown EV btn id!')
-	
-	
-	# time.sleep(100)
-
-	# add 
-	# print('sportsbook_btn: ' + sportsbook_btn.get_attribute('innerHTML'))
-	# sportsbook_btn.click()
-	# time.sleep(5)
-	# sportsbook_combobox.send_keys('Fliff')
-	# time.sleep(5)
-	# sportsbook_combobox.send_keys('\t\t')
-
-	#time.sleep(0.1)
-
-	# fliff_checkbox = ''
-	# if fliff_checkbox
-
-	# wait to get to new table?
-	#time.sleep(1000)
-
-	# tables = driver.find_elements('tag name', 'table')
-	# print('Tables:')
-	# for idx in range(len(tables)):
-	# 	table = tables[idx]
-	# 	print('Table ' + str(idx) + ': ' + table.get_attribute('innerHTML'))
-
-	# arb table changes so wait to call table each monitor loop
-	# arb_table = driver.find_elements('tag name', 'table')[-1]
-	# print('arb_table: ' + arb_table.get_attribute('innerHTML'))
-
-	# time.sleep(1000)
-
-
-
-	return driver, arb_btn, pre_btn, ev_btn, sportsbook_btn
-
-		# except Exception as e:
-			
-		# 	retries += 1
-		# 	print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+			retries += 1
+			print(f"Exception occurred while opening website. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
 
 
 # each league has a known url
@@ -4185,18 +4436,31 @@ def read_league_odds(league):
 def open_dynamic_website(url, max_retries=3):
 	print('\n===Open Dynamic Website===\n')
 
-	driver = open_react_website(url)
 
-	# each specific website needs to extract nav buttons
-	# that show on all pages or only get used once to init
-	website = open_oddsview_website(driver)
-	driver = website[0]
-	arb_btn = website[1]
-	pre_btn = website[2]
-	ev_btn = website[3]
+	retries = 0
+	while retries < max_retries:
+		try:
+
+			driver = open_react_website(url)
+
+			# each specific website needs to extract nav buttons
+			# that show on all pages or only get used once to init
+			website = open_oddsview_website(driver)
+			driver = website[0]
+			arb_btn = website[1]
+			pre_btn = website[2]
+			ev_btn = website[3]
+
+			return driver, arb_btn, pre_btn, ev_btn
+
+		except:
+			print('Error while opening dynamic website.')
+			retries += 1
+			driver.close()
+			time.sleep(1)
 
 
-	return driver, arb_btn, pre_btn, ev_btn
+	
 
 # finding element by class name will return 1st instance of class
 # but unusual error may occur
