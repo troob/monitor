@@ -14,7 +14,7 @@ import numpy as np # mean, median to display over time
 import os
 import re # see if string contains stat and player of interest to display
 
-import string # to format workbook column wrap
+#import string # to format workbook column wrap
 
 from tabulate import tabulate # display output, eg consistent stat vals
 
@@ -22,36 +22,338 @@ from tabulate import tabulate # display output, eg consistent stat vals
 #import determiner # determine matching key
 #import sorter # sort players outcomes so we see conditions grouped by type and other useful visuals
 
-import converter # convert dicts to lists AND number formats
+import converter, reader # convert dicts to lists AND number formats
 # import remover
 
+import time
 
 
 
 
 
 
+# Assume already on webpage
+def login_website(website_name, driver, cookies_file, saved_cookies):
+    print('\n===Login Website===\n')
+    print('Input: web name: ' + website_name)
+    print('\nOutput: Logged In\n')
 
-def place_bet(ev_row, website_name, driver, final_outcome):
+    email = os.environ['EMAIL']
+    token = os.environ[website_name.upper()]
+
+    
+    logged_in = False
+
+    if website_name == 'betrivers':
+        # look for my account menu btn
+        # betrivers always requires login new window so may not need this for betrivers
+        # unless leave open window for certain predefined time period
+        # such as 5 min bc if haven't seen prop in 5min then probably not for a while???
+        # not necessarily so maybe dont keep open at all unless already have more props in queue
+        try:
+            driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
+            print('Already Logged In Betrivers')
+        except:
+            print('Login Betrivers')
+            # login_betrivers()
+
+        # keep looking for login page
+        # OR just click login btn once???
+        # problem is if not loaded yet then will move on before login
+        login_page = False
+        while not login_page:
+            # class = sc-gHLcSH cnmSeS
+            login_btn = driver.find_element('class name', 'sc-gHLcSH')
+            print('login_btn: ' + login_btn.get_attribute('innerHTML'))
+            login_btn.click()
+            time.sleep(1)
+
+            try:
+                usr_field_input = driver.find_element('id', 'login-form-modal-email')
+                usr_field_html = usr_field_input.get_attribute('outerHTML')
+                print('usr_field_html: ' + usr_field_html)
+
+                login_page = True
+            except:
+                print('Not Login Page')
+
+        # it adds class validation-ok if valid email entered
+        if not re.search('valid', usr_field_html):
+            usr_field_input.send_keys(email)
+
+        # login-form-modal-password
+        pwd_field_input = driver.find_element('id', 'login-form-modal-password')
+        pwd_field_html = pwd_field_input.get_attribute('outerHTML')
+        print('pwd_field_html: ' + pwd_field_html)
+        if not re.search('valid', pwd_field_html):
+            pwd_field_input.send_keys(token)
+
+        # id = login-form-modal-submit
+        submit_btn = driver.find_element('id', 'login-form-modal-submit') #('xpath', '//button[@class="login w-100 btn btn-primary"]')
+        print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        submit_btn.click()
+        time.sleep(3)
+
+        # class = close-modal-button-container
+        close_popup_btn = driver.find_element('xpath', '//div[@class="close-modal-button"]')
+        print('close_popup_btn: ' + close_popup_btn.get_attribute('innerHTML'))
+        close_popup_btn.click()
+        time.sleep(1)
+
+        logged_in = True
+
+    elif website_name == 'betmgm':
+        # check if logged in by top right corner menu
+        # if it says login then not logged in
+        # if it says account name then logged in
+        # if not logged in, then go direct to login url
+        # no need to click btn unless easier
+        # example: driver.find_element_by_xpath('//input[@node-type="searchInput"]')
+        # login_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="signin"]')
+        # print('login_btn: ' + login_btn.get_attribute('innerHTML'))
+        # login_btn.click()
+        # time.sleep(1)
+
+
+        # Check if already logged in
+        # Check if need to login
+
+        login_page = False
+        while not login_page:
+            login_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="signin"]')
+            print('login_btn: ' + login_btn.get_attribute('innerHTML'))
+            login_btn.click()
+            time.sleep(1)
+
+            try:
+                usr_field_div = driver.find_element('id', 'username')
+                usr_field_html = usr_field_div.get_attribute('innerHTML')
+                print('usr_field_div: ' + usr_field_html)
+
+                login_page = True
+            except:
+                print('Not Login Page')
+
+        # if username already entered previously and saved
+        # then go to next field
+        # if untouched empty field, then input email
+        # if starts off blank, then save cookies bc we know not saved yet
+        
+        if re.search('ng-untouched', usr_field_html):
+            usr_field = driver.find_element('id', 'userId')
+            usr_field.send_keys(email)
+
+
+        pwd_field = driver.find_element('name', 'password')
+        pwd_field.send_keys(token)
+
+        submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+        print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        submit_btn.click()
+        time.sleep(3)
+
+
+        # wait for verification manually first time
+        # https://www.ny.betmgm.com/en/mobileportal/twofa
+        verified = False
+        while not verified:
+            url = driver.current_url
+            #print('current url: ' + url)
+            if not url == 'https://www.ny.betmgm.com/en/mobileportal/twofa':
+                verified = True
+                print('Verified')
+                time.sleep(1)
+
+        logged_in = True
+
+
+
+    # Do Something
+    time.sleep(1)
+
+    if logged_in:
+        print('Logged In')
+        reader.save_cookies(driver, website_name, cookies_file, saved_cookies)
+
+
+    #return driver
+
+
+def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved_cookies, test):
     print('\n===Place Bet===\n')
-    print('Input: ev_row = ' + str(ev_row))
+    print('Input: bet_dict = ' + str(bet_dict))
     print('Input: website_name = ' + website_name)
 
 
     # click bet btn to add to betslip
     if final_outcome is not None:
-        final_outcome.click()
+        # Require that betslip is empty
+        # So look for betslip html to see if open
+        # if open, click clear all
+        try:
+            clear_btn = driver.find_element('class name', 'mod-KambiBC-betslip__clear-btn')
+            clear_btn.click()
+            print('Cleared Betslip')
+        except:
+            try:
+                remove_pick_btn = driver.find_element('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+                remove_pick_btn.click()
+                print('Removed Pick')
+            except:
+                print('Betslip Empty')
+
+        # if not already clicked
+        # data-pressed=\"null\"
+
+        # final_outcome: 
+        # <button type="button" 
+        #   class="sc-aXZVg dYaJxz sc-dAlyuH buSnVV KambiBC-betty-outcome" 
+        #   data-touch-feedback="true">
+        #   <div data-touch-feedback="true" 
+        #       class="sc-gEvEer kOrbku">
+        #       <div data-touch-feedback="true" 
+        #           class="sc-eqUAAy kLwvTb">
+        #           <div class="sc-fqkvVR cyiQDV">Over</div>
+        #           <div data-touch-feedback="true" 
+        #               class="sc-dcJsrY gCFiej">6.5
+        #           </div>
+    #           </div>
+    #           <div data-touch-feedback="true" 
+    #               class="sc-iGgWBj kAIwQy">
+    #               <div class="sc-jXbUNg jRmJQc"></div>
+    #               <div data-touch-feedback="true" 
+    #                   class="sc-gsFSXq dqtSKK">
+    #                   <div data-touch-feedback="true" 
+    #                       class="sc-kAyceB gIMtGL">-360
+    #                   </div>
+#                   </div>
+#               </div>
+#           </div>
+        # </button>
+
+
+        # final_outcome: 
+        # <div data-touch-feedback="true" 
+        #   class="sc-gEvEer kOrbku"><div data-touch-feedback="true" class="sc-eqUAAy kLwvTb"><div class="sc-fqkvVR cyiQDV">Over</div><div data-touch-feedback="true" class="sc-dcJsrY gCFiej">6.5</div></div><div data-touch-feedback="true" class="sc-iGgWBj kAIwQy"><div class="sc-jXbUNg jRmJQc"></div><div data-touch-feedback="true" class="sc-gsFSXq dqtSKK"><div data-touch-feedback="true" class="sc-kAyceB gLUWXi">-360</div></div></div></div>
+        #print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
+        while not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
+            final_outcome.click()
+        #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
         # Login after adding to betslip bc then keeps in betslip
         # login first detects if already logged in
-        #login_to_website(website_name, driver)
+        #if not test:
+        login_website(website_name, driver, cookies_file, saved_cookies)
+
+        # For Arbs, find limit by placing large bet we know above limit
+        # find_bet_limit(website_name, driver)
+
+        # For EVs, place bet at given size, rounded to nearest whole number
+        # Then if after place bet, returns msg over limit, place bet at limit
+
+        # enter bet size into wager field
+        # Test find limit with bet size guaranteed above limit
+        # depends on source and market
+        # for betrivers, $300 is max 
+        # so if less than 300 available then need to set limits diff by market
+        max_bet = 0
+        if website_name == 'betrivers':
+            max_bet = 400
+        bet_size = max_bet #bet_dict['size']
+        #submit_wager(bet_size, website_name)
+        # the field uses a changing id so get container 
+        # and then know 1st field is wager field
+        input_container = driver.find_element('class name', 'mod-KambiBC-to-win-input__container')
+        #print('input_container: ' + input_container.get_attribute('innerHTML'))
+        wager_field = input_container.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+        #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+        wager_field.send_keys(bet_size)
+
+        # click Place Bet
+        # mod-KambiBC-betslip__place-bet-btn KambiBC-disabled
+        place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
+        #print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
+        
+        # === MONEY ===
+        #if not test:
+        # Need to click twice or just wait longer???
+        place_bet_btn.click()
+        #time.sleep(1) # Wait for bet to fully load and submit before moving on
+        place_bet_btn.click()
+        time.sleep(1)
+        print('Clicked bet twice')
+
+        # If no receipt
+        # Wager too higher, OR
+        # Odds Change
+        try:
+            close_receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+            close_receipt_btn.click()
+            time.sleep(1) 
+            print('Placed Bet')
+            print('Closed Receipt')
+        except:
+            print('Bet Error')
+            place_bet = False
+
+            # if wager too high, click back
+            try:
+                error_title = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__title').get_attribute('innerHTML').lower() # Wager too high
+                print('error_title: ' + error_title)
+                # Still place bet if not allowed above limit?
+                if error_title == 'wager too high':
+                    place_bet = True
+                    back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
+                    print('back_btn: ' + back_btn.get_attribute('innerHTML'))
+                    back_btn.click()
+                    print('Clicked Back Btn')
+                    time.sleep(1)
+            except:
+                print('Unknown Error while placing bet')
+
+            # if odds change, may still be ok for arb, depending on other side
+            # approve odds btn: mod-KambiBC-betslip__place-bet-btn mod-KambiBC-betslip__approve-odds-btn
+            # but for ev if odds change need to compare to fair odds before deciding if still proceed
+            # For EV, remove pick bc invalidated
+            # and do not add to saved list in case becomes valid again
+            
+            # For EV, place at limit
+            if not test and place_bet:
+                place_bet_btn.click()
+                #time.sleep(1)
+                place_bet_btn.click()
+                time.sleep(1)
+                print('Placed Bet')
+
+                # NEED to Handle Odds Change on subsequent attempts
+                # loop while odds in range and not yet placed
+                # but for EV if odds change then skip
+                try:
+                    close_receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                    close_receipt_btn.click()
+                    time.sleep(1) # Wait for bet to fully load and submit before moving on
+                    print('Closed Receipt')
+                except:
+                    print('Bet Failed')
+                    print('Odds Change or Other Error???')
+
+        # Navigate to bet page to confirm bet placed
+        
+        
+
+        
 
 
     # Close Window after placing bet
     # Close Window before going to next pick
     # bc only 1 window at a time
-    #driver.close() # comment out to test
+    if not test:
+        print('Close Bet Window')
+        driver.close() # comment out to test
+
+    # always switch bot back to main window so it can click btns  
     driver.switch_to.window(driver.window_handles[0])
+
 
 
 # def write_arb_to_post(arb, client, post=False):
@@ -265,7 +567,7 @@ def write_ev_to_post(ev, client, post=False):
     #market_str = 'Market:\t' + market
     bet = ev['bet']
 
-    source = ev['source']
+    source = ev['source'].title()
     # bet1_str = 'Bet 1:\t' + bet1
     odds = ev['odds']
     # odds1_str = 'Odds 1:\t' + odds1
@@ -566,8 +868,8 @@ def write_arbs_to_post(arbs, client, post=False):
         # bet2_str = 'Bet 2:\t' + bet2
         link1 = arb['link1']
         link2 = arb['link2']
-        source1 = arb['source1']
-        source2 = arb['source2']
+        source1 = arb['source1'].title()
+        source2 = arb['source2'].title()
 
         
         # Make list of sizes depending on limit, from 1000 to 100, every 100
