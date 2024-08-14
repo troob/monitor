@@ -826,7 +826,7 @@ def monitor_website(url, test, max_retries=3):
 
 
 # === TEST ===
-test = True
+test = False
 
 # diff from read react website bc we keep site open and loop read data
 # oodsview was free but now charges

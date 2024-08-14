@@ -308,6 +308,9 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                     back_btn.click()
                     print('Clicked Back Btn')
                     time.sleep(1)
+                # elif error_title == 'odds changed':
+                #     # if arb, check other side to see if still valid
+                #     'mod-KambiBC-betslip-button'
             except:
                 print('Unknown Error while placing bet')
 
