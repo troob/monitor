@@ -179,7 +179,7 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
     #return driver
 
 
-def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved_cookies, test):
+def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved_cookies, pick_type='ev', test=True):
     print('\n===Place Bet===\n')
     print('Input: bet_dict = ' + str(bet_dict))
     print('Input: website_name = ' + website_name)
@@ -251,15 +251,24 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
         # For EVs, place bet at given size, rounded to nearest whole number
         # Then if after place bet, returns msg over limit, place bet at limit
 
-        # enter bet size into wager field
-        # Test find limit with bet size guaranteed above limit
-        # depends on source and market
-        # for betrivers, $300 is max 
-        # so if less than 300 available then need to set limits diff by market
-        max_bet = 0
-        if website_name == 'betrivers':
-            max_bet = 400
-        bet_size = max_bet #bet_dict['size']
+        # === Find Limit === 
+        # If EV, start with given wager size
+        # If Arb, find limits on both sides
+        bet_size = 0
+        if not test and pick_type == 'ev':
+            bet_size = converter.round_half_up(float(re.sub('\$','',bet_dict['size'])))
+        else: # if test or arb
+            # enter bet size into wager field
+            # Test find limit with bet size guaranteed above limit
+            # depends on source and market
+            # for betrivers, $300 is max 
+            # so if less than 300 available then need to set limits diff by market
+            max_bet = 0
+            if website_name == 'betrivers':
+                max_bet = 400
+
+            bet_size = max_bet #bet_dict['size']
+
         #submit_wager(bet_size, website_name)
         # the field uses a changing id so get container 
         # and then know 1st field is wager field
@@ -278,7 +287,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
         #if not test:
         # Need to click twice or just wait longer???
         place_bet_btn.click()
-        #time.sleep(1) # Wait for bet to fully load and submit before moving on
+        time.sleep(1) # need wait for bet to fully load and submit before moving on
         place_bet_btn.click()
         time.sleep(1)
         print('Clicked bet twice')
@@ -323,7 +332,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             # For EV, place at limit
             if not test and place_bet:
                 place_bet_btn.click()
-                #time.sleep(1)
+                time.sleep(1) # need wait
                 place_bet_btn.click()
                 time.sleep(1)
                 print('Placed Bet')
@@ -351,6 +360,8 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
     # Close Window before going to next pick
     # bc only 1 window at a time
     if not test:
+        # TEMP wait to manually check bet placed before closing
+        time.sleep(60)
         print('Close Bet Window')
         driver.close() # comment out to test
 
@@ -576,7 +587,10 @@ def write_ev_to_post(ev, client, post=False):
     # odds1_str = 'Odds 1:\t' + odds1
     link = ev['link']
 
-    size = ev['size']
+    # $x -> x
+    # size_num = re.sub('\$','',ev['size'])
+    # print('size_num', size_num)
+    size = '$' + str(converter.round_half_up(float(re.sub('\$','',ev['size']))))
 
 
 

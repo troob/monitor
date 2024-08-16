@@ -431,6 +431,157 @@ def convert_box_score_to_dict(box_score_df):
     #print('box_score_dict: ' + str(box_score_dict))
     return box_score_dict
 
+def convert_team_to_loc_abbrev(team_loc, sport=''):
+    #print('\n===Convert Team to Location Abbrev: ' + team_name + '===\n')
+    
+    abbrev = ''
+
+    
+    # for baseball, need logo info bc multiple teams same city
+    if sport == 'baseball':
+        team_locs = {'chicago white sox':'chw',
+                    'cleveland guardians':'cle',
+                    'detroit tigers':'det',
+                    'kansas city royals':'kc', #KC
+                    'minnesota twins':'min',
+                    'baltimore orioles':'bal',
+                    'boston red sox':'bos',
+                    'new york yankees':'ny',
+                    'tampa bay rays':'tb',
+                    'toronto blue jays':'tor',
+                    'houston astros':'hou',
+                    'los angeles angels':'la',
+                    'oakland athletics':'oak',
+                    'seattle mariners':'sea',
+                    'texas rangers':'tex',
+                    'chicago cubs':'chi',
+                    'cincinnati reds':'cin',
+                    'milwaukee brewers':'mil',
+                    'pittsburgh pirates':'pit',
+                    'st louis cardinals':'stl',
+                    'atlanta braves':'atl',
+                    'miami marlins':'mia',
+                    'new york mets':'ny',
+                    'philadelphia phillies':'phi',
+                    'washington nationals':'wsh',
+                    'arizona diamondbacks':'ari',
+                    'colorado rockies':'col',
+                    'los angeles dodgers':'la',
+                    'san diego padres':'sd',
+                    'san francisco giants':'sf'}
+        
+    elif sport == 'hockey':
+        team_locs = {'boston':'bos',
+                        'buffalo':'buf',
+                        'detroit':'det',
+                        'florida':'fla',
+                        'montreal':'mtl',
+                        'ottawa':'ott',
+                        'tampa bay':'tbl',
+                        'toronto':'tor',
+                        'arizona':'ari',
+                        'chicago':'chi',
+                        'colorado':'col',
+                        'dallas':'dal',
+                        'minnesota':'min',
+                        'nashville':'nsh',
+                        'st louis':'stl',
+                        'winnipeg':'wpg',
+                        'carolina':'car',
+                        'columbus':'cbj',
+                        'new jersey':'njd',
+                        'new york islanders':'nyi',
+                        'new york rangers':'nyr',
+                        'philadelphia':'phi',
+                        'pittsburgh':'pit',
+                        'washington':'wsh',
+                        'anaheim':'ana',
+                        'calgary':'cgy',
+                        'edmonton':'edm',
+                        'los angeles':'lak',
+                        'san jose':'sjs',
+                        'seattle':'sea',
+                        'vancouver':'van',
+                        'vegas':'vgk'}
+    elif sport == 'football':
+        team_locs = {'buffalo':'buf',
+                        'miami':'mia',
+                        'new england':'nep',
+                        'new york jets':'nyj',
+                        'baltimore':'bal',
+                        'cincinnati':'cin',
+                        'cleveland':'cle',
+                        'pittsburgh':'pit',
+                        'houston':'hou',
+                        'indianapolis':'ind',
+                        'jacksonville':'jax',
+                        'tennessee':'ten',
+                        'denver':'den',
+                        'kansas city':'kcc',
+                        'las vegas':'lvr',
+                        'los angeles colts':'lac',
+                        'dallas':'dal',
+                        'new york giants':'nyg',
+                        'philadelphia':'phi',
+                        'washington':'wsh',
+                        'chicago':'chi',
+                        'detroit':'det',
+                        'green bay':'gbp',
+                        'minnesota':'min',
+                        'atlanta':'atl',
+                        'carolina':'car',
+                        'new orleans':'nos',
+                        'tampa bay':'tbb',
+                        'arizona':'ari',
+                        'los angeles rams':'lar',
+                        'san francisco':'sff',
+                        'seattle':'sea'}
+        
+    else: # basketball
+        # even tho 2 teams in LA 1 labeled LA and other Los Angeles
+        team_locs = {'atlanta':'atl', 
+                    'boston':'bos', 
+                    'brooklyn':'bkn', 
+                    'charlotte':'cha', 
+                    'chicago':'chi',
+                    'cleveland':'cle',
+                    'dallas':'dal',
+                    'denver':'den',
+                    'detroit':'det',
+                    'golden state':'gsw',
+                    'houston':'hou',
+                    'indiana':'ind',
+                    'la':'lac',
+                    'los angeles':'lal',
+                    'memphis':'mem',
+                    'miami':'mia',
+                    'milwaukee':'mil',
+                    'minnesota':'min',
+                    'new orleans':'nop',
+                    'new york':'nyk',
+                    'oklahoma city':'okc',
+                    'orlando':'orl',
+                    'philadelphia':'phi',
+                    'phoenix':'phx',
+                    'portland':'por',
+                    'sacramento':'sac',
+                    'san antonio':'sas',
+                    'toronto':'tor',
+                    'utah':'uta',
+                    'washington':'wsh'} # could get from fantasy pros table but simpler to make once bc only 30 immutable vals
+    
+
+
+
+    # hard fail so we can correct name
+    #if team_name in team_abbrevs.keys():
+    abbrev = team_locs[team_loc]
+    # else:
+    #     print('Warning: Unknown team name! ' + team_name)
+
+    #print('abbrev: ' + abbrev)
+    return abbrev
+
 def convert_team_loc_to_abbrev(team_loc, sport=''):
     #print('\n===Convert Team Location to Abbrev: ' + team_name + '===\n')
     
@@ -439,34 +590,31 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
     
     # for baseball, need logo info bc multiple teams same city
     if sport == 'baseball':
-        team_locs = {'chicago white sox':'chi',
+        team_locs = {'chicago':'chi',
                         'cleveland':'cle',
                         'detroit':'det',
                         'kansas city':'kc', #KC
                         'minnesota':'min',
                         'baltimore':'bal',
                         'boston':'bos',
-                        'new york yankees':'ny',
+                        'new york':'ny',
                         'tampa bay':'tb',
                         'toronto':'tor',
                         'houston':'hou',
-                        'los angeles angels':'la',
+                        'los angeles':'la',
                         'oakland':'oak',
                         'seattle':'sea',
                         'texas':'tex',
-                        'chicago cubs':'chi',
                         'cincinnati':'cin',
                         'milwaukee':'mil',
                         'pittsburgh':'pit',
                         'st louis':'stl',
                         'atlanta':'atl',
                         'miami':'mia',
-                        'new york mets':'ny',
                         'philadelphia':'phi',
                         'washington':'was',
                         'arizona':'ari',
                         'colorado':'col',
-                        'los angeles dodgers':'la',
                         'san diego':'sd',
                         'san francisco':'sf'}
         

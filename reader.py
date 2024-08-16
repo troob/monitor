@@ -77,7 +77,7 @@ def read_outcome_label(outcome, market):
 		# Swiatek, Iga -> Iga Swiatek
 		if re.search(',', outcome_label):
 			names = outcome_label.split(', ')
-			outcome_label = names[1] + names[0]
+			outcome_label = names[1] + ' ' + names[0]
 
 	else:# market == 'run line':
 		# Run Line / Spread
@@ -113,6 +113,7 @@ def read_market_odds(market, market_element, bet_dict):
 
 	market_odds = ''
 
+	# Chicago Cubs +1.5
 	bet_outcome = bet_dict['bet'].lower()
 	if bet_dict['source'] == 'betrivers':
 		# if market has team name in it
@@ -120,8 +121,21 @@ def read_market_odds(market, market_element, bet_dict):
 		team_sports = ['mlb', 'nba', 'nfl', 'nhl']
 		# convert team loc to abbrev
 		if market in team_markets and bet_dict['sport'] in team_sports:
-			team_loc = bet_outcome.split()[0]
+			#multi_name_locs = ['new york', 'los angeles']
+			#team = bet_outcome.rsplit(' ', 1)[0]
+			# only sox has 2 names in team
+			# white sox is 2 words
+			multi_name = 'sox'
+			split_num = 2
+			if multi_name in bet_outcome:
+				split_num = 3
+			print('split_num: ' + str(split_num))
+			team_loc = bet_outcome.rsplit(' ', split_num)[0]
+			#team_loc = bet_outcome.split()[0]
+			print('team_loc: ' + team_loc)
 			loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
+			# Chicago -> CHI
+			# New York -> NY
 			bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
 			# bet_outcome = loc_abbrev + team_full_name[1]
 	print('bet_outcome: ' + bet_outcome)
@@ -219,12 +233,15 @@ def read_market_odds(market, market_element, bet_dict):
 
 	return market_odds, final_outcome
 
-def read_market_section(market, website_name, pick_time_group):
+def read_market_section(market, sport, website_name, pick_time_group):
 	print('\n===Read Market Section===\n')
 	print('Input: market = ' + market)
 	print('Input: website_name = ' + website_name)
 	print('\nOutput: market_title='', section_idx=0\n')
 
+	# Tennis
+	# Total Games
+	# Game Total, and more
 	section_idx = 0
 
 	# need standard market for if statements
@@ -235,29 +252,39 @@ def read_market_section(market, website_name, pick_time_group):
 	# '[a-z]{3}\s[a-z]+\stotal'
 	# space before total implies team total
 	if website_name == 'betrivers':
-		if market == 'total':
-			market_title = 'total runs'
-		elif re.search('\stotal', market):
-			# section_name = 'team totals'
-			section_idx = 2
 
-			# oakland athletics -> oak athletics
-			team_full_name = re.sub('\stotal', '', market).split()
-			team_loc = team_full_name[0]
-			loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
-			#team_name = team_full_name[1]
-			team_name = loc_abbrev + ' ' + team_full_name[1]
-			market_title = 'total runs by ' + team_name
-		elif re.search('pitcher', market):
-			# section_name = 'pitcher props'
-			section_idx = 7
-
-
-		# ===Live===
-		elif pick_time_group == 'live':
-
-			if re.search('run line|total', market):
+		# Only Set Winner currently offered in section 2 for tennis
+		if sport == 'tennis':
+			if re.search('winner', market):
+				market_title = re.sub(' winner', '', market)
+				section_idx = 1
+		
+		# Baseball
+		else:
+			if market == 'total':
+				market_title = 'total runs'
+			# Team Total
+			elif re.search('\stotal', market):
+				# section_name = 'team totals'
 				section_idx = 2
+
+				# oakland athletics -> oak athletics
+				team_full_name = re.sub('\stotal', '', market).split()
+				team_loc = team_full_name[0]
+				loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
+				#team_name = team_full_name[1]
+				team_name = loc_abbrev + ' ' + team_full_name[1]
+				market_title = 'total runs by ' + team_name
+			elif re.search('pitcher', market):
+				# section_name = 'pitcher props'
+				section_idx = 7
+
+
+			# ===Live===
+			elif pick_time_group == 'live':
+
+				if re.search('run line|total', market):
+					section_idx = 2
 
 
 			
@@ -359,8 +386,10 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	
 	market = bet_dict['market'].lower()
 	print('market: ' + market)
+	sport = bet_dict['sport']
+	print('sport: ' + sport)
 	
-	market_title, section_idx = read_market_section(market, website_name, pick_time_group)
+	market_title, section_idx = read_market_section(market, sport, website_name, pick_time_group)
 
     #offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
 	sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
@@ -3664,9 +3693,12 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 
 					# For now we take all sports for +EV but only limited sources 
 					# to avoid always beating closing line on unlimited sources
-					sport = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML')
-					sport = sport.split('|')[1].strip().lower()
+					sport_data = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML').split('|')
+					#sport_data = sport_element.split('|')
+					sport = sport_data[0].strip().lower()
 					#print('sport: ' + str(sport))
+					league = sport_data[1].strip().lower()
+					#print('league: ' + str(league))
 					
 
 					market = ev_data[val_idx + 2].find_element('tag name', 'p').get_attribute('innerHTML')
@@ -3750,7 +3782,8 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 								'link':link,
 								'size':size,
 								'game date':game_date,
-								'sport':sport}
+								'sport':sport,
+								'league':league}
 
 					prematch_ev_data.append(ev_dict)
 
@@ -3773,8 +3806,12 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 			exit()
 
 		except Exception as e:
-
 			print('Unknown Error: ', e)
+			if re.search('Message: invalid session id', e):
+				# reboot window
+				# open dynamic window
+				# restart monitor website fcn from the top
+				return 'reboot'
 			retries += 1
 
 
@@ -3890,9 +3927,15 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 					game_idx = val_idx + 2
 					game_element = arb_data[game_idx]
 					game_data = game_element.find_elements('tag name', 'p')
-					sport = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML')
-					sport = sport.split('|')[1].strip().lower()
+					# sport = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML')
+					# sport = sport.split('|')[1].strip().lower()
 					#print('Sport: ' + sport)
+					sport_data = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML').split('|')
+					#sport_data = sport_element.split('|')
+					sport = sport_data[0].strip().lower()
+					#print('sport: ' + str(sport))
+					league = sport_data[1].strip().lower()
+					#print('league: ' + str(league))
 					# Mon Jul 1, 4:00 AM -> Jul 1
 					# OR Today, 9:00 PM
 					# remove comma for csv
@@ -4098,7 +4141,8 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 								'size1':size1,
 								'size2':size2,
 								'game date':game_date,
-								'sport':sport}
+								'sport':sport,
+								'league':league}
 
 					prematch_arb_data.append(arb_dict)
 
@@ -4122,6 +4166,11 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 
 		except Exception as e:
 			print('Unknown Error: ', e)
+			if re.search('Message: invalid session id', e):
+				# reboot window
+				# open dynamic window
+				# restart monitor website fcn from the top
+				return 'reboot'
 			retries += 1
 			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
 			print('Warning: No SGP element!\n', e)

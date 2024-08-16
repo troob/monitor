@@ -138,7 +138,7 @@ def open_bet(bet_dict, driver):
 # input all EVs read this scan
 # output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, test, pick_type='prematch'):
+def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, test, pick_time_group='prematch', pick_type='ev'):
 	# print('\n===Monitor New EVs===\n')
 	# print('Input: ev_data = [[...],...]')# + str(ev_data))
 	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
@@ -213,7 +213,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 				market = ev_row['market'].lower()
 				if market in enabled_markets or re.search('\stotal', market):
 
-					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_type)
+					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 				
 					# Next level: accept different as long as still less than fair odds
 					if actual_odds != ev_row['odds']:
@@ -269,7 +269,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# === Place Bet === 
 			# if actual odds is none then we know not enabled to place bet
 			if actual_odds is not None:
-				writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, test)
+				writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
 
 			
 			
@@ -677,6 +677,10 @@ def monitor_website(url, test, max_retries=3):
 						# read live twice before
 						arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 					
+					if arb_data == 'reboot':
+						driver.quit()
+						break
+
 					# if arb_data is None:
 					# 	# exit
 					# 	print('Arb Data None')
@@ -727,7 +731,10 @@ def monitor_website(url, test, max_retries=3):
 					# === Monitor New +EV picks ===
 
 					ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, sources)
-					
+					if ev_data == 'reboot':
+						driver.quit()
+						break
+
 					# if ev_data is None:
 					# 	# exit
 					# 	print('EV Data None')
@@ -736,16 +743,16 @@ def monitor_website(url, test, max_retries=3):
 
 					# === START TEST ===
 					if test:
-						test_ev = {'market': 'Cincinnati Reds Total', 
-									'bet': 'Over 3.5', 
-									'odds': '-139', 
+						test_ev = {'market': 'Run Line', 
+									'bet': 'Chicago Cubs +1.5', 
+									'odds': '-186', 
 									'source':'betrivers',
-									'game':'St Louis Cardinals vs Cincinnati Reds',
+									'game':'Toronto Blue Jays vs Chicago Cubs',
 									'value':'1.0',
 									'size':'$3.00',
 									'game date':'Today',
 									'sport':'mlb',
-									'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376371'}
+									'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376494'}
 						ev_data = [test_ev] 
 					# === END TEST ===
 
@@ -826,7 +833,7 @@ def monitor_website(url, test, max_retries=3):
 
 
 # === TEST ===
-test = False
+test = True
 
 # diff from read react website bc we keep site open and loop read data
 # oodsview was free but now charges
