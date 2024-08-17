@@ -118,7 +118,7 @@ def read_market_odds(market, market_element, bet_dict):
 	if bet_dict['source'] == 'betrivers':
 		# if market has team name in it
 		team_markets = ['moneyline', 'run line', 'spread']
-		team_sports = ['mlb', 'nba', 'nfl', 'nhl']
+		team_sports = ['baseball', 'basketball', 'football', 'hockey'] # soccer has full name bc just location???
 		# convert team loc to abbrev
 		if market in team_markets and bet_dict['sport'] in team_sports:
 			#multi_name_locs = ['new york', 'los angeles']
@@ -235,8 +235,8 @@ def read_market_odds(market, market_element, bet_dict):
 
 def read_market_section(market, sport, website_name, pick_time_group):
 	print('\n===Read Market Section===\n')
-	print('Input: market = ' + market)
-	print('Input: website_name = ' + website_name)
+	print('Input: market = example = ' + market)
+	print('Input: website_name = example = ' + website_name)
 	print('\nOutput: market_title='', section_idx=0\n')
 
 	# Tennis
@@ -253,12 +253,18 @@ def read_market_section(market, sport, website_name, pick_time_group):
 	# space before total implies team total
 	if website_name == 'betrivers':
 
+		# Tennis
 		# Only Set Winner currently offered in section 2 for tennis
 		if sport == 'tennis':
 			if re.search('winner', market):
 				market_title = re.sub(' winner', '', market)
 				section_idx = 1
-		
+		# Soccer
+		elif sport == 'soccer':
+			if market == 'moneyline':
+				market_title = 'regular time'
+			elif market == 'total':
+				market_title = 'total goals'
 		# Baseball
 		else:
 			if market == 'total':
@@ -402,10 +408,14 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 		section = sections[section_idx]
         #print('\nsection: ' + section.get_attribute('innerHTML'))
         # format makes it so it only opens but does not close with same element
-		driver.execute_script("arguments[0].scrollIntoView(true);", section)
+		
 		retries = 0
 		# do not click section if only 1 section
 		if len(sections) > 1:
+			# starts at top of page so only scroll if > section 0
+			if section_idx > 0:
+				driver.execute_script("arguments[0].scrollIntoView(true);", section)
+
 			while retries < max_retries:
 				try:
 					section.click()
@@ -3807,12 +3817,21 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 
 		except Exception as e:
 			print('Unknown Error: ', e)
-			if re.search('Message: invalid session id', e):
+			e_str = str(e)
+			print('e_str: ' + e_str)
+			if re.search('invalid session id', e_str):
 				# reboot window
 				# open dynamic window
 				# restart monitor website fcn from the top
 				return 'reboot'
+			elif re.search('Connection refused', e_str):
+				print('\nConnection refused in Read Prematch Arb Data')
+				print('Exit')
+				exit()
+
 			retries += 1
+			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+
 
 
 
@@ -4166,14 +4185,21 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 
 		except Exception as e:
 			print('Unknown Error: ', e)
-			if re.search('Message: invalid session id', e):
+			e_str = str(e)
+			print('e_str: ' + e_str)
+			if re.search('invalid session id', e_str):
 				# reboot window
 				# open dynamic window
 				# restart monitor website fcn from the top
 				return 'reboot'
+			elif re.search('Connection refused', e_str):
+				print('\nConnection refused in Read Prematch Arb Data')
+				print('Exit')
+				exit()
+			
+
 			retries += 1
 			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
-			print('Warning: No SGP element!\n', e)
 
 
 		

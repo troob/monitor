@@ -184,6 +184,9 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
     print('Input: bet_dict = ' + str(bet_dict))
     print('Input: website_name = ' + website_name)
 
+    print('Has Page Shifted Inadvertently Yet??')
+    time.sleep(100)
+    
 
     # click bet btn to add to betslip
     if final_outcome is not None:
@@ -235,10 +238,13 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
         # final_outcome: 
         # <div data-touch-feedback="true" 
         #   class="sc-gEvEer kOrbku"><div data-touch-feedback="true" class="sc-eqUAAy kLwvTb"><div class="sc-fqkvVR cyiQDV">Over</div><div data-touch-feedback="true" class="sc-dcJsrY gCFiej">6.5</div></div><div data-touch-feedback="true" class="sc-iGgWBj kAIwQy"><div class="sc-jXbUNg jRmJQc"></div><div data-touch-feedback="true" class="sc-gsFSXq dqtSKK"><div data-touch-feedback="true" class="sc-kAyceB gLUWXi">-360</div></div></div></div>
-        #print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
-        while not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
+        print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
+        if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
+            # driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
+            # #driver.execute_script('window.scrollTo(0, 0);')
+            # time.sleep(1)
             final_outcome.click()
-        #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
+        print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
         # Login after adding to betslip bc then keeps in betslip
         # login first detects if already logged in

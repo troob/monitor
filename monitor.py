@@ -8,6 +8,11 @@ from slack_sdk import WebClient
 
 from datetime import datetime
 
+import pyautogui # screenshot
+import cv2 # computer vision, screen record
+from multiprocessing import Process # run while recording
+import numpy as np # convert img to array
+
 # TEST
 test = False
 
@@ -65,74 +70,125 @@ new_pick_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-valid_sports = ['mlb', 'olympics (men)', 'olympics (women)']#,'hockey'] # big markets to stay subtle
+valid_sports = ['baseball']#,'hockey'] # big markets to stay subtle
+valid_leagues = ['mlb']
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 monitor_ev = True
 
-# Indexes for Data Scraped from Web
-val_idx = 0
-game_idx = 1
-game_date_idx = 2
-market_idx = 3
-bet_idx = 4
-odds_idx = 5
-size_idx = 6
-link_idx = 7
-source_idx = 8
+stop_record = False
 
 
 
+def record_screen():
+	print('\n===Record Screen===\n')
+	# Record Screen Specs
+	# Specify resolution
+	resolution = (1920, 1080)
+	
+	# Specify video codec
+	codec = cv2.VideoWriter_fourcc(*"XVID")
+	
+	# Specify name of Output file
+	filename = "data/Recording.avi"
+	
+	# Specify frames rate. We can choose any 
+	# value and experiment with it
+	fps = 60.0
 
-# Open the website on the bet page
-# And navigate to bet if no direct link
-def open_bet(bet_dict, driver):
-	print('\n===Open Bet===\n')
-	print('Input: bet_dict = {} = ' + str(bet_dict))
-	print('\nOutput: bet_data = [odds, size]\n')
-
-	ev_bet = False
-
-	ev_url = ev_row[link_idx]
-
-	# get size of window 1 to determine window 2 x
-	size = driver.get_window_size()
-
-	driver.switch_to.new_window(type_hint='window')
-	window2_x = size['width'] + 1
-	driver.set_window_position(window2_x, 0)
-	driver.get(ev_url)
-
-	# get cookies immediately after opening page
-	# and then again if login
-
-	# if real odds match source odds
-	# then valid ev bet
-	# check odds match before logging in
-	# bc if odds dont match then close windows without saving cookies
-	source_odds = ev_row[source_idx]
-	real_odds = driver.find_element('', '')
-
-	if source_odds == real_odds:
-		logged_in = determiner.determine_logged_in(website_name, driver)
-
-		# to avoid detection
-		# only open 1 window at a time
-		# and close before opening new one on same source
-		time.sleep(100) # wait before opening next page to seem human
+	# Creating a VideoWriter object
+	out = cv2.VideoWriter(filename, codec, fps, resolution)
+	
+	# Create an Empty window
+	cv2.namedWindow("Live", cv2.WINDOW_NORMAL)
+	
+	# Resize this window
+	cv2.resizeWindow("Live", 480, 270)
+	
+	while True:
+		# Take screenshot using PyAutoGUI
+		img = pyautogui.screenshot()
+	
+		# Convert the screenshot to a numpy array
+		frame = np.array(img)
+	
+		# Convert it from BGR(Blue, Green, Red) to
+		# RGB(Red, Green, Blue)
+		frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+	
+		# Write it to the output file
+		out.write(frame)
 		
-		
-		
-		if logged_in:
-			# Need logged in cookies each login
-			cookies = driver.get_cookies()
-			print('cookies:\n' + str(cookies))
-			saved_cookies[website_name] = cookies
-			writer.write_json_to_file(saved_cookies, cookies_file)	
-		
+		# Optional: Display the recording screen
+		#cv2.imshow('Live', frame)
+
+		if stop_record:
+			print('Stop Record')
+			break
+
+	# Release the Video writer
+	out.release()
+	# Destroy all windows
+	cv2.destroyAllWindows()
+
+
+def read_and_place_bet(ev_row, ev_source, driver, pick_time_group, pick_type, monitor_idx, test):
+	print('\n===Read and Place Bet===\n')
+
+	actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
+				
+	# Next level: accept different as long as still less than fair odds
+	if actual_odds != ev_row['odds']:
+		if actual_odds == '':
+			print('\nNo Bet')
+		else:
+			print('\nOdds Mismatch')
+			print('actual_odds: ' + actual_odds)
+			print('init_odds: ' + ev_row['odds'])
+
 		driver.close()
+		driver.switch_to.window(driver.window_handles[0])
 
-	print('ev_bet: ' + str(ev_bet))
-	return ev_bet
+		# stop recording before continuing to next bet
+		stop_record = True
+		print('Stop Record')
+
+		#return # continue
+	else:
+		# continue to place bet
+		# First notify users before placing bet
+		print('\nPlace Bet')
+
+		# only beep once on desktop after first arb so I can respond fast as possible
+		# but send notification after each arb???
+		# currently phone not used but ideally sends link to phone
+		# so we want to handle one at a time ideally
+		# so phone should get notice for each arb so it can start processing asap
+		if valid_ev_idx == 0:
+			ev_type = 'pre-match'
+			say_str = 'say "' + ev_type + ' E.V."'
+			os.system(say_str)
+			# Also say if still need to check mobile only sources
+			#os.system(say_mobile)
+			print('\n' + str(monitor_idx) + ': Found New EVs')
+			
+			
+		new_picks[valid_ev_idx] = ev_row
+		valid_ev_idx += 1
+
+
+		# notify before placing bet so other devices can start placing bets
+		# format string to post
+		writer.write_ev_to_post(ev_row, client, True)
+
+		# === Place Bet === 
+		# if actual odds is none then we know not enabled to place bet
+		if actual_odds is not None:
+			writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+		
+			# === Stop Recording after place bet ===
+			stop_record = True
+			print('Stop Record')
+
 
 
 # input all EVs read this scan
@@ -145,12 +201,24 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 	ev_type = 'pre-match'
 	say_str = 'say "' + ev_type + ' E.V."'
+
+	# global record_screen
+	# global read_and_place_bet
+	# global ev_row
+	# global ev_source
+	# global driver
+	# global pick_time_group
+	# global pick_type
+	# global monitor_idx
+	# global test
+
+	
 	
 	# if just check diff then will alert when arb disappears
 	# which we do not want
 	new_picks = {}
-	test_picks = []
 	valid_ev_idx = 0
+	test_picks = []
 	for ev_idx in range(len(ev_data)):
 		ev_row = ev_data[ev_idx]
 
@@ -166,7 +234,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 			# all criteria
 			if not test:
-				if not determiner.determine_valid_pick(ev_row, valid_sports, limited_sources, new_ev_rules, init_evs):
+				if not determiner.determine_valid_pick(ev_row, valid_sports, valid_leagues, limited_sources, new_ev_rules, init_evs):
 					continue
 
 
@@ -209,9 +277,27 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			cookies_file = 'data/cookies.json'
 			saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
 			actual_odds = None
+			#auto = False
+
 			if ev_source in enabled_sources:
 				market = ev_row['market'].lower()
+				# team total market shows as <team name> total
 				if market in enabled_markets or re.search('\stotal', market):
+					#print('Auto Pick')
+					# auto = True
+					# === Record Screen for Demo ===
+					# === Func 1: Record Screen ===
+					# === Func 2: Read and Place Bet ===
+					# stop_record = False
+					# If global vars FAIL, then try Thread instead of Process
+					# bc same memory space
+					# p1 = Process(target=record_screen)
+					# p1.start()
+					# p2 = Process(target=read_and_place_bet, args=(ev_row, ev_source, driver, pick_time_group, pick_type, monitor_idx, test))
+					# p2.start()
+					# # close processes before continue
+					# p1.join()
+					# p2.join()
 
 					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 				
@@ -226,25 +312,19 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 						driver.close()
 						driver.switch_to.window(driver.window_handles[0])
+
 						continue
+
 					else:
 						# continue to place bet
+						# First notify users before placing bet
 						print('\nPlace Bet')
+					
 
-					# if actual_odds == ev_row['odds']:
-					# 	# continue to place bet
-					# 	print('\nPlace Bet')
-					# elif actual_odds == '':
-					# 	print('\nNo Bet')
-					# 	driver.close()
-					# 	continue
-					# else:
-					# 	print('\nOdds Mismatch')
-					# 	print('actual_odds: ' + actual_odds)
-					# 	print('init_odds: ' + ev_row['odds'])
-					# 	driver.close()
-					# 	continue
-
+					 
+					
+			#if not auto: # not yet enabled for auto
+			#print('Manual Pick')
 			# only beep once on desktop after first arb so I can respond fast as possible
 			# but send notification after each arb???
 			# currently phone not used but ideally sends link to phone
@@ -270,7 +350,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# if actual odds is none then we know not enabled to place bet
 			if actual_odds is not None:
 				writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
-
+		
 			
 			
 			# CHANGE so instead of batching
@@ -348,7 +428,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 
 			# all criteria
-			if not determiner.determine_valid_pick(arb_row, valid_sports, limited_sources, new_arb_rules, init_arbs, pick_type='arb'):
+			if not determiner.determine_valid_pick(arb_row, valid_sports, valid_leagues, limited_sources, new_arb_rules, init_arbs, pick_type='arb'):
 				continue
 
 
@@ -550,7 +630,7 @@ def open_new_arb_bets(new_arbs):
 # open website once 
 # and then loop over it 
 # simulate human behavior to avoid getting blocked
-def monitor_website(url, test, max_retries=3):
+def monitor_website(url, test, test_ev, max_retries=3):
 
 	# loop until keyboard interrupt
 	retries = 0
@@ -678,6 +758,7 @@ def monitor_website(url, test, max_retries=3):
 						arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 					
 					if arb_data == 'reboot':
+						print('Reboot')
 						driver.quit()
 						break
 
@@ -732,6 +813,7 @@ def monitor_website(url, test, max_retries=3):
 
 					ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, sources)
 					if ev_data == 'reboot':
+						print('Reboot')
 						driver.quit()
 						break
 
@@ -743,16 +825,6 @@ def monitor_website(url, test, max_retries=3):
 
 					# === START TEST ===
 					if test:
-						test_ev = {'market': 'Run Line', 
-									'bet': 'Chicago Cubs +1.5', 
-									'odds': '-186', 
-									'source':'betrivers',
-									'game':'Toronto Blue Jays vs Chicago Cubs',
-									'value':'1.0',
-									'size':'$3.00',
-									'game date':'Today',
-									'sport':'mlb',
-									'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376494'}
 						ev_data = [test_ev] 
 					# === END TEST ===
 
@@ -832,12 +904,34 @@ def monitor_website(url, test, max_retries=3):
 
 
 
-# === TEST ===
-test = True
+if __name__ == "__main__":
+	# === TEST ===
+	test = True
+	# test_ev = {'market': 'Moneyline', 
+	# 			'bet': 'Liverpool', 
+	# 			'odds': '-315', 
+	# 			'game':'Ipswich Town vs Liverpool',
+	# 			'sport':'soccer',
+	# 			'source':'betrivers',
+	# 			'value':'1.0',
+	# 			'size':'$3.00',
+	# 			'game date':'Today',
+	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1021042635'}
+	test_ev = {'market': 'Moneyline', 
+				'bet': 'Seattle Mariners', 
+				'odds': '-165', 
+				'game':'Seattle Mariners vs Pittsburgh Pirates',
+				'sport':'baseball',
+				'source':'betrivers',
+				'value':'1.0',
+				'size':'$3.00',
+				'game date':'Today',
+				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376249'}
 
-# diff from read react website bc we keep site open and loop read data
-# oodsview was free but now charges
-# So instead scrape sites directly
-url = 'https://www.oddsview.com/odds'
-#url = 'https://sportsbook.draftkings.com'
-monitor_website(url, test)
+
+	# diff from read react website bc we keep site open and loop read data
+	# oodsview was free but now charges
+	# So instead scrape sites directly
+	url = 'https://www.oddsview.com/odds'
+	#url = 'https://sportsbook.draftkings.com'
+	monitor_website(url, test, test_ev)
