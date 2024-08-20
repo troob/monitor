@@ -282,22 +282,8 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			if ev_source in enabled_sources:
 				market = ev_row['market'].lower()
 				# team total market shows as <team name> total
-				if market in enabled_markets or re.search('\stotal', market):
-					#print('Auto Pick')
-					# auto = True
-					# === Record Screen for Demo ===
-					# === Func 1: Record Screen ===
-					# === Func 2: Read and Place Bet ===
-					# stop_record = False
-					# If global vars FAIL, then try Thread instead of Process
-					# bc same memory space
-					# p1 = Process(target=record_screen)
-					# p1.start()
-					# p2 = Process(target=read_and_place_bet, args=(ev_row, ev_source, driver, pick_time_group, pick_type, monitor_idx, test))
-					# p2.start()
-					# # close processes before continue
-					# p1.join()
-					# p2.join()
+				if market in enabled_markets or re.search('\stotal', market) or re.search('first inning', market):
+					print('Auto Pick')
 
 					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 				
@@ -307,7 +293,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 							print('\nNo Bet')
 						else:
 							print('\nOdds Mismatch')
-							print('actual_odds: ' + actual_odds)
+							print('actual_odds: ' + str(actual_odds))
 							print('init_odds: ' + ev_row['odds'])
 
 						driver.close()
@@ -906,7 +892,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 if __name__ == "__main__":
 	# === TEST ===
-	test = True
+	test = False
 	# test_ev = {'market': 'Moneyline', 
 	# 			'bet': 'Liverpool', 
 	# 			'odds': '-315', 
@@ -917,16 +903,16 @@ if __name__ == "__main__":
 	# 			'size':'$3.00',
 	# 			'game date':'Today',
 	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1021042635'}
-	test_ev = {'market': 'Moneyline', 
+	test_ev = {'market': 'First Inning Moneyline 3 Way', 
 				'bet': 'Seattle Mariners', 
-				'odds': '-165', 
-				'game':'Seattle Mariners vs Pittsburgh Pirates',
+				'odds': '+335', 
+				'game':'Seattle Mariners vs Los Angeles Dodgers',
 				'sport':'baseball',
 				'source':'betrivers',
-				'value':'1.0',
+				'value':'5.0',
 				'size':'$3.00',
 				'game date':'Today',
-				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376249'}
+				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376385'}
 
 
 	# diff from read react website bc we keep site open and loop read data

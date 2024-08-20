@@ -71,7 +71,7 @@ def read_outcome_label(outcome, market):
 
 	outcome_label = ''
 	# Moneyline
-	if market == 'moneyline':
+	if re.search('moneyline|lead', market):
 		outcome_label = parts[1].get_attribute('innerHTML').lower()
 
 		# Swiatek, Iga -> Iga Swiatek
@@ -79,7 +79,7 @@ def read_outcome_label(outcome, market):
 			names = outcome_label.split(', ')
 			outcome_label = names[1] + ' ' + names[0]
 
-	else:# market == 'run line':
+	else:# market == 'run line': or total
 		# Run Line / Spread
 		# label = div 1 + div 2
 		part1 = parts[1].get_attribute('innerHTML').lower()
@@ -99,6 +99,9 @@ def read_outcome_label(outcome, market):
 
 	#elif market == 'hits':
 
+	# remove dash from compound name for betrivers
+	outcome_label = re.sub('-', ' ', outcome_label)
+
 
 	outcome_odds = parts[-1].get_attribute('innerHTML')
 		
@@ -114,6 +117,7 @@ def read_market_odds(market, market_element, bet_dict):
 	market_odds = ''
 
 	# Chicago Cubs +1.5
+	# U 0.5, O 0.5
 	bet_outcome = bet_dict['bet'].lower()
 	if bet_dict['source'] == 'betrivers':
 		# if market has team name in it
@@ -138,6 +142,17 @@ def read_market_odds(market, market_element, bet_dict):
 			# New York -> NY
 			bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
 			# bet_outcome = loc_abbrev + team_full_name[1]
+			
+		# Totals
+		elif re.search('^[ou]\s', bet_outcome):
+			bet_data = bet_outcome.split()
+			direction = bet_data[0]
+			line = bet_data[1]
+			if direction == 'o':
+				bet_outcome = 'over ' + line
+			else:
+				bet_outcome = 'under ' + line
+
 	print('bet_outcome: ' + bet_outcome)
 
 
@@ -182,7 +197,10 @@ def read_market_odds(market, market_element, bet_dict):
 
 		print('outcome_label: ' + outcome_label)
 		print('bet_outcome: ' + bet_outcome)
-		if outcome_label == bet_outcome:
+		# sometimes betrivers uses shorthand so velez instead of velez sarsfield
+		# so search for label in outcome
+		#if outcome_label == bet_outcome:
+		if re.search(outcome_label, bet_outcome):
 			print('Found Outcome')
 			outcome_disabled = outcome.get_attribute('disabled')
 			print('outcome_disabled: ' + str(outcome_disabled))
@@ -233,7 +251,7 @@ def read_market_odds(market, market_element, bet_dict):
 
 	return market_odds, final_outcome
 
-def read_market_section(market, sport, website_name, pick_time_group):
+def read_market_section(market, sport, website_name, sections, pick_time_group):
 	print('\n===Read Market Section===\n')
 	print('Input: market = example = ' + market)
 	print('Input: website_name = example = ' + website_name)
@@ -259,38 +277,118 @@ def read_market_section(market, sport, website_name, pick_time_group):
 			if re.search('winner', market):
 				market_title = re.sub(' winner', '', market)
 				section_idx = 1
+
 		# Soccer
+		# all current soccer valid props in section 0
+		# Currently only 3 markets for soccer on betrivers
 		elif sport == 'soccer':
+			# Spread not visible in betrivers for soccer???
+
 			if market == 'moneyline':
 				market_title = 'regular time'
+
 			elif market == 'total':
 				market_title = 'total goals'
+
+			# Team Total
+			elif re.search('\stotal', market):
+				team_name = re.sub('\stotal', '', market)
+				market_title = 'total goals by ' + team_name
+
 		# Baseball
 		else:
 			if market == 'total':
 				market_title = 'total runs'
+			# First Inning
+			elif re.search('first inning', market):
+				section_idx = 4
+
+				if market == 'first inning moneyline 3 way':
+					market_title = 'inning 1'
+				elif market == 'first inning total':
+					market_title = 'total runs - inning 1'
+				# First Inning Kansas City Royals Total
+				# just search total bc only first inning total available
+				# if not overall total then team total
+				elif re.search('total', market):
+					team_name = converter.convert_market_to_team_name(market)
+					market_title = team_name + ' to score a run - inning 1'
+
+			# Other Innings
+			elif re.search('inning', market):
+				section_idx = 5
+
+				# prematch only 3 and 5 but live for all innings
+				# innings = ['3', '5']
+				# # 'First 5 Innings Moneyline'
+				# for inning_num in innings:
+				inning_num = market.split()[1]
+				# moneyline_market = 'first ' + inning_num + ' innings moneyline'
+				# moneyline_3way_market = 'first ' + inn
+				# spread_market
+				# total_market
+				if re.search('3 way'):
+					market_title = 'lead after ' + inning_num + ' innings - 3-way'
+				elif re.search('moneyline'):
+					market_title = 'moneyline - first ' + inning_num + ' innings'
+				elif re.search('spread'):
+					market_title = 'spread - first ' + inning_num + ' innings'
+				elif re.search('total'):
+					market_title = 'total runs - first ' + inning_num + ' innings'
+
 			# Team Total
 			elif re.search('\stotal', market):
 				# section_name = 'team totals'
 				section_idx = 2
 
 				# oakland athletics -> oak athletics
-				team_full_name = re.sub('\stotal', '', market).split()
-				team_loc = team_full_name[0]
-				loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
-				#team_name = team_full_name[1]
-				team_name = loc_abbrev + ' ' + team_full_name[1]
+				team_name = converter.convert_market_to_team_name(market)
 				market_title = 'total runs by ' + team_name
 			elif re.search('pitcher', market):
 				# section_name = 'pitcher props'
 				section_idx = 7
 
+			# Player Props
+			# if pitcher props NA we do not know section idx
+			# so loop thru sections or search by id
+			elif re.search(' - ', market):
+				for s_idx in range(len(sections)):
+					section = sections[s_idx]
+					# get title
+					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML')
+					print('section_title_element: ' + section_title_element)
+
+					section_title = ''
+					player_market = market.split(' - ')[1]
+					# Hits and Alt Hits are diff sections
+					# so can either see if = player market
+					# or if in full market title
+					# more specific is better to specific sections
+					# alert error if unrecognized new section/market
+					if player_market == 'Home Runs':
+						section_title = 'Batter HRs'
+					elif player_market == 'Hits' or player_market == 'Alt Hits':
+						section_title = 'Batter Hits'
+					elif player_market == 'Runs' or player_market == 'RBI':
+						section_title = 'Batter Runs/RBIs'
+					elif player_market == 'Bases':
+						section_title = 'Total Bases'
+					elif player_market == 'Stolen Bases':
+						section_title = 'Stolen Bases'
+					else:
+						print('Unkown Player Market! Need to add!')
+
+					if section_title == section_title_element:
+						print('Found Player Section')
+						section_idx = s_idx
+						break
+
 
 			# ===Live===
-			elif pick_time_group == 'live':
+			# if pick_time_group == 'live':
 
-				if re.search('run line|total', market):
-					section_idx = 2
+			# 	if re.search('run line|total', market):
+			# 		section_idx = 2
 
 
 			
@@ -394,11 +492,13 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	print('market: ' + market)
 	sport = bet_dict['sport']
 	print('sport: ' + sport)
+
+	sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
 	
-	market_title, section_idx = read_market_section(market, sport, website_name, pick_time_group)
+	market_title, section_idx = read_market_section(market, sport, website_name, sections, pick_time_group)
 
     #offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
-	sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+	
     # click if not expanded   
     # print('\nSections:') 
     # for section in sections:
@@ -413,8 +513,8 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 		# do not click section if only 1 section
 		if len(sections) > 1:
 			# starts at top of page so only scroll if > section 0
-			if section_idx > 0:
-				driver.execute_script("arguments[0].scrollIntoView(true);", section)
+			#if section_idx > 0:
+				
 
 			while retries < max_retries:
 				try:
@@ -424,6 +524,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 					break
 				except:
 					print('Error clicking Section')
+					driver.execute_script("arguments[0].scrollIntoView(true);", section)
 					retries += 1
 					time.sleep(1)
             
@@ -436,7 +537,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 			market_element = markets[market_idx]
 			#list_element = list_elements[market_idx]
 			#market = offer_categories[1]
-			print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
+			#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
 			# print('\nouter market_element: ' + market_element.get_attribute('outerHTML'))
 			# print('\nlist_element: ' + list_element.get_attribute('innerHTML'))
 			# moneyline always first if available
@@ -3818,7 +3919,7 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 		except Exception as e:
 			print('Unknown Error: ', e)
 			e_str = str(e)
-			print('e_str: ' + e_str)
+			#print('e_str: ' + e_str)
 			if re.search('invalid session id', e_str):
 				# reboot window
 				# open dynamic window
@@ -4186,7 +4287,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 		except Exception as e:
 			print('Unknown Error: ', e)
 			e_str = str(e)
-			print('e_str: ' + e_str)
+			#print('e_str: ' + e_str)
 			if re.search('invalid session id', e_str):
 				# reboot window
 				# open dynamic window
@@ -4231,7 +4332,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 		# Login to Chrome Profile
 		# V5: NEED all chrome windows fully closed and quit
 		options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-		options.add_argument(r'--profile-directory=Profile 8') 
+		options.add_argument(r'--profile-directory=Profile 10') 
 		
 		# FAIL: enable password manager to autofill
 		#options.add_experimental_option("credentials_enable_service", True)

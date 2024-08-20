@@ -7,6 +7,18 @@ import reader # read player abbrevs
 import math
 
 
+
+
+def convert_market_to_team_name(market):
+    # oakland athletics -> oak athletics
+    team_full_name = re.sub('\stotal', '', market).split()
+    team_loc = team_full_name[0]
+    loc_abbrev = convert_team_loc_to_abbrev(team_loc, 'baseball')
+    team_name = loc_abbrev + ' ' + team_full_name[1]
+
+    return team_name
+
+
 # we must iteratively try to round stake and see if other side stake is round enough
 # until both stakes are round enough
 def round_stakes(stake1, stake2):

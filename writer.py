@@ -184,9 +184,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
     print('Input: bet_dict = ' + str(bet_dict))
     print('Input: website_name = ' + website_name)
 
-    print('Has Page Shifted Inadvertently Yet??')
-    time.sleep(100)
-    
+    # print('Has Page Shifted Inadvertently Yet??') No
 
     # click bet btn to add to betslip
     if final_outcome is not None:
@@ -204,6 +202,9 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                 print('Removed Pick')
             except:
                 print('Betslip Empty')
+
+        # print('Has Page Shifted Inadvertently Yet??') No
+        # time.sleep(100)
 
         # if not already clicked
         # data-pressed=\"null\"
@@ -245,6 +246,9 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             # time.sleep(1)
             final_outcome.click()
         print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
+
+        # print('Has Page Shifted Inadvertently Yet??') No
+        # time.sleep(100)
 
         # Login after adding to betslip bc then keeps in betslip
         # login first detects if already logged in
@@ -340,7 +344,9 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                 place_bet_btn.click()
                 time.sleep(1) # need wait
                 place_bet_btn.click()
-                time.sleep(1)
+                # DEMO:
+                time.sleep(5)
+                #time.sleep(1)
                 print('Placed Bet')
 
                 # NEED to Handle Odds Change on subsequent attempts
@@ -349,7 +355,9 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                 try:
                     close_receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
                     close_receipt_btn.click()
-                    time.sleep(1) # Wait for bet to fully load and submit before moving on
+                    # DEMO:
+                    time.sleep(5)
+                    #time.sleep(1) # Wait for bet to fully load and submit before moving on
                     print('Closed Receipt')
                 except:
                     print('Bet Failed')
@@ -367,7 +375,10 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
     # bc only 1 window at a time
     if not test:
         # TEMP wait to manually check bet placed before closing
-        time.sleep(60)
+        #aria-label="Navigate to My Bets"
+        my_bets_btn = driver.find_element('xpath', '//button[@aria-label="Navigate to My Bets"]')
+        my_bets_btn.click()
+        time.sleep(5)
         print('Close Bet Window')
         driver.close() # comment out to test
 
@@ -643,7 +654,7 @@ def write_ev_to_post(ev, client, post=False):
     props_str += 'SIZE: ' + size + ' \n\n'
     props_str += 'VALUE: ' + value + '% \n\n'
     #props_str += 'PROFIT: $' + profit + ' \n\n'
-    props_str += 'LINK: ' + link + ' \n'
+    props_str += 'LINK:\n' + link + ' \n'
 
 
     props_str += '\n==================\n==================\n\n'
@@ -788,7 +799,7 @@ def write_evs_to_post(evs, client, post=False):
         props_str += 'SIZE: ' + size + ' \n\n'
         props_str += 'VALUE: ' + value + '% \n\n'
         #props_str += 'PROFIT: $' + profit + ' \n\n'
-        props_str += 'LINK: ' + link + ' \n'
+        props_str += 'LINK:\n' + link + ' \n'
 
 
         props_str += '\n==================\n==================\n\n'
