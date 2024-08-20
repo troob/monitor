@@ -74,10 +74,7 @@ def read_outcome_label(outcome, market):
 	if re.search('moneyline|lead', market):
 		outcome_label = parts[1].get_attribute('innerHTML').lower()
 
-		# Swiatek, Iga -> Iga Swiatek
-		if re.search(',', outcome_label):
-			names = outcome_label.split(', ')
-			outcome_label = names[1] + ' ' + names[0]
+		outcome_label = converter.convert_name_format(outcome_label)
 
 	else:# market == 'run line': or total
 		# Run Line / Spread
@@ -143,7 +140,7 @@ def read_market_odds(market, market_element, bet_dict):
 			bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
 			# bet_outcome = loc_abbrev + team_full_name[1]
 			
-		# Totals
+		# Totals and Player Props
 		elif re.search('^[ou]\s', bet_outcome):
 			bet_data = bet_outcome.split()
 			direction = bet_data[0]
@@ -299,6 +296,7 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 		else:
 			if market == 'total':
 				market_title = 'total runs'
+				
 			# First Inning
 			elif re.search('first inning', market):
 				section_idx = 4
@@ -344,6 +342,7 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 				# oakland athletics -> oak athletics
 				team_name = converter.convert_market_to_team_name(market)
 				market_title = 'total runs by ' + team_name
+
 			elif re.search('pitcher', market):
 				# section_name = 'pitcher props'
 				section_idx = 7
@@ -352,6 +351,15 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 			# if pitcher props NA we do not know section idx
 			# so loop thru sections or search by id
 			elif re.search(' - ', market):
+
+				market_data = market.split(' - ')
+				player_name = market_data[0]
+				player_market = market_data[1]
+
+				# market title is player name formatted to source
+				# first last -> last, first
+				market_title = converter.convert_name_format(player_name)
+
 				for s_idx in range(len(sections)):
 					section = sections[s_idx]
 					# get title
@@ -359,7 +367,7 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 					print('section_title_element: ' + section_title_element)
 
 					section_title = ''
-					player_market = market.split(' - ')[1]
+					
 					# Hits and Alt Hits are diff sections
 					# so can either see if = player market
 					# or if in full market title
@@ -514,7 +522,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 		if len(sections) > 1:
 			# starts at top of page so only scroll if > section 0
 			#if section_idx > 0:
-				
+			# scrolls to bottom? and does not scroll back up to find element!
 
 			while retries < max_retries:
 				try:

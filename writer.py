@@ -363,22 +363,17 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                     print('Bet Failed')
                     print('Odds Change or Other Error???')
 
+                #aria-label="Navigate to My Bets"
+                my_bets_btn = driver.find_element('xpath', '//button[@aria-label="Navigate to My Bets"]')
+                my_bets_btn.click()
+                time.sleep(5) # TEMP wait to manually check bet placed before closing
+
         # Navigate to bet page to confirm bet placed
         
-        
-
-        
-
-
     # Close Window after placing bet
     # Close Window before going to next pick
     # bc only 1 window at a time
     if not test:
-        # TEMP wait to manually check bet placed before closing
-        #aria-label="Navigate to My Bets"
-        my_bets_btn = driver.find_element('xpath', '//button[@aria-label="Navigate to My Bets"]')
-        my_bets_btn.click()
-        time.sleep(5)
         print('Close Bet Window')
         driver.close() # comment out to test
 

@@ -9,6 +9,23 @@ import math
 
 
 
+def convert_name_format(outcome_label):
+
+    names = outcome_label.split() 
+
+    # Swiatek, Iga -> Iga Swiatek
+    if re.search(',', outcome_label):
+        outcome_label = names[1] + ' ' + names[0]
+
+    # Iga Swiatek -> Swiatek, Iga
+    else:
+        outcome_label = names[1] + ', ' + names[0]
+
+        
+
+    return outcome_label
+
+
 def convert_market_to_team_name(market):
     # oakland athletics -> oak athletics
     team_full_name = re.sub('\stotal', '', market).split()
