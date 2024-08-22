@@ -9,31 +9,88 @@ import math
 
 
 
-def convert_name_format(outcome_label):
+def convert_bet_to_team_loc(bet_outcome):
 
-    names = outcome_label.split() 
+    # only sox has 2 names in team
+    # white sox is 2 words
+    multi_name = 'sox'
+    split_num = 2
+    if multi_name in bet_outcome:
+        split_num = 3
+    print('split_num: ' + str(split_num))
+    team_loc = bet_outcome.rsplit(' ', split_num)[0]
+    #team_loc = bet_outcome.split()[0]
+    print('team_loc: ' + team_loc)
+    return team_loc
+
+
+def convert_name_format(outcome_label):
 
     # Swiatek, Iga -> Iga Swiatek
     if re.search(',', outcome_label):
+        names = outcome_label.split(', ') 
         outcome_label = names[1] + ' ' + names[0]
 
     # Iga Swiatek -> Swiatek, Iga
     else:
+        names = outcome_label.split() 
         outcome_label = names[1] + ', ' + names[0]
 
         
 
     return outcome_label
 
+def convert_team_to_loc_and_name(team):
+    print('\n===Convert Team to Name and Loc===\n')
+    print('Input: team = kansas city royals or chicago white sox = ' + team)
+    print('\nOutput: kansas city or chicago\n')
+
+    # only sox has 2 names in team
+    # white sox is 2 words
+    multi_name = 'sox'
+    split_num = 2
+    if multi_name in team:
+        split_num = 3
+    print('split_num: ' + str(split_num))
+
+    team_data = team.rsplit(' ', split_num)
+    team_loc = team_data[0]
+    team_name = team_data[1]
+    #team_loc = bet_outcome.split()[0]
+
+    print('team_loc: ' + team_loc)
+    print('team_name: ' + team_name)
+    return team_loc, team_name
+
 
 def convert_market_to_team_name(market):
-    # oakland athletics -> oak athletics
-    team_full_name = re.sub('\stotal', '', market).split()
-    team_loc = team_full_name[0]
-    loc_abbrev = convert_team_loc_to_abbrev(team_loc, 'baseball')
-    team_name = loc_abbrev + ' ' + team_full_name[1]
+    print('\n===Convert Market to Team Name===\n')
+    print('Input: market = ' + market)
 
-    return team_name
+    # first x innings kansas city royals total -> kansas city royals
+    # first inning kansas city royals total -> kansas city royals
+    if re.search('innings', market):
+        market = market.split('innings ')[1]
+    elif re.search('inning', market):
+        market = market.split('inning ')[1]
+    # kansas city royals total
+    print('market: ' + market)
+
+    # remove last word to get team full name
+    # kansas city royals
+    team_full_name = market.rsplit()[0]
+
+    team_loc, team_name = convert_team_to_loc_and_name(team_full_name)
+
+    loc_abbrev = convert_team_loc_to_abbrev(team_loc, 'baseball')
+
+    # final format depends on source
+    # betrivers uses loc abbrev + team name
+    # oakland athletics -> oak athletics
+    # kansas city royals -> kc royals
+    source_team_name = loc_abbrev + ' ' + team_name
+
+    return source_team_name
 
 
 # we must iteratively try to round stake and see if other side stake is round enough
@@ -623,11 +680,14 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
                         'cleveland':'cle',
                         'detroit':'det',
                         'kansas city':'kc', #KC
+                        'kansas':'kc', #KC
                         'minnesota':'min',
                         'baltimore':'bal',
                         'boston':'bos',
                         'new york':'ny',
+                        'new':'ny',
                         'tampa bay':'tb',
+                        'tampa':'tb',
                         'toronto':'tor',
                         'houston':'hou',
                         'los angeles':'la',
@@ -638,6 +698,7 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
                         'milwaukee':'mil',
                         'pittsburgh':'pit',
                         'st louis':'stl',
+                        'st':'stl',
                         'atlanta':'atl',
                         'miami':'mia',
                         'philadelphia':'phi',

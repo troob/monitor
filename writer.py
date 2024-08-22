@@ -960,8 +960,8 @@ def write_arbs_to_post(arbs, client, post=False):
             props_str += 'PLAYER: ' + player + ' \n\n'
         props_str += 'VALUE: ' + value + '% \n\n'
         props_str += 'PROFIT: $' + profit + ' \n\n'
-        props_str += 'LINK 1: ' + link1 + ' \n'
-        props_str += 'LINK 2: ' + link2 + ' \n\n'
+        props_str += 'LINK 1:\n' + link1 + ' \n'
+        props_str += 'LINK 2:\n' + link2 + ' \n\n'
         
 
         # if Betrivers show range bc inaccurate reading

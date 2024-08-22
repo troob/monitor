@@ -124,16 +124,8 @@ def read_market_odds(market, market_element, bet_dict):
 		if market in team_markets and bet_dict['sport'] in team_sports:
 			#multi_name_locs = ['new york', 'los angeles']
 			#team = bet_outcome.rsplit(' ', 1)[0]
-			# only sox has 2 names in team
-			# white sox is 2 words
-			multi_name = 'sox'
-			split_num = 2
-			if multi_name in bet_outcome:
-				split_num = 3
-			print('split_num: ' + str(split_num))
-			team_loc = bet_outcome.rsplit(' ', split_num)[0]
-			#team_loc = bet_outcome.split()[0]
-			print('team_loc: ' + team_loc)
+			
+			team_loc = converter.convert_bet_to_team_loc(bet_outcome)
 			loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
 			# Chicago -> CHI
 			# New York -> NY
