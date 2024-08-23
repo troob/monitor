@@ -281,8 +281,10 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 			if ev_source in enabled_sources:
 				market = ev_row['market'].lower()
-				# team total market shows as <team name> total
-				if market in enabled_markets or re.search('\stotal', market) or re.search('first inning', market):
+				# if in enabled markets
+				# or team total, shows as <team name> total
+				# or inning market
+				if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
 					print('Auto Pick')
 
 					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
@@ -811,7 +813,9 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 					# === START TEST ===
 					if test:
-						ev_data = [test_ev] 
+						# add test ev to actual data 
+						# so we can test and run code at same time
+						ev_data.append(test_ev)#[test_ev] 
 					# === END TEST ===
 
 					#print('ev_data: ' + str(ev_data))
@@ -903,16 +907,16 @@ if __name__ == "__main__":
 	# 			'size':'$3.00',
 	# 			'game date':'Today',
 	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1021042635'}
-	test_ev = {'market': 'First Inning Moneyline 3 Way', 
-				'bet': 'Seattle Mariners', 
-				'odds': '+335', 
-				'game':'Seattle Mariners vs Los Angeles Dodgers',
+	test_ev = {'market':'First 3 Innings Spread', 
+				'bet':'Tampa Bay Rays +1.5', 
+				'odds':'-310', 
+				'game':'Tampa Bay Rays vs Los Angeles Dodgers',
 				'sport':'baseball',
 				'source':'betrivers',
 				'value':'5.0',
 				'size':'$3.00',
 				'game date':'Today',
-				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376385'}
+				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376305'}
 
 
 	# diff from read react website bc we keep site open and loop read data

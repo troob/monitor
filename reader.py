@@ -50,7 +50,7 @@ import converter, writer # convert year span to current season
 
 # diff markets have diff formats
 # moneyline has only 1 div but others have 2
-def read_outcome_label(outcome, market):
+def read_outcome_label(outcome, market, sport, team_sports):
 	print('\n===Read Outcome Label===\n')
 	print('Input: outcome: ' + outcome.get_attribute('innerHTML'))
 	print('Input: market = ' + market)
@@ -71,10 +71,14 @@ def read_outcome_label(outcome, market):
 
 	outcome_label = ''
 	# Moneyline
-	if re.search('moneyline|lead', market):
+	# First inning team total says yes/no bc only option to score or not
+	if re.search('moneyline|lead|first inning\s.+total', market):
 		outcome_label = parts[1].get_attribute('innerHTML').lower()
 
-		outcome_label = converter.convert_name_format(outcome_label)
+		# tie outcome does not have either name
+		# but only sports with no tie need to be converted to comma format
+		if sport not in team_sports:
+			outcome_label = converter.convert_name_format(outcome_label)#, name_format=',')
 
 	else:# market == 'run line': or total
 		# Run Line / Spread
@@ -97,7 +101,10 @@ def read_outcome_label(outcome, market):
 	#elif market == 'hits':
 
 	# remove dash from compound name for betrivers
-	outcome_label = re.sub('-', ' ', outcome_label)
+	# but not minus in spread -1.5
+	outcome_data = outcome_label.rsplit(' ', 1)
+	#outcome_label = re.sub('-', ' ', outcome_label)
+	outcome_label = re.sub('-', ' ', outcome_data[0]) + ' ' + outcome_data[1]
 
 
 	outcome_odds = parts[-1].get_attribute('innerHTML')
@@ -108,24 +115,29 @@ def read_outcome_label(outcome, market):
 
 def read_market_odds(market, market_element, bet_dict):
 	print('\n===Read Market Odds===\n')
-	print('Input: market = ' + market)
-	print('Input: bet_dict = ' + str(bet_dict))
+	print('Input: market = example = ' + market)
+	print('Input: bet_dict = {...} = ' + str(bet_dict))
 
 	market_odds = ''
+
+	team_sports = ['baseball', 'basketball', 'football', 'hockey'] # soccer has full name bc just location???
+	sport = bet_dict['sport']
 
 	# Chicago Cubs +1.5
 	# U 0.5, O 0.5
 	bet_outcome = bet_dict['bet'].lower()
 	if bet_dict['source'] == 'betrivers':
 		# if market has team name in it
-		team_markets = ['moneyline', 'run line', 'spread']
-		team_sports = ['baseball', 'basketball', 'football', 'hockey'] # soccer has full name bc just location???
+		#team_markets = ['moneyline', 'run line', 'spread']
+		
 		# convert team loc to abbrev
-		if market in team_markets and bet_dict['sport'] in team_sports:
+		#if market in team_markets or 
+		# ties are moneyline but no team name to convert
+		if re.search('moneyline|spread|run line', market) and sport in team_sports and bet_outcome != 'tie':
 			#multi_name_locs = ['new york', 'los angeles']
 			#team = bet_outcome.rsplit(' ', 1)[0]
 			
-			team_loc = converter.convert_bet_to_team_loc(bet_outcome)
+			team_loc = converter.convert_bet_to_team_loc(bet_outcome, market)
 			loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
 			# Chicago -> CHI
 			# New York -> NY
@@ -137,10 +149,17 @@ def read_market_odds(market, market_element, bet_dict):
 			bet_data = bet_outcome.split()
 			direction = bet_data[0]
 			line = bet_data[1]
-			if direction == 'o':
-				bet_outcome = 'over ' + line
+			# if first inning team total, change to yes or no score
+			if re.search('first inning .+ total', market):
+				if direction == 'o':
+					bet_outcome = 'yes'
+				else:
+					bet_outcome = 'no'
 			else:
-				bet_outcome = 'under ' + line
+				if direction == 'o':
+					bet_outcome = 'over ' + line
+				else:
+					bet_outcome = 'under ' + line
 
 	print('bet_outcome: ' + bet_outcome)
 
@@ -182,14 +201,14 @@ def read_market_odds(market, market_element, bet_dict):
 	for outcome in outcomes:
 
 		# phi pillies
-		outcome_label, outcome_odds = read_outcome_label(outcome, market)
+		outcome_label, outcome_odds = read_outcome_label(outcome, market, sport, team_sports)
 
 		print('outcome_label: ' + outcome_label)
 		print('bet_outcome: ' + bet_outcome)
 		# sometimes betrivers uses shorthand so velez instead of velez sarsfield
 		# so search for label in outcome
 		#if outcome_label == bet_outcome:
-		if re.search(outcome_label, bet_outcome):
+		if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome):
 			print('Found Outcome')
 			outcome_disabled = outcome.get_attribute('disabled')
 			print('outcome_disabled: ' + str(outcome_disabled))
@@ -222,7 +241,7 @@ def read_market_odds(market, market_element, bet_dict):
 		
 		for outcome in outcomes:
 
-			outcome_label, outcome_odds = read_outcome_label(outcome, market)
+			outcome_label, outcome_odds = read_outcome_label(outcome, market, sport, team_sports)
 
 			if outcome_label == bet_outcome:
 				print('Found Outcome')
@@ -263,7 +282,7 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 		# Tennis
 		# Only Set Winner currently offered in section 2 for tennis
 		if sport == 'tennis':
-			if re.search('winner', market):
+			if re.search(' winner', market):
 				market_title = re.sub(' winner', '', market)
 				section_idx = 1
 
@@ -317,13 +336,13 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 				# moneyline_3way_market = 'first ' + inn
 				# spread_market
 				# total_market
-				if re.search('3 way'):
+				if re.search('3 way', market):
 					market_title = 'lead after ' + inning_num + ' innings - 3-way'
-				elif re.search('moneyline'):
+				elif re.search('moneyline', market):
 					market_title = 'moneyline - first ' + inning_num + ' innings'
-				elif re.search('spread'):
+				elif re.search('spread', market):
 					market_title = 'spread - first ' + inning_num + ' innings'
-				elif re.search('total'):
+				elif re.search('total', market):
 					market_title = 'total runs - first ' + inning_num + ' innings'
 
 			# Team Total
@@ -4685,29 +4704,29 @@ def open_dynamic_website(url, max_retries=3):
 	print('\n===Open Dynamic Website===\n')
 
 
-	# retries = 0
-	# while retries < max_retries:
-	# 	try:
+	retries = 0
+	while retries < max_retries:
+		try:
 
-	driver = open_react_website(url)
+			driver = open_react_website(url)
 
-	#if re.search('oddsview', url):
+			#if re.search('oddsview', url):
 
-	# each specific website needs to extract nav buttons
-	# that show on all pages or only get used once to init
-	website = open_oddsview_website(driver)
-	driver = website[0]
-	arb_btn = website[1]
-	pre_btn = website[2]
-	ev_btn = website[3]
+			# each specific website needs to extract nav buttons
+			# that show on all pages or only get used once to init
+			website = open_oddsview_website(driver)
+			driver = website[0]
+			arb_btn = website[1]
+			pre_btn = website[2]
+			ev_btn = website[3]
 
-	return driver, arb_btn, pre_btn, ev_btn
+			return driver, arb_btn, pre_btn, ev_btn
 
-		# except: # NEED specific error for crash so we can still get debug errors for testing
-		# 	print('Error while opening dynamic website.')
-		# 	retries += 1
-		# 	driver.close()
-		# 	time.sleep(1)
+		except: # NEED specific error for crash so we can still get debug errors for testing
+			print('Error while opening dynamic website.')
+			retries += 1
+			driver.close()
+			time.sleep(1)
 
 
 	

@@ -9,48 +9,62 @@ import math
 
 
 
-def convert_bet_to_team_loc(bet_outcome):
+def convert_bet_to_team_loc(bet_outcome, market):
+    print('\n===Convert Bet to Team Loc===\n')
+    print('Input: bet_outcome = team name = ' + bet_outcome)
 
     # only sox has 2 names in team
     # white sox is 2 words
     multi_name = 'sox'
-    split_num = 2
+    split_num = 1
     if multi_name in bet_outcome:
-        split_num = 3
+        split_num = 2
     print('split_num: ' + str(split_num))
+
+    # moneyline outcome is just team name
+    # but other bets like spread have +1.5 to split off
+    if re.search('spread', market):
+        split_num += 1
+
     team_loc = bet_outcome.rsplit(' ', split_num)[0]
     #team_loc = bet_outcome.split()[0]
+
     print('team_loc: ' + team_loc)
     return team_loc
 
 
-def convert_name_format(outcome_label):
+def convert_name_format(name, name_format=None):
+    print('\n===Convert Name Format===\n')
+    print('Input: name = ' + name)
 
-    # Swiatek, Iga -> Iga Swiatek
-    if re.search(',', outcome_label):
-        names = outcome_label.split(', ') 
-        outcome_label = names[1] + ' ' + names[0]
-
-    # Iga Swiatek -> Swiatek, Iga
-    else:
-        names = outcome_label.split() 
-        outcome_label = names[1] + ', ' + names[0]
-
+    if name_format == ',' and not re.search(',', name):
+        names = name.split() 
+        name = names[1] + ', ' + names[0]
         
+    else:
+        # Swiatek, Iga -> Iga Swiatek
+        if re.search(',', name):
+            names = name.split(', ') 
+            name = names[1] + ' ' + names[0]
 
-    return outcome_label
+        # Iga Swiatek -> Swiatek, Iga
+        else:
+            names = name.split() 
+            name = names[1] + ', ' + names[0]
+
+    return name
 
 def convert_team_to_loc_and_name(team):
-    print('\n===Convert Team to Name and Loc===\n')
+    print('\n===Convert Team to Loc and Name===\n')
     print('Input: team = kansas city royals or chicago white sox = ' + team)
     print('\nOutput: kansas city or chicago\n')
 
     # only sox has 2 names in team
     # white sox is 2 words
     multi_name = 'sox'
-    split_num = 2
+    split_num = 1
     if multi_name in team:
-        split_num = 3
+        split_num = 2
     print('split_num: ' + str(split_num))
 
     team_data = team.rsplit(' ', split_num)
@@ -78,7 +92,7 @@ def convert_market_to_team_name(market):
 
     # remove last word to get team full name
     # kansas city royals
-    team_full_name = market.rsplit()[0]
+    team_full_name = market.rsplit(' ', 1)[0]
 
     team_loc, team_name = convert_team_to_loc_and_name(team_full_name)
 

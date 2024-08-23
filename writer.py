@@ -241,10 +241,17 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
         #   class="sc-gEvEer kOrbku"><div data-touch-feedback="true" class="sc-eqUAAy kLwvTb"><div class="sc-fqkvVR cyiQDV">Over</div><div data-touch-feedback="true" class="sc-dcJsrY gCFiej">6.5</div></div><div data-touch-feedback="true" class="sc-iGgWBj kAIwQy"><div class="sc-jXbUNg jRmJQc"></div><div data-touch-feedback="true" class="sc-gsFSXq dqtSKK"><div data-touch-feedback="true" class="sc-kAyceB gLUWXi">-360</div></div></div></div>
         print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
         if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
-            # driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
+            # 
             # #driver.execute_script('window.scrollTo(0, 0);')
-            # time.sleep(1)
-            final_outcome.click()
+            # 
+            try:
+                final_outcome.click()
+            except:
+                driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
+                final_outcome.click()
+            
+            time.sleep(1)
+
         print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
         # print('Has Page Shifted Inadvertently Yet??') No
@@ -252,8 +259,8 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
 
         # Login after adding to betslip bc then keeps in betslip
         # login first detects if already logged in
-        #if not test:
-        login_website(website_name, driver, cookies_file, saved_cookies)
+        if not test:
+            login_website(website_name, driver, cookies_file, saved_cookies)
 
         # For Arbs, find limit by placing large bet we know above limit
         # find_bet_limit(website_name, driver)
