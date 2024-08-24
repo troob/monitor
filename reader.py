@@ -3753,7 +3753,9 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, sources=[], max_retries=3):
 			# click_retries = 0
 			# while click_retries < max_retries:
 			try:
-				pre_btn.click()
+				# pre btn not clickable for some reason
+				#pre_btn.click()
+				driver.execute_script("arguments[0].click();", pre_btn)
 				ev_btn.click()
 				time.sleep(1)
 
@@ -3996,14 +3998,17 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, sources=[], max_retries=3):
 
 			# click_retries = 0
 			# while click_retries < max_retries:
-			try:
-				pre_btn.click()
-				arb_btn.click()
-				time.sleep(1)
+			#try:
+			# print('pre_btn: ' + pre_btn.get_attribute('outerHTML'))
+			# print('arb_btn: ' + arb_btn.get_attribute('outerHTML'))
+			#pre_btn.click()
+			driver.execute_script("arguments[0].click();", pre_btn)
+			arb_btn.click()
+			time.sleep(1)
 
 				#break # exit loop after clicking to continue
-			except:
-				print('Error clicking pre or arb btn')
+			# except:
+			# 	print('Error clicking pre or arb btn')
 				#click_retries += 1
 
 			# if click_retries == 3:
@@ -4474,220 +4479,299 @@ def read_bet_odds(bet, driver):
 def open_oddsview_website(driver, max_retries=3):
 	print('\n===Open Oddsview===\n')
 
-	retries = 0
-	while retries < max_retries:
-		try:
+	# extra wait time to load elements
+	# instead loop until elements found bc minimal wait time
+	#stime.sleep(3)
 
-			# intro dialog shows if cache cleared bc assumes first time user
-			# but now changed to login profile so skip intro dialog
-			# dialog_element = driver.find_element('id', 'radix-:r5:')
-			# print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
+	# retries = 0
+	# while retries < max_retries:
+# 	try:
 
-			# close_btn = dialog_element.find_element('xpath','button')
-			# #print("close_btn: " + close_btn.get_attribute('innerHTML'))
-			# close_btn.click()
-			# time.sleep(0.2)
+	# intro dialog shows if cache cleared bc assumes first time user
+	# but now changed to login profile so skip intro dialog
+	# dialog_element = driver.find_element('id', 'radix-:r5:')
+	# print("dialog_element: " + dialog_element.get_attribute('innerHTML'))
 
-
-			# # data panel, right side
-			#body = driver.find_element('tag name', 'body')
-			#print('body: ' + body.get_attribute('innerHTML'))
-
-			pre_btn = arb_btn = ev_btn = sportsbook_btn = None
-
-			divs = driver.find_elements('tag name', 'div')
-			arb_divs = []
-			ev_divs = []
-			#print('All Divs:')
-			for idx in range(len(divs)):
-				div = divs[idx]
-
-				try:
-					div_str = div.get_attribute('innerHTML')
-					#print('Div ' + str(idx) + ': ' + div_str)
-
-					# Arb and EV btns in same div so both ifs run each loop (not elif)
-					# if re.search('-trigger-ev', div_str):
-					# 	ev_btn = div
-
-					# if re.search('-trigger-arbitrage', div_str):
-					# 	arb_btn = div
-
-					if re.search('\\+EV', div_str):
-						# print('Found EV')
-						# print('Div ' + str(idx) + ': ' + div_str)
-
-						ev_divs.append(div)
-						
-					# arb btn is last div with arb str
-					if re.search('Arbitrage', div_str):
-						# print('Found Arb')
-						# print('Div ' + str(idx) + ': ' + div_str)
-
-						arb_divs.append(div)
-
-					elif div_str == 'Prematch':
-						#print('Found Prematch')
-						pre_btn = div
-					#elif re.search('Sportsbook', div_str):
-						# elif div_str == 'Sportsbooks':
-						# 	#print('Div ' + str(idx) + ': ' + div_str)
-						# 	sportsbook_btn = div
-						# 	sportsbook_combobox = divs[idx-1]
-
-						# elif re.search('table', div_str):
-						# 	print('Table ' + str(idx) + ': ' + div_str)
-
-						# elif div_str == 'Arbitrage':
-						# 	arb_btn = div
-
-				except Exception as e:
-					#print('Exception at div ' + str(idx))# + ': ', e)
-					continue
-
-			# Find Buttons
-			# 1. Arb
-			# for idx in range(len(divs)):
-			# 	div = divs[idx]
-			# 	try:
-			# 		div_str = div.get_attribute('innerHTML')
-			# 		if re.search('-trigger-arbitrage', div_str):
-			# 			#print('Trigger Arb')
-			# 			btns = div.find_elements('tag name', 'button')
-			# 			for btn in btns:
-			# 				btn_str = btn.get_attribute('innerHTML')
-			# 				#print('btn: ' + btn.get_attribute('innerHTML'))
-			# 				if btn_str == 'Arbitrage':
-			# 					arb_btn = btn
-			# 					break
-			# 	except:
-			# 		continue
-			# # 2. EV
-			# for idx in range(len(divs)):
-			# 	div = divs[idx]
-			# 	try:
-			# 		div_str = div.get_attribute('innerHTML')
-			# 		if re.search('-trigger-ev', div_str):
-			# 			#print('Trigger EV')
-			# 			btns = div.find_elements('tag name', 'button')
-			# 			for btn in btns:
-			# 				btn_str = btn.get_attribute('innerHTML')
-			# 				#print('btn: ' + btn.get_attribute('innerHTML'))
-			# 				if btn_str == '+EV':
-			# 					ev_btn = btn
-			# 					break
-			# 	except:
-			# 		continue
-			# # 3. Prematch
-			# for idx in range(len(divs)):
-			# 	div = divs[idx]
-			# 	try:
-			# 		div_str = div.get_attribute('innerHTML')
-			# 		if div_str == 'Prematch':
-			# 			pre_btn = div
-			# 			break
-			# 	except:
-			# 		continue
+	# close_btn = dialog_element.find_element('xpath','button')
+	# #print("close_btn: " + close_btn.get_attribute('innerHTML'))
+	# close_btn.click()
+	# time.sleep(0.2)
 
 
-					
+	# # data panel, right side
+	body = driver.find_element('tag name', 'body')
+	body_str = body.get_attribute('innerHTML')
+	while 'Arbitrage' not in body_str:
+		body = driver.find_element('tag name', 'body')
+		body_str = body.get_attribute('innerHTML')
+	#print('body: ' + body_str)
 
-					
+	
 
+	pre_btn = arb_btn = ev_btn = sportsbook_btn = None
+	
+	# divs = body.find_elements('tag name', 'div')
+	# btns = body.find_elements('tag name', 'button')
+	# # test btn
+	# # buttons work but needed buttons are disabled for some reason
+	# # btns[0].click()
+	# # print('Clicked Test Button')
+	# # time.sleep(5)
 
-			# Live Now: Div 132
-			# Prematch: Div 136
-			# 3 section btns: Div 146
+	# arb_divs = []
+	# ev_divs = []
+	#while len(arb_divs) == 0 and pre_btn is not None:
+	# print('\nAll Btns:')
+	# for idx in range(len(btns)):
+	# 	div = divs[idx]
 
-			# Dynamic btns to switch tables
-			# 1. Arb
-			arb_btn = arb_divs[-1].find_elements('tag name', 'button')[-1]
-			print('arb_btn: ' + arb_btn.get_attribute('innerHTML'))
-			# 2. Prematch
-			print('pre_btn: ' + pre_btn.get_attribute('innerHTML'))
-			# 3. EV
-			ev_btn = ev_divs[-1].find_elements('tag name', 'button')[-2]
-			print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
-			# 4. Live
+	# 	try:
+	# 		div_str = div.get_attribute('innerHTML')
+	# 		print('Div ' + str(idx) + ': ' + div_str)
 
-			#ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
-			#ev_btn = driver.find_element('xpath', '//button[@id="radix-:rv:-trigger-ev"]')
-			# ev_btn = None
-			# try:
-			# 	ev_btn = driver.find_element('id', 'radix-:r12:-trigger-ev')
-			# 	print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
-			# except:
-			# 	try:
-			# 		ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
-			# 		print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
-			# 	except:
-			# 		print('Unknown EV btn id!')
-			
-			
-			# time.sleep(100)
+	# 		# Arb and EV btns in same div so both ifs run each loop (not elif)
+	# 		# if re.search('-trigger-ev', div_str):
+	# 		# 	ev_btn = div
 
-			# add 
-			# print('sportsbook_btn: ' + sportsbook_btn.get_attribute('innerHTML'))
-			# sportsbook_btn.click()
-			# time.sleep(5)
-			# sportsbook_combobox.send_keys('Fliff')
-			# time.sleep(5)
-			# sportsbook_combobox.send_keys('\t\t')
+	# 		# if re.search('-trigger-arbitrage', div_str):
+	# 		# 	arb_btn = div
 
-			#time.sleep(0.1)
+	# 		if re.search('\\+EV', div_str):
+	# 			# print('Found EV')
+	# 			# print('Div ' + str(idx) + ': ' + div_str)
 
-			# fliff_checkbox = ''
-			# if fliff_checkbox
+	# 			ev_divs.append(div)
+				
+	# 		# arb btn is last div with arb str
+	# 		if re.search('Arbitrage', div_str):
+	# 			# print('Found Arb')
+	# 			# print('Div ' + str(idx) + ': ' + div_str)
 
-			# wait to get to new table?
-			#time.sleep(1000)
+	# 			arb_divs.append(div)
 
-			# tables = driver.find_elements('tag name', 'table')
-			# print('Tables:')
-			# for idx in range(len(tables)):
-			# 	table = tables[idx]
-			# 	print('Table ' + str(idx) + ': ' + table.get_attribute('innerHTML'))
+	# 		elif div_str == 'Prematch':
+	# 			#print('Found Prematch')
+	# 			pre_btn = div
+	# 		#elif re.search('Sportsbook', div_str):
+	# 			# elif div_str == 'Sportsbooks':
+	# 			# 	#print('Div ' + str(idx) + ': ' + div_str)
+	# 			# 	sportsbook_btn = div
+	# 			# 	sportsbook_combobox = divs[idx-1]
 
-			# arb table changes so wait to call table each monitor loop
-			# arb_table = driver.find_elements('tag name', 'table')[-1]
-			# print('arb_table: ' + arb_table.get_attribute('innerHTML'))
+	# 			# elif re.search('table', div_str):
+	# 			# 	print('Table ' + str(idx) + ': ' + div_str)
 
-			# time.sleep(1000)
+	# 			# elif div_str == 'Arbitrage':
+	# 			# 	arb_btn = div
+
+	# 	except Exception as e:
+	# 		#print('Exception at div ' + str(idx))# + ': ', e)
+	# 		continue
+
+		#time.sleep(1)
+
+	# Find Buttons
+	# 1. Arb
+	# for idx in range(len(divs)):
+	# 	div = divs[idx]
+	# 	try:
+	# 		div_str = div.get_attribute('innerHTML')
+	# 		if re.search('-trigger-arbitrage', div_str):
+	# 			#print('Trigger Arb')
+	# 			btns = div.find_elements('tag name', 'button')
+	# 			for btn in btns:
+	# 				btn_str = btn.get_attribute('innerHTML')
+	# 				#print('btn: ' + btn.get_attribute('innerHTML'))
+	# 				if btn_str == 'Arbitrage':
+	# 					arb_btn = btn
+	# 					break
+	# 	except:
+	# 		continue
+	# # 2. EV
+	# for idx in range(len(divs)):
+	# 	div = divs[idx]
+	# 	try:
+	# 		div_str = div.get_attribute('innerHTML')
+	# 		if re.search('-trigger-ev', div_str):
+	# 			#print('Trigger EV')
+	# 			btns = div.find_elements('tag name', 'button')
+	# 			for btn in btns:
+	# 				btn_str = btn.get_attribute('innerHTML')
+	# 				#print('btn: ' + btn.get_attribute('innerHTML'))
+	# 				if btn_str == '+EV':
+	# 					ev_btn = btn
+	# 					break
+	# 	except:
+	# 		continue
+	# # 3. Prematch
+	# for idx in range(len(divs)):
+	# 	div = divs[idx]
+	# 	try:
+	# 		div_str = div.get_attribute('innerHTML')
+	# 		if div_str == 'Prematch':
+	# 			pre_btn = div
+	# 			break
+	# 	except:
+	# 		continue
 
 
 			
-			# # Click filters so do not need to process as many picks
-			# # Combobox html not visible so try select
-			# # find by aria-controls=:
-			# # prematch arb: aria-controls=radix-:r2bi:
-			# # prematch ev: aria-controls="radix-:r1q4:" or radix-:r2s:
-			# ev_btn.click()
-			# pre_btn.click()
-			# loop thru elements until find Filters
-			# and then select parent or just click the div???
-			#try:
-			# filter_dropdown = driver.find_element('xpath', '//button[@role="combobox"]') #find_element('xpath', '..')
-			# print('filter_dropdown: ' + filter_dropdown.get_attribute('outerHTML'))
-			# filter_dropdown.click()
-			# # filter_dropdown = Select(filter_dropdown)
-			# # filter_dropdown.select_by_visible_text('Leagues')
-			# # except:
-			# # 	print('No Filter')
-			# driver.execute_script('arguments[1].click()', filter_dropdown)
+	# print('arb_divs: ')
+	# for arb in arb_divs:
+	# 	arb_str = arb.get_attribute('innerHTML')
+	# 	print('arb: ' + arb_str)
+	# print('ev_divs: ')
+	# for ev in ev_divs:
+	# 	ev_str = ev.get_attribute('innerHTML')
+	# 	print('ev: ' + ev_str)
 
-			# WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//button[@role="combobox"]'))).click()
+	# why are buttons not interactable???
+	# print('\nTabs:')
+	# tabs = driver.find_elements('xpath', '//button[@role="tab"]')
+	# for tab in tabs:
+	# 	tab_str = tab.get_attribute('innerHTML')
+	# 	print('tab: ' + tab_str)
+	# 	if tab_str == '+EV':
+	# 		ev_btn = tab
+	# 	elif tab_str == 'Arbitrage':
+	# 		arb_btn = tab
+	# 		break
 
-			# WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//span[@class='k-widget k-dropdown' and @aria-owns='products_listbox']"))).click()
-			# WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//div[@class='k-animation-container']/div[@id='products-list']//ul//li[text()='Chang']"))).click()
+
+	# print('\nRadio:')
+	# radios = driver.find_elements('xpath', '//button[@role="radio"]')
+	# for radio in radios:
+	# 	radio_str = radio.find_element('tag name', 'div').get_attribute('innerHTML')
+	# 	print('radio: ' + radio_str)
+	# 	if radio_str == 'Prematch':
+	# 		pre_btn = radio
+	# 		break
+
+	# Live Now: Div 132
+	# Prematch: Div 136
+	# 3 section btns: Div 146
+
+	# Dynamic btns to switch tables
+	# 1. Arb
+	arb_btn = driver.find_element('xpath', '//button[text()[contains(., "Arbitrage")]]')
+	# print('arb_btn: ' + arb_btn.get_attribute('outerHTML'))
+	#arb_btn = arb_divs[-1].find_elements('tag name', 'button')[-1]
+	
+	# 2. Prematch
+	pre_btn = driver.find_element('xpath', '//*[text()[contains(., "Prematch")]]').find_element('xpath', '..')
+	# 3. EV
+	ev_btn = driver.find_element('xpath', '//button[text()[contains(., "+EV")]]')
+	#ev_btn = ev_divs[-1].find_elements('tag name', 'button')[-2]
+
+	# while True:
+	# 	print('\narb_btn: ' + arb_btn.get_attribute('outerHTML'))
+	# 	# print('pre_btn: ' + pre_btn.get_attribute('outerHTML'))
+	# 	# print('ev_btn: ' + ev_btn.get_attribute('outerHTML'))
+	# 	time.sleep(5)
+	# 4. Live
+
+	# print('\npre_btn before: ' + pre_btn.get_attribute('outerHTML'))
+	# print('\narb_btn before: ' + arb_btn.get_attribute('outerHTML'))
+	# print('\narb_btn before: ' + arb_btn.get_attribute('outerHTML'))
+
+	# test click arb btn
+	#driver.execute_script("arguments[0].setAttribute('aria-selected', arguments[1])", arb_btn, "true")
+	#driver.execute_script("arguments[0].setAttribute('data-state', arguments[1])", pre_btn, "on")
+
+	#driver.execute_script('arguments[0].removeAttribute("disabled:pointer-events-none");', pre_btn)
+
+	# driver.execute_script('arguments[0].removeAttribute("disabled");', ev_btn)
+	# driver.execute_script('arguments[0].removeAttribute("disabled");', arb_btn)
+	
+	# print('\npre_btn after: ' + pre_btn.get_attribute('outerHTML'))
+	# print('\narb_btn after: ' + arb_btn.get_attribute('outerHTML'))
+	# print('\narb_btn after: ' + arb_btn.get_attribute('outerHTML'))
+
+	#time.sleep(5)
+
+	#driver.execute_script("arguments[0].click();", pre_btn)
+	#arb_btn.click()
+
+	#time.sleep(10)
+
+	#ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
+	#ev_btn = driver.find_element('xpath', '//button[@id="radix-:rv:-trigger-ev"]')
+	# ev_btn = None
+	# try:
+	# 	ev_btn = driver.find_element('id', 'radix-:r12:-trigger-ev')
+	# 	print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
+	# except:
+	# 	try:
+	# 		ev_btn = driver.find_element('id', 'radix-:rv:-trigger-ev')
+	# 		print('ev_btn: ' + ev_btn.get_attribute('innerHTML'))
+	# 	except:
+	# 		print('Unknown EV btn id!')
+	
+	
+	# time.sleep(100)
+
+	# add 
+	# print('sportsbook_btn: ' + sportsbook_btn.get_attribute('innerHTML'))
+	# sportsbook_btn.click()
+	# time.sleep(5)
+	# sportsbook_combobox.send_keys('Fliff')
+	# time.sleep(5)
+	# sportsbook_combobox.send_keys('\t\t')
+
+	#time.sleep(0.1)
+
+	# fliff_checkbox = ''
+	# if fliff_checkbox
+
+	# wait to get to new table?
+	#time.sleep(1000)
+
+	# tables = driver.find_elements('tag name', 'table')
+	# print('Tables:')
+	# for idx in range(len(tables)):
+	# 	table = tables[idx]
+	# 	print('Table ' + str(idx) + ': ' + table.get_attribute('innerHTML'))
+
+	# arb table changes so wait to call table each monitor loop
+	# arb_table = driver.find_elements('tag name', 'table')[-1]
+	# print('arb_table: ' + arb_table.get_attribute('innerHTML'))
+
+	# time.sleep(1000)
+
+
+	
+	# # Click filters so do not need to process as many picks
+	# # Combobox html not visible so try select
+	# # find by aria-controls=:
+	# # prematch arb: aria-controls=radix-:r2bi:
+	# # prematch ev: aria-controls="radix-:r1q4:" or radix-:r2s:
+	# ev_btn.click()
+	# pre_btn.click()
+	# loop thru elements until find Filters
+	# and then select parent or just click the div???
+	#try:
+	# filter_dropdown = driver.find_element('xpath', '//button[@role="combobox"]') #find_element('xpath', '..')
+	# print('filter_dropdown: ' + filter_dropdown.get_attribute('outerHTML'))
+	# filter_dropdown.click()
+	# # filter_dropdown = Select(filter_dropdown)
+	# # filter_dropdown.select_by_visible_text('Leagues')
+	# # except:
+	# # 	print('No Filter')
+	# driver.execute_script('arguments[1].click()', filter_dropdown)
+
+	# WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//button[@role="combobox"]'))).click()
+
+	# WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//span[@class='k-widget k-dropdown' and @aria-owns='products_listbox']"))).click()
+	# WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//div[@class='k-animation-container']/div[@id='products-list']//ul//li[text()='Chang']"))).click()
+	
+	#time.sleep(100)
+
+	return driver, arb_btn, pre_btn, ev_btn, sportsbook_btn
+
+		# except Exception as e:
 			
-			#time.sleep(100)
-
-			return driver, arb_btn, pre_btn, ev_btn, sportsbook_btn
-
-		except Exception as e:
-			
-			retries += 1
-			print(f"Exception occurred while opening website. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+		# 	retries += 1
+		# 	print(f"Exception occurred while opening website. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
 
 
 # each league has a known url
@@ -4704,29 +4788,29 @@ def open_dynamic_website(url, max_retries=3):
 	print('\n===Open Dynamic Website===\n')
 
 
-	retries = 0
-	while retries < max_retries:
-		try:
+	# retries = 0
+	# while retries < max_retries:
+	# 	try:
 
-			driver = open_react_website(url)
+	driver = open_react_website(url)
 
-			#if re.search('oddsview', url):
+	#if re.search('oddsview', url):
 
-			# each specific website needs to extract nav buttons
-			# that show on all pages or only get used once to init
-			website = open_oddsview_website(driver)
-			driver = website[0]
-			arb_btn = website[1]
-			pre_btn = website[2]
-			ev_btn = website[3]
+	# each specific website needs to extract nav buttons
+	# that show on all pages or only get used once to init
+	website = open_oddsview_website(driver)
+	driver = website[0]
+	arb_btn = website[1]
+	pre_btn = website[2]
+	ev_btn = website[3]
 
-			return driver, arb_btn, pre_btn, ev_btn
+	return driver, arb_btn, pre_btn, ev_btn
 
-		except: # NEED specific error for crash so we can still get debug errors for testing
-			print('Error while opening dynamic website.')
-			retries += 1
-			driver.close()
-			time.sleep(1)
+		# except: # NEED specific error for crash so we can still get debug errors for testing
+		# 	print('Error while opening dynamic website.')
+		# 	retries += 1
+		# 	driver.close()
+		# 	time.sleep(1)
 
 
 	

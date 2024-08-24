@@ -239,7 +239,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
         # final_outcome: 
         # <div data-touch-feedback="true" 
         #   class="sc-gEvEer kOrbku"><div data-touch-feedback="true" class="sc-eqUAAy kLwvTb"><div class="sc-fqkvVR cyiQDV">Over</div><div data-touch-feedback="true" class="sc-dcJsrY gCFiej">6.5</div></div><div data-touch-feedback="true" class="sc-iGgWBj kAIwQy"><div class="sc-jXbUNg jRmJQc"></div><div data-touch-feedback="true" class="sc-gsFSXq dqtSKK"><div data-touch-feedback="true" class="sc-kAyceB gLUWXi">-360</div></div></div></div>
-        print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
+        #print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
         if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
             # 
             # #driver.execute_script('window.scrollTo(0, 0);')
@@ -252,7 +252,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             
             time.sleep(1)
 
-        print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
+        #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
         # print('Has Page Shifted Inadvertently Yet??') No
         # time.sleep(100)
@@ -373,6 +373,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                 #aria-label="Navigate to My Bets"
                 my_bets_btn = driver.find_element('xpath', '//button[@aria-label="Navigate to My Bets"]')
                 my_bets_btn.click()
+                print('Clicked My Bets')
                 time.sleep(5) # TEMP wait to manually check bet placed before closing
 
         # Navigate to bet page to confirm bet placed

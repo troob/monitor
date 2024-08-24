@@ -69,8 +69,10 @@ def convert_team_to_loc_and_name(team):
 
     team_data = team.rsplit(' ', split_num)
     team_loc = team_data[0]
-    team_name = team_data[1]
     #team_loc = bet_outcome.split()[0]
+    team_name = team_data[1]
+    if split_num == 2:
+        team_name += ' ' + team_data[2]
 
     print('team_loc: ' + team_loc)
     print('team_name: ' + team_name)

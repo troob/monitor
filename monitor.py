@@ -233,9 +233,10 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 
 			# all criteria
-			if not test:
-				if not determiner.determine_valid_pick(ev_row, valid_sports, valid_leagues, limited_sources, new_ev_rules, init_evs):
-					continue
+			#if not test: ensure test meets criteria
+			# or else need to analyze test ev separate to run tests while running live odds
+			if not determiner.determine_valid_pick(ev_row, valid_sports, valid_leagues, limited_sources, new_ev_rules, init_evs):
+				continue
 
 
 			# === Check Real Odds === 
@@ -287,26 +288,26 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 				if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
 					print('Auto Pick')
 
-					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
+					# actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 				
-					# Next level: accept different as long as still less than fair odds
-					if actual_odds != ev_row['odds']:
-						if actual_odds == '':
-							print('\nNo Bet')
-						else:
-							print('\nOdds Mismatch')
-							print('actual_odds: ' + str(actual_odds))
-							print('init_odds: ' + ev_row['odds'])
+					# # Next level: accept different as long as still less than fair odds
+					# if actual_odds != ev_row['odds']:
+					# 	if actual_odds == '':
+					# 		print('\nNo Bet')
+					# 	else:
+					# 		print('\nOdds Mismatch')
+					# 		print('actual_odds: ' + str(actual_odds))
+					# 		print('init_odds: ' + ev_row['odds'])
 
-						driver.close()
-						driver.switch_to.window(driver.window_handles[0])
+					# 	driver.close()
+					# 	driver.switch_to.window(driver.window_handles[0])
 
-						continue
+					# 	continue
 
-					else:
-						# continue to place bet
-						# First notify users before placing bet
-						print('\nPlace Bet')
+					# else:
+					# 	# continue to place bet
+					# 	# First notify users before placing bet
+					# 	print('\nPlace Bet')
 					
 
 					 
@@ -670,6 +671,15 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 			driver.switch_to.window(driver.window_handles[0])
 
+			# display all select elements
+			# None Here which makes sense bc not shown in html
+			# so try to get combobox
+			# select_elements = driver.find_elements('xpath', '//button[@role="combobox"]')
+			# print('Select Elements')
+			# for se in select_elements:
+			# 	print('select element: ' + se.get_attribute('outerHTML'))
+			
+			
 			monitor_idx = 1
 
 			prev_arb_data = [] # first loop init=prev or None?
