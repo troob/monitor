@@ -36,7 +36,7 @@ import time
 def login_website(website_name, driver, cookies_file, saved_cookies):
     print('\n===Login Website===\n')
     print('Input: web name: ' + website_name)
-    print('\nOutput: Logged In\n')
+    #print('\nOutput: Logged In\n')
 
     email = os.environ['EMAIL']
     token = os.environ[website_name.upper()]
@@ -318,6 +318,15 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             time.sleep(1) 
             print('Placed Bet')
             print('Closed Receipt')
+
+            # Go to my bets to confirm
+             #aria-label="Navigate to My Bets"
+            my_bets_btn = driver.find_element('xpath', '//button[@aria-label="Navigate to My Bets"]')
+            my_bets_btn.click()
+            print('Clicked My Bets')
+            time.sleep(5) # TEMP wait to manually check bet placed before closing
+
+
         except:
             print('Bet Error')
             place_bet = False

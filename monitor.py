@@ -274,40 +274,40 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# None vs '' does not work bc could be blank bc gray or gone
 			# so if we are sure that it would read unless disappeared then None could indicate failed to read
 			# use same keywords as oddsview market title
-			enabled_markets = ['moneyline', 'run line', 'total']
+			#enabled_markets = ['moneyline', 'run line', 'total']
 			cookies_file = 'data/cookies.json'
 			saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
 			actual_odds = None
 			#auto = False
 
 			if ev_source in enabled_sources:
-				market = ev_row['market'].lower()
+				#market = ev_row['market'].lower()
 				# if in enabled markets
 				# or team total, shows as <team name> total
 				# or inning market
-				if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
-					print('Auto Pick')
+				#if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
+				print('Auto Pick')
 
-					# actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
-				
-					# # Next level: accept different as long as still less than fair odds
-					# if actual_odds != ev_row['odds']:
-					# 	if actual_odds == '':
-					# 		print('\nNo Bet')
-					# 	else:
-					# 		print('\nOdds Mismatch')
-					# 		print('actual_odds: ' + str(actual_odds))
-					# 		print('init_odds: ' + ev_row['odds'])
+				actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
+			
+				# Next level: accept different as long as still less than fair odds
+				if actual_odds != ev_row['odds']:
+					if actual_odds == '':
+						print('\nNo Bet')
+					else:
+						print('\nOdds Mismatch')
+						print('actual_odds: ' + str(actual_odds))
+						print('init_odds: ' + ev_row['odds'] + '\n')
 
-					# 	driver.close()
-					# 	driver.switch_to.window(driver.window_handles[0])
+					driver.close()
+					driver.switch_to.window(driver.window_handles[0])
 
-					# 	continue
+					continue
 
-					# else:
-					# 	# continue to place bet
-					# 	# First notify users before placing bet
-					# 	print('\nPlace Bet')
+				else:
+					# continue to place bet
+					# First notify users before placing bet
+					print('\nPlace Bet')
 					
 
 					 
@@ -825,7 +825,11 @@ def monitor_website(url, test, test_ev, max_retries=3):
 					if test:
 						# add test ev to actual data 
 						# so we can test and run code at same time
-						ev_data.append(test_ev)#[test_ev] 
+						# If Test and Run same time
+						#ev_data.append(test_ev)#[test_ev] 
+
+						# If Only Test EV
+						ev_data = [test_ev] 
 					# === END TEST ===
 
 					#print('ev_data: ' + str(ev_data))
@@ -906,27 +910,40 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 if __name__ == "__main__":
 	# === TEST ===
-	test = False
-	# test_ev = {'market': 'Moneyline', 
-	# 			'bet': 'Liverpool', 
-	# 			'odds': '-315', 
-	# 			'game':'Ipswich Town vs Liverpool',
-	# 			'sport':'soccer',
+	test = True
+	# test_ev = {'market':'Total Sets', 
+	# 			'bet':'O 12.5', 
+	# 			'odds':'-103', 
+	# 			'game':'Nadia Podoroska vs Diana Shnaider',
+	# 			'sport':'tennis',
 	# 			'source':'betrivers',
-	# 			'value':'1.0',
+	# 			'league':'NA',
+	# 			'value':'5.0',
 	# 			'size':'$3.00',
 	# 			'game date':'Today',
 	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1021042635'}
-	test_ev = {'market':'First 3 Innings Spread', 
-				'bet':'Tampa Bay Rays +1.5', 
-				'odds':'-310', 
-				'game':'Tampa Bay Rays vs Los Angeles Dodgers',
-				'sport':'baseball',
+	# test_ev = {'market':'Jose Altuve - Hits', 
+	# 			'bet':'U 0.5', 
+	# 			'odds':'-360', 
+	# 			'game':'Houston Astros vs Baltimore Orioles',
+	# 			'source':'betrivers',
+	# 			'sport':'baseball',
+	# 			'league':'mlb',
+	# 			'value':'5.0',
+	# 			'size':'$3.00',
+	# 			'game date':'Today',
+	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
+	test_ev = {'market':'Jose Altuve - Home Runs', 
+				'bet':'U 0.5', 
+				'odds':'-360', 
+				'game':'Houston Astros vs Baltimore Orioles',
 				'source':'betrivers',
+				'sport':'baseball',
+				'league':'mlb',
 				'value':'5.0',
 				'size':'$3.00',
 				'game date':'Today',
-				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376305'}
+				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
 
 
 	# diff from read react website bc we keep site open and loop read data

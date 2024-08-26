@@ -37,6 +37,7 @@ def convert_name_format(name, name_format=None):
     print('\n===Convert Name Format===\n')
     print('Input: name = ' + name)
 
+    # if not sure which format input but only want comma out
     if name_format == ',' and not re.search(',', name):
         names = name.split() 
         name = names[1] + ', ' + names[0]
@@ -79,9 +80,18 @@ def convert_team_to_loc_and_name(team):
     return team_loc, team_name
 
 
-def convert_market_to_team_name(market):
+# seattle seahawks total -> sea seahawks
+def convert_market_to_team_name(market, league):
     print('\n===Convert Market to Team Name===\n')
     print('Input: market = ' + market)
+
+    # only convert team name format if usa league
+    source_team_name = re.sub('\stotal', '', market)
+
+    usa_leagues = ['mlb', 'nba', 'nfl']
+
+    if league not in usa_leagues:
+        return source_team_name
 
     # first x innings kansas city royals total -> kansas city royals
     # first inning kansas city royals total -> kansas city royals

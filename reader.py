@@ -57,9 +57,9 @@ def read_outcome_label(outcome, market, sport, team_sports):
 
 	outcome_sub_element_1 = outcome.find_element('tag name', 'div')
 	parts = outcome_sub_element_1.find_elements('tag name', 'div')
-	print('Parts 1:')
-	for part in parts:
-		print('part: ' + part.get_attribute('innerHTML'))
+	#print('Parts 1:')
+	#for part in parts:
+		#print('part: ' + part.get_attribute('innerHTML'))
 
 	# Need to tell if grayed out NA by class or lack of odds???
 	# outcome_sub_element_2 = outcome_sub_element_1.find_element('tag name', 'div')
@@ -70,9 +70,13 @@ def read_outcome_label(outcome, market, sport, team_sports):
 
 
 	outcome_label = ''
+	
 	# Moneyline
 	# First inning team total says yes/no bc only option to score or not
-	if re.search('moneyline|lead|first inning\s.+total', market):
+	# so label is only 1 part
+	# set winner
+	if re.search('moneyline|lead|win|first inning .+ total', market):
+	
 		outcome_label = parts[1].get_attribute('innerHTML').lower()
 
 		# tie outcome does not have either name
@@ -80,31 +84,30 @@ def read_outcome_label(outcome, market, sport, team_sports):
 		if sport not in team_sports:
 			outcome_label = converter.convert_name_format(outcome_label)#, name_format=',')
 
-	else:# market == 'run line': or total
+	# all others, except home runs bc no outcome label, bc yes/no list
+	# spread or total, except first inning total bc yes/no
+	#elif # Home Run button shows only odds bc it is yes/no list
+	elif not re.search('home', market): # market == 'run line': or total
+	# if re.search('spread|total') and not re.search('first'):
 		# Run Line / Spread
 		# label = div 1 + div 2
 		part1 = parts[1].get_attribute('innerHTML').lower()
-		print('\npart1: ' + part1)
+		#print('\npart1: ' + part1)
 		part2 = parts[2].get_attribute('innerHTML') # symbols/numbers dont lower
-		print('part2: ' + part2)
+		#print('part2: ' + part2)
 		outcome_label = part1 + ' ' + part2
 
-	# elif market == 'total':
-	#     # label = div 1 + div 2
-	#     part1 = parts[1].get_attribute('innerHTML').lower()
-	#     print('\npart1: ' + part1)
-	#     part2 = parts[2].get_attribute('innerHTML') # symbols/numbers dont lower
-	#     print('part2: ' + part2)
-	#     outcome_label = part1 + ' ' + part2
+	
 
 
 	#elif market == 'hits':
 
-	# remove dash from compound name for betrivers
-	# but not minus in spread -1.5
-	outcome_data = outcome_label.rsplit(' ', 1)
-	#outcome_label = re.sub('-', ' ', outcome_label)
-	outcome_label = re.sub('-', ' ', outcome_data[0]) + ' ' + outcome_data[1]
+	if outcome_label != '':
+		# remove dash from compound name for betrivers
+		# but not minus in spread -1.5
+		outcome_data = outcome_label.rsplit(' ', 1)
+		#outcome_label = re.sub('-', ' ', outcome_label)
+		outcome_label = re.sub('-', ' ', outcome_data[0]) + ' ' + outcome_data[1]
 
 
 	outcome_odds = parts[-1].get_attribute('innerHTML')
@@ -113,9 +116,10 @@ def read_outcome_label(outcome, market, sport, team_sports):
 	print('outcome_odds: ' + outcome_odds)
 	return outcome_label, outcome_odds
 
-def read_market_odds(market, market_element, bet_dict):
-	print('\n===Read Market Odds===\n')
-	print('Input: market = example = ' + market)
+def read_player_market_odds(player_name, participants, market_element, bet_dict):
+	print('\n===Read Player Market Odds===\n')
+	print('Input: player_name = example name = ' + player_name)
+	#print('Input: market_element = <...> = ' + market_element.get_attribute('innerHTML'))
 	print('Input: bet_dict = {...} = ' + str(bet_dict))
 
 	market_odds = ''
@@ -123,6 +127,181 @@ def read_market_odds(market, market_element, bet_dict):
 	team_sports = ['baseball', 'basketball', 'football', 'hockey'] # soccer has full name bc just location???
 	sport = bet_dict['sport']
 
+	# === Convert Bet Outcome to Source Format === 
+	# Chicago Cubs +1.5
+	# U 0.5, O 0.5
+	bet_outcome = bet_dict['bet'].lower()
+
+	bet_data = bet_outcome.split()
+	direction = bet_data[0]
+	line = bet_data[1]
+
+	if bet_dict['source'] == 'betrivers':
+		
+		# Player Props over under except home runs yes/no
+		if re.search('^[ou]\s', bet_outcome):
+
+			if direction == 'o':
+				bet_outcome = 'over ' + line
+			else:
+				bet_outcome = 'under ' + line
+
+		print('bet_outcome: ' + bet_outcome)
+
+			
+		final_outcome = None # pass it on to click in place bet fcn
+
+		# get column lists
+		columns = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')
+		# for column in columns:
+		# 	print('column: ' + column.get_attribute('innerHTML'))
+
+		# idx = 0
+		# if len(columns) == 3:
+		# 	idx += 1
+
+		# need over column to determine when new player
+		over_column = columns[-2].get_attribute('innerHTML')
+		# under_column = columns[1]
+
+		# look for participant in over column to get cutoff idx?
+		# no bc not outcome
+		# instead see if num is less than prev bc always in order
+
+		if direction == 'o':
+			column = columns[-2]
+		else:
+			column = columns[-1]
+		
+		# when it is grayed out NA disabled there is no odds section
+		outcomes = column.find_elements('class name', 'KambiBC-betty-outcome')
+		
+		# For Home Runs, always 1 per player
+		# as indicated by num cols
+		# if only 2 columns, need to separate outcomes by player
+		# if 3 columns, then first column is separator already 
+		# and we know only 1 row per player
+		if len(columns) == 3:
+
+			player_idx = None
+			for participant_idx in range(len(participants)):
+				participant = participants[participant_idx]
+				if participant == player_name:
+					player_idx = participant_idx
+					break
+					
+			if player_idx is not None:
+				print('Found Outcome')
+
+				final_outcome = outcomes[player_idx]
+
+				outcome_disabled = final_outcome.get_attribute('disabled')
+				if outcome_disabled is not None:
+					print('Outcome Disabled')
+					
+				outcome_odds = read_outcome_label(outcome, player_name, sport, team_sports)[1]
+				if outcome_disabled is None:
+					market_odds = outcome_odds #parts[-1].get_attribute('innerHTML')
+
+		else:
+			print('Separate Outcomes')
+			num_player_outcomes = 0
+			all_players_outcome_nums = []
+			# players in idx 1+ bc idx 0 is header
+			player_column_split = over_column.split('<h4 class="KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant">')
+			for player_column in player_column_split[1:]:
+				outcome_buttons = player_column.split('<button')
+				num_player_outcomes = len(outcome_buttons) - 1 # minus header row
+				#print('num_player_outcomes: ' + str(num_player_outcomes))
+				all_players_outcome_nums.append(num_player_outcomes)
+			print('all_players_outcome_nums: ' + str(all_players_outcome_nums))
+
+			# separate outcomes by player
+			# by checking if num is less than prev
+			all_players_outcomes = {}
+			player_idx = 0
+			#prev_outcome_num = 0
+			outcome_count = 0
+			#for outcome_idx in range(len(outcomes)):
+			#for outcome_idx in range(num_player_outcomes):
+			for outcome in outcomes:
+				#outcome = outcomes[outcome_idx]
+
+				# phi pillies
+				#outcome_label, outcome_odds = read_outcome_label(outcome, player_name, sport, team_sports)
+
+				# over 3.5 -> 3.5
+				# +3.5 -> 3.5
+				#outcome_num = float(re.sub('over |under |\+-', '', outcome_label))
+				#print('outcome_num: ' + str(outcome_num))
+				
+				#if outcome_num <= prev_outcome_num:
+				if outcome_count == all_players_outcome_nums[player_idx]:
+					print('New Player')
+					player_idx += 1
+					outcome_count = 0
+
+				participant_name = participants[player_idx]
+				if participant_name not in all_players_outcomes.keys():
+					all_players_outcomes[participant_name] = []
+				all_players_outcomes[participant_name].append(outcome)
+
+				#prev_outcome_num = outcome_num
+				outcome_count += 1
+
+			print('all_players_outcomes: ' + str(all_players_outcomes))
+
+				
+			# see if given bet matches any of the outcomes
+			#for participant_name, participant_outcomes in all_players_outcomes.items():
+
+			player_outcomes = all_players_outcomes[player_name]
+			#print('player_outcomes: ' + str(player_outcomes))
+			for outcome in player_outcomes:
+
+				# phi pillies
+				outcome_label, outcome_odds = read_outcome_label(outcome, player_name, sport, team_sports)
+
+				print('\noutcome_label: ' + outcome_label)
+				print('bet_outcome: ' + bet_outcome)
+
+				# if home runs, only outcome odds, no label
+				# so get row idx in list
+				
+				# sometimes betrivers uses shorthand so velez instead of velez sarsfield
+				# so search for label in outcome
+				#if outcome_label == bet_outcome:
+				if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome):
+					print('Found Outcome')
+					outcome_disabled = outcome.get_attribute('disabled')
+					if outcome_disabled is not None:
+						print('Outcome Disabled')
+					#print('outcome_disabled: ' + str(outcome_disabled))
+					#if not re.search('disabled', outcome_class):
+					# get odds if not disabled
+					# disabled is none if not disabled
+					if outcome_disabled is None:
+						market_odds = outcome_odds #parts[-1].get_attribute('innerHTML')
+					final_outcome = outcome
+					break
+	
+
+	time.sleep(1)
+
+	return market_odds, final_outcome
+
+def read_market_odds(market, market_element, bet_dict):
+	print('\n===Read Market Odds===\n')
+	print('Input: market = example = ' + market)
+	#print('Input: market_element = <...> = ' + market_element.get_attribute('innerHTML'))
+	print('Input: bet_dict = {...} = ' + str(bet_dict))
+
+	market_odds = ''
+
+	team_sports = ['baseball', 'basketball', 'football', 'hockey'] # soccer has full name bc just location???
+	sport = bet_dict['sport']
+
+	# === Convert Bet Outcome to Source Format === 
 	# Chicago Cubs +1.5
 	# U 0.5, O 0.5
 	bet_outcome = bet_dict['bet'].lower()
@@ -133,7 +312,7 @@ def read_market_odds(market, market_element, bet_dict):
 		# convert team loc to abbrev
 		#if market in team_markets or 
 		# ties are moneyline but no team name to convert
-		if re.search('moneyline|spread|run line', market) and sport in team_sports and bet_outcome != 'tie':
+		if re.search('moneyline|spread|run line', market) and sport in team_sports and bet_outcome != 'tie' and bet_outcome != 'draw':
 			#multi_name_locs = ['new york', 'los angeles']
 			#team = bet_outcome.rsplit(' ', 1)[0]
 			
@@ -163,34 +342,6 @@ def read_market_odds(market, market_element, bet_dict):
 
 	print('bet_outcome: ' + bet_outcome)
 
-
-	# === Player Props === 
-	# separate outcomes if player prop
-	# Check for specific player
-	# ryne nelson - pitcher strikeouts
-	# player_names = market.split(' - ')[0].split()
-	# first_name = player_names[0]
-	# last_name = player_names[1]
-	# player_title = last_name + ', ' + first_name
-	# print('player_title: ' + player_title)
-
-	# outcomes = []
-	# # cannot simply take all outcomes in market
-	# # need all children to separate players by header
-	# # get 2 columns 'KambiBC-outcomes-list__column'
-	# market_columns = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')
-	# over_column = market_columns[0]
-	# under_column = market_columns[1]
-	# market_children = over_column.find_elements('xpath', './/*')
-	# for child in market_children:
-	#     print('\nMarket_child: ' + child.get_attribute('innerHTML'))
-
-		# if header, use as key
-		# if button, use as outcome
-
-		# start at player name
-		# stop at header or end
-
 		
 	final_outcome = None # pass it on to click in place bet fcn
 
@@ -203,7 +354,10 @@ def read_market_odds(market, market_element, bet_dict):
 		# phi pillies
 		outcome_label, outcome_odds = read_outcome_label(outcome, market, sport, team_sports)
 
-		print('outcome_label: ' + outcome_label)
+		# if home runs, only outcome odds, no label
+		# so get row idx in list
+
+		print('\noutcome_label: ' + outcome_label)
 		print('bet_outcome: ' + bet_outcome)
 		# sometimes betrivers uses shorthand so velez instead of velez sarsfield
 		# so search for label in outcome
@@ -211,7 +365,9 @@ def read_market_odds(market, market_element, bet_dict):
 		if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome):
 			print('Found Outcome')
 			outcome_disabled = outcome.get_attribute('disabled')
-			print('outcome_disabled: ' + str(outcome_disabled))
+			if outcome_disabled is not None:
+				print('Outcome Disabled')
+			#print('outcome_disabled: ' + str(outcome_disabled))
 			#if not re.search('disabled', outcome_class):
 			# get odds if not disabled
 			# disabled is none if not disabled
@@ -223,45 +379,54 @@ def read_market_odds(market, market_element, bet_dict):
 
 	# if not found bet in main lines
 	# then search alternates
-	alt_markets = ['run line', 'total']
-	if market_odds == '' and market in alt_markets:
+	# alt_markets = ['run line', 'total', 'total games']
+	# do not need to know alt markets bc just check for alt show list btn
+	if market_odds == '': # and market in alt_markets:
 		# separate markets with only 1 option
 		#if market != 'moneyline':
 		# click Show list
-		alt_btn = market_element.find_element('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
-		print('alt_btn: ' + alt_btn.get_attribute('innerHTML'))
-		alt_btn.click()
-		time.sleep(1)
+		try:
+			alt_btn = market_element.find_element('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
+			print('alt_btn: ' + alt_btn.get_attribute('innerHTML'))
+			alt_btn.click()
+			time.sleep(1)
 
-		# get altered market element
-		#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
-		# repeat check in outcomes list
-		outcomes = market_element.find_elements('class name', 'KambiBC-betty-outcome')
-		# see if given bet matches any of the outcomes
-		
-		for outcome in outcomes:
+			# get altered market element
+			#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
+			# repeat check in outcomes list
+			outcomes = market_element.find_elements('class name', 'KambiBC-betty-outcome')
+			# see if given bet matches any of the outcomes
+			
+			for outcome in outcomes:
 
-			outcome_label, outcome_odds = read_outcome_label(outcome, market, sport, team_sports)
+				outcome_label, outcome_odds = read_outcome_label(outcome, market, sport, team_sports)
 
-			if outcome_label == bet_outcome:
-				print('Found Outcome')
-				outcome_disabled = outcome.get_attribute('disabled')
-				#print('outcome_disabled: ' + str(outcome_disabled))
-				#if not re.search('disabled', outcome_class):
-				# get odds if not disabled
-				# disabled is none if not disabled
-				if outcome_disabled is None:
-					market_odds = outcome_odds #parts[-1].get_attribute('innerHTML')
-				final_outcome = outcome
-				break
+				print('\noutcome_label: ' + outcome_label)
+				print('bet_outcome: ' + bet_outcome)
+
+				if outcome_label == bet_outcome:
+					print('Found Outcome')
+					outcome_disabled = outcome.get_attribute('disabled')
+					#print('outcome_disabled: ' + str(outcome_disabled))
+					#if not re.search('disabled', outcome_class):
+					# get odds if not disabled
+					# disabled is none if not disabled
+					if outcome_disabled is None:
+						market_odds = outcome_odds #parts[-1].get_attribute('innerHTML')
+					final_outcome = outcome
+					break
+
+		except:
+			print('No Alt List')
 
 	time.sleep(1)
 
 	return market_odds, final_outcome
 
-def read_market_section(market, sport, website_name, sections, pick_time_group):
+def read_market_section(market, sport, league, website_name, sections, pick_time_group):
 	print('\n===Read Market Section===\n')
 	print('Input: market = example = ' + market)
+	print('Input: sport = example = ' + sport)
 	print('Input: website_name = example = ' + website_name)
 	print('\nOutput: market_title='', section_idx=0\n')
 
@@ -279,14 +444,38 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 	# space before total implies team total
 	if website_name == 'betrivers':
 
-		# Tennis
+		# === Tennis ===
 		# Only Set Winner currently offered in section 2 for tennis
 		if sport == 'tennis':
+
+			# total games, total sets, set spread, game spread stay same
+
 			if re.search(' winner', market):
+				# Set 1 Winner -> Set 1
 				market_title = re.sub(' winner', '', market)
 				section_idx = 1
+			
+			# Player Total Games
+			elif re.search('\stotal', market):
+				player_name = market.split(' total')[0] #rsplit(' total', 1)[0] #re.sub('\stotal', '', market)
+				player_name = converter.convert_name_format(player_name)
+				market_title = 'total games won by ' + player_name
 
-		# Soccer
+			# Player To Win At Least 1 Set
+			elif re.search('to win at least', market):
+				player_name = market.split(' to win at least')[0] #rsplit(' total', 1)[0] #re.sub('\stotal', '', market)
+				player_name = converter.convert_name_format(player_name)
+				market_title = player_name + ' to win at least one set'
+
+		# === MMA & Boxing ===
+		# elif sport == 'mma' or sport == 'boxing':
+
+		# 	if market == 'total':
+		# 		market_title = 'total rounds'
+
+		# ==== Team Sports ====
+
+		# === Soccer ===
 		# all current soccer valid props in section 0
 		# Currently only 3 markets for soccer on betrivers
 		elif sport == 'soccer':
@@ -303,9 +492,37 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 				team_name = re.sub('\stotal', '', market)
 				market_title = 'total goals by ' + team_name
 
-		# Baseball
+		# === Football & Basketball===
+		# both use 'points' and have 4 markets
+		elif sport == 'football' or sport == 'basketball':
+
+			# moneyline is moneyline
+			
+			if market == 'spread':
+				market_title = 'point spread'
+
+			elif market == 'total':
+				market_title = 'total points'
+
+			# Team Total
+			elif re.search('\stotal', market):
+				section_idx = 2
+
+				# if nfl then loc abbrev + name
+				# elif college just team name
+				# oakland athletics -> oak athletics
+				# team_name = re.sub('\stotal', '', market)
+				# if league == 'nfl':
+				team_name = converter.convert_market_to_team_name(market, league)
+				market_title = 'total points by ' + team_name
+
+		# === Baseball ===
 		else:
-			if market == 'total':
+
+			if market == 'spread':
+				market_title = 'run line'
+
+			elif market == 'total':
 				market_title = 'total runs'
 				
 			# First Inning
@@ -320,7 +537,7 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 				# just search total bc only first inning total available
 				# if not overall total then team total
 				elif re.search('total', market):
-					team_name = converter.convert_market_to_team_name(market)
+					team_name = converter.convert_market_to_team_name(market, league)
 					market_title = team_name + ' to score a run - inning 1'
 
 			# Other Innings
@@ -351,12 +568,13 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 				section_idx = 2
 
 				# oakland athletics -> oak athletics
-				team_name = converter.convert_market_to_team_name(market)
+				team_name = converter.convert_market_to_team_name(market, league)
 				market_title = 'total runs by ' + team_name
 
-			elif re.search('pitcher', market):
-				# section_name = 'pitcher props'
-				section_idx = 7
+			# handle like any player prop
+			# elif re.search('pitcher', market):
+			# 	# section_name = 'pitcher props'
+			# 	section_idx = 7
 
 			# Player Props
 			# if pitcher props NA we do not know section idx
@@ -366,36 +584,44 @@ def read_market_section(market, sport, website_name, sections, pick_time_group):
 				market_data = market.split(' - ')
 				player_name = market_data[0]
 				player_market = market_data[1]
+				print('player_name: ' + player_name)
+				print('player_market: ' + player_market)
 
 				# market title is player name formatted to source
 				# first last -> last, first
 				market_title = converter.convert_name_format(player_name)
 
+				section_title = ''
+					
+				# Hits and Alt Hits are diff sections
+				# so can either see if = player market
+				# or if in full market title
+				# more specific is better to specific sections
+				# alert error if unrecognized new section/market
+				if re.search('pitcher', market):
+					section_title = 'Pitcher Props'
+					# section_idx = 7
+				elif player_market == 'home runs':
+					section_title = 'Batter HRs'
+				elif player_market == 'hits' or player_market == 'alt hits':
+					section_title = 'Batter Hits'
+				elif player_market == 'runs' or player_market == 'rbi':
+					section_title = 'Batter Runs/RBIs'
+				elif player_market == 'bases':
+					section_title = 'Total Bases'
+				elif player_market == 'stolen bases':
+					section_title = 'Stolen Bases'
+				else:
+					print('Unkown Player Market! Need to add! ' + player_market)
+
+				print('section_title: ' + section_title)
+
 				for s_idx in range(len(sections)):
 					section = sections[s_idx]
 					# get title
-					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML')
-					print('section_title_element: ' + section_title_element)
-
-					section_title = ''
-					
-					# Hits and Alt Hits are diff sections
-					# so can either see if = player market
-					# or if in full market title
-					# more specific is better to specific sections
-					# alert error if unrecognized new section/market
-					if player_market == 'Home Runs':
-						section_title = 'Batter HRs'
-					elif player_market == 'Hits' or player_market == 'Alt Hits':
-						section_title = 'Batter Hits'
-					elif player_market == 'Runs' or player_market == 'RBI':
-						section_title = 'Batter Runs/RBIs'
-					elif player_market == 'Bases':
-						section_title = 'Total Bases'
-					elif player_market == 'Stolen Bases':
-						section_title = 'Stolen Bases'
-					else:
-						print('Unkown Player Market! Need to add!')
+					# remove &nbsp;
+					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
+					print('section_title_element: ' + section_title_element)					
 
 					if section_title == section_title_element:
 						print('Found Player Section')
@@ -511,10 +737,12 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	print('market: ' + market)
 	sport = bet_dict['sport']
 	print('sport: ' + sport)
+	league = bet_dict['league']
+	print('league: ' + league)
 
 	sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
 	
-	market_title, section_idx = read_market_section(market, sport, website_name, sections, pick_time_group)
+	market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
 
     #offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
 	
@@ -547,7 +775,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 					retries += 1
 					time.sleep(1)
             
-		# Market
+		# Markets in section
 		found_offer = False
 		markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
 		# list_elements = section.find_elements('tag name', 'li')
@@ -573,15 +801,67 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 			# player props market label always has - with spaces on either side
 			# KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant
 			elif re.search(' - ', market):
-				market_keyword = market.split(' - ')[1]
-				market_keyword = re.sub('pitcher ', '', market_keyword)
+				# market keyword must be found in offer label
+				# market_data = market.split(' - ')
+				market_keyword = market.split(' - ')[1] #market_data[1]
+
+				# pitcher props
+				# pitcher strikeouts -> strikeouts
+				# pitcher outs -> total outs
+				market_keyword = re.sub('pitcher |alt ', '', market_keyword)
 				# if re.search('strikeout', market):
 				#     keyword = keyword.split()[-1]
+				# strikeouts diff than outs
+				if market_keyword == 'outs' or market_keyword == 'bases':
+					market_keyword = 'total ' + market_keyword
+
 				print('market_keyword: ' + market_keyword)
 				
 				if re.search(market_keyword, offer_label):
-					print('Found Offer')
-					found_offer = True       
+					print('Found Player Market, Search for Offer')
+
+					player_name = market_title
+					print('player_name: ' + player_name)
+
+					participant_names = []
+
+					# Home Runs do not have participant elements
+					# instead participants in first column of table
+					# KambiBC-outcomes-list__column
+					if market_keyword == 'home runs':
+						name_column = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')[0]
+						participants = name_column.find_elements('KambiBC-outcomes-list__label')
+						for participant_element in participants:
+							participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+							print('participant: ' + participant)
+							participant_names.append(participant)
+
+							if participant == player_name:
+								print('Found Offer')
+								found_offer = True  
+					else:
+						participants = market_element.find_elements('class name', 'KambiBC-outcomes-list__row-header--participant')
+						
+						#player_market_name = player_name
+						for participant_element in participants:
+							participant_element_str = participant_element.get_attribute('innerHTML')
+							#print('participant_element: ' + participant_element_str)
+							if re.search('\<span', participant_element_str):
+								participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+								print('participant: ' + participant)
+								participant_names.append(participant)
+
+								# search for player
+								if participant == player_name:
+									print('Found Offer')
+									found_offer = True  
+									#player_market_name = player_name
+									#break # break player loop
+
+					if found_offer:
+						actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict)
+
+					break # done after found market
 
 
 			if found_offer:
