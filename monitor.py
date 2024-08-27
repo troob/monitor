@@ -37,7 +37,7 @@ test_msg = 'test'
 # set up webclient with slack oauth token
 client = WebClient(token=slack_token)
 
-todays_date = datetime.today()
+todays_date = datetime.today().date()
 
 
 
@@ -137,13 +137,16 @@ def read_and_place_bet(ev_row, ev_source, driver, pick_time_group, pick_type, mo
 	actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 				
 	# Next level: accept different as long as still less than fair odds
-	if actual_odds != ev_row['odds']:
+	pick_odds = ev_row['odds']
+	if actual_odds != pick_odds:
 		if actual_odds == '':
 			print('\nNo Bet')
-		else:
+		# still accept better price
+		elif int(actual_odds) < int(pick_odds):
 			print('\nOdds Mismatch')
-			print('actual_odds: ' + actual_odds)
 			print('init_odds: ' + ev_row['odds'])
+			print('actual_odds: ' + actual_odds)
+			
 
 		driver.close()
 		driver.switch_to.window(driver.window_handles[0])
@@ -218,12 +221,12 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 	# which we do not want
 	new_picks = {}
 	valid_ev_idx = 0
-	test_picks = []
+	#test_picks = []
 	for ev_idx in range(len(ev_data)):
 		ev_row = ev_data[ev_idx]
 
 		# TEST
-		test_picks.append(ev_row)
+		#test_picks.append(ev_row)
 
         # instead of just checking if any diff
 		# must be either 
@@ -288,12 +291,16 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 				#if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
 				print('Auto Pick')
 
+				# final outcome is bet btn if not already in betslip
+				# bc no need to click if mismatched odds
 				actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 			
 				# Next level: accept different as long as still less than fair odds
-				if actual_odds != ev_row['odds']:
+				pick_odds = ev_row['odds']
+				if actual_odds == '' or int(actual_odds) < int(pick_odds):
 					if actual_odds == '':
 						print('\nNo Bet')
+					# still accept better price
 					else:
 						print('\nOdds Mismatch')
 						print('actual_odds: ' + str(actual_odds))
@@ -620,6 +627,10 @@ def open_new_arb_bets(new_arbs):
 # and then loop over it 
 # simulate human behavior to avoid getting blocked
 def monitor_website(url, test, test_ev, max_retries=3):
+	print('\n===Monitor Website===\n')
+
+	cur_yr = str(todays_date.year)
+	#print('cur_yr: ' + cur_yr)
 
 	# loop until keyboard interrupt
 	retries = 0
@@ -688,6 +699,8 @@ def monitor_website(url, test, test_ev, max_retries=3):
 			# if arb_type == 'pre':
 			# 	pre_btn.click()
 
+			init_evs, init_arbs = reader.read_current_data(todays_date)
+
 			# keep looping every 5 seconds for change
 			while True:
 
@@ -747,7 +760,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 					elif arb_type == 'pre':
 						# if on live-page, click pre btn
 						# all arbs read this loop, incuding invalid picks
-						arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, sources)
+						arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources)
 						#arb_dict = reader.read_prematch_arb_dict(driver, pre_btn, arb_btn, sources)
 					# live_arb_data = arb_data[0]
 					# prematch_arb_data = arb_data[1]
@@ -809,7 +822,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 					# === Monitor New +EV picks ===
 
-					ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, sources)
+					ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources)
 					if ev_data == 'reboot':
 						print('Reboot')
 						driver.quit()
@@ -910,7 +923,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 if __name__ == "__main__":
 	# === TEST ===
-	test = True
+	test = False
 	# test_ev = {'market':'Total Sets', 
 	# 			'bet':'O 12.5', 
 	# 			'odds':'-103', 

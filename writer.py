@@ -184,6 +184,8 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
     print('Input: bet_dict = ' + str(bet_dict))
     print('Input: website_name = ' + website_name)
 
+    # wait to load if not clearing betslip???
+
     # print('Has Page Shifted Inadvertently Yet??') No
 
     # click bet btn to add to betslip
@@ -308,6 +310,8 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
         place_bet_btn.click()
         time.sleep(1)
         print('Clicked bet twice')
+        print('Placed Bet')
+        time.sleep(3) 
 
         # If no receipt
         # Wager too higher, OR
@@ -316,7 +320,6 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             close_receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
             close_receipt_btn.click()
             time.sleep(1) 
-            print('Placed Bet')
             print('Closed Receipt')
 
             # Go to my bets to confirm
@@ -339,10 +342,11 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                 if error_title == 'wager too high':
                     place_bet = True
                     back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
-                    print('back_btn: ' + back_btn.get_attribute('innerHTML'))
+                    #print('back_btn: ' + back_btn.get_attribute('innerHTML'))
                     back_btn.click()
-                    print('Clicked Back Btn')
                     time.sleep(1)
+                    print('Clicked Back Btn')
+                    
                 # elif error_title == 'odds changed':
                 #     # if arb, check other side to see if still valid
                 #     'mod-KambiBC-betslip-button'
@@ -358,10 +362,14 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             # For EV, place at limit
             if not test and place_bet:
                 place_bet_btn.click()
-                time.sleep(1) # need wait
-                place_bet_btn.click()
+                # time.sleep(1) # need wait
+                # # may need to click twice
+                # try:
+                #     place_bet_btn.click()
+                # except:
+                #     print('No need to click place bet twice. Already placed bet.')
                 # DEMO:
-                time.sleep(5)
+                time.sleep(3)
                 #time.sleep(1)
                 print('Placed Bet')
 
@@ -372,7 +380,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                     close_receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
                     close_receipt_btn.click()
                     # DEMO:
-                    time.sleep(5)
+                    time.sleep(1)
                     #time.sleep(1) # Wait for bet to fully load and submit before moving on
                     print('Closed Receipt')
                 except:
