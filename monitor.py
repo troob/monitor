@@ -131,66 +131,66 @@ def record_screen():
 	cv2.destroyAllWindows()
 
 
-def read_and_place_bet(ev_row, ev_source, driver, pick_time_group, pick_type, monitor_idx, test):
-	print('\n===Read and Place Bet===\n')
+# def read_and_place_bet(ev_row, ev_source, driver, pick_time_group, pick_type, monitor_idx, test):
+# 	print('\n===Read and Place Bet===\n')
 
-	actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
+# 	actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 				
-	# Next level: accept different as long as still less than fair odds
-	pick_odds = ev_row['odds']
-	if actual_odds != pick_odds:
-		if actual_odds == '':
-			print('\nNo Bet')
-		# still accept better price
-		elif int(actual_odds) < int(pick_odds):
-			print('\nOdds Mismatch')
-			print('init_odds: ' + ev_row['odds'])
-			print('actual_odds: ' + actual_odds)
+# 	# Next level: accept different as long as still less than fair odds
+# 	pick_odds = ev_row['odds']
+# 	if actual_odds != pick_odds:
+# 		if actual_odds == '':
+# 			print('\nNo Bet')
+# 		# still accept better price
+# 		elif int(actual_odds) < int(pick_odds):
+# 			print('\nOdds Mismatch')
+# 			print('init_odds: ' + ev_row['odds'])
+# 			print('actual_odds: ' + actual_odds)
 			
 
-		driver.close()
-		driver.switch_to.window(driver.window_handles[0])
+# 		driver.close()
+# 		driver.switch_to.window(driver.window_handles[0])
 
-		# stop recording before continuing to next bet
-		stop_record = True
-		print('Stop Record')
+# 		# stop recording before continuing to next bet
+# 		stop_record = True
+# 		print('Stop Record')
 
-		#return # continue
-	else:
-		# continue to place bet
-		# First notify users before placing bet
-		print('\nPlace Bet')
+# 		#return # continue
+# 	else:
+# 		# continue to place bet
+# 		# First notify users before placing bet
+# 		print('\nPlace Bet')
 
-		# only beep once on desktop after first arb so I can respond fast as possible
-		# but send notification after each arb???
-		# currently phone not used but ideally sends link to phone
-		# so we want to handle one at a time ideally
-		# so phone should get notice for each arb so it can start processing asap
-		if valid_ev_idx == 0:
-			ev_type = 'pre-match'
-			say_str = 'say "' + ev_type + ' E.V."'
-			os.system(say_str)
-			# Also say if still need to check mobile only sources
-			#os.system(say_mobile)
-			print('\n' + str(monitor_idx) + ': Found New EVs')
+# 		# only beep once on desktop after first arb so I can respond fast as possible
+# 		# but send notification after each arb???
+# 		# currently phone not used but ideally sends link to phone
+# 		# so we want to handle one at a time ideally
+# 		# so phone should get notice for each arb so it can start processing asap
+# 		if valid_ev_idx == 0:
+# 			ev_type = 'pre-match'
+# 			say_str = 'say "' + ev_type + ' E.V."'
+# 			os.system(say_str)
+# 			# Also say if still need to check mobile only sources
+# 			#os.system(say_mobile)
+# 			print('\n' + str(monitor_idx) + ': Found New EVs')
 			
 			
-		new_picks[valid_ev_idx] = ev_row
-		valid_ev_idx += 1
+# 		new_picks[valid_ev_idx] = ev_row
+# 		valid_ev_idx += 1
 
 
-		# notify before placing bet so other devices can start placing bets
-		# format string to post
-		writer.write_ev_to_post(ev_row, client, True)
+# 		# notify before placing bet so other devices can start placing bets
+# 		# format string to post
+# 		writer.write_ev_to_post(ev_row, client, True)
 
-		# === Place Bet === 
-		# if actual odds is none then we know not enabled to place bet
-		if actual_odds is not None:
-			writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+# 		# === Place Bet === 
+# 		# if actual odds is none then we know not enabled to place bet
+# 		if actual_odds is not None:
+# 			writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
 		
-			# === Stop Recording after place bet ===
-			stop_record = True
-			print('Stop Record')
+# 			# === Stop Recording after place bet ===
+# 			stop_record = True
+# 			print('Stop Record')
 
 
 
@@ -238,7 +238,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# all criteria
 			#if not test: ensure test meets criteria
 			# or else need to analyze test ev separate to run tests while running live odds
-			if not determiner.determine_valid_pick(ev_row, valid_sports, valid_leagues, limited_sources, new_ev_rules, init_evs):
+			if not determiner.determine_valid_pick(ev_row, valid_sports, valid_leagues, limited_sources, new_ev_rules, init_evs, todays_date):
 				continue
 
 
@@ -284,37 +284,43 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			#auto = False
 
 			if ev_source in enabled_sources:
-				#market = ev_row['market'].lower()
-				# if in enabled markets
-				# or team total, shows as <team name> total
-				# or inning market
-				#if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
-				print('Auto Pick')
 
-				# final outcome is bet btn if not already in betslip
-				# bc no need to click if mismatched odds
-				actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
-			
-				# Next level: accept different as long as still less than fair odds
-				pick_odds = ev_row['odds']
-				if actual_odds == '' or int(actual_odds) < int(pick_odds):
-					if actual_odds == '':
-						print('\nNo Bet')
-					# still accept better price
+				try: 
+					#market = ev_row['market'].lower()
+					# if in enabled markets
+					# or team total, shows as <team name> total
+					# or inning market
+					#if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
+					print('Auto Pick')
+
+					# final outcome is bet btn if not already in betslip
+					# bc no need to click if mismatched odds
+					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
+				
+					# Next level: accept different as long as still less than fair odds
+					pick_odds = ev_row['odds']
+					if actual_odds == '' or int(actual_odds) < int(pick_odds):
+						if actual_odds == '':
+							print('\nNo Bet')
+						# still accept better price
+						else:
+							print('\nOdds Mismatch')
+							print('init_odds: ' + ev_row['odds'])
+							print('actual_odds: ' + str(actual_odds) + '\n')
+							
+
+						driver.close()
+						driver.switch_to.window(driver.window_handles[0])
+
+						continue
+
 					else:
-						print('\nOdds Mismatch')
-						print('actual_odds: ' + str(actual_odds))
-						print('init_odds: ' + ev_row['odds'] + '\n')
+						# continue to place bet
+						# First notify users before placing bet
+						print('\nPlace Bet')
 
-					driver.close()
-					driver.switch_to.window(driver.window_handles[0])
-
-					continue
-
-				else:
-					# continue to place bet
-					# First notify users before placing bet
-					print('\nPlace Bet')
+				except KeyboardInterrupt:
+					print('Stop Auto Read')
 					
 
 					 
@@ -345,8 +351,13 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# === Place Bet === 
 			# if actual odds is none then we know not enabled to place bet
 			if actual_odds is not None:
-				writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
-		
+
+				try: 
+
+					writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+				
+				except KeyboardInterrupt:
+					print('Stop Auto Bet')
 			
 			
 			# CHANGE so instead of batching
@@ -424,7 +435,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 
 			# all criteria
-			if not determiner.determine_valid_pick(arb_row, valid_sports, valid_leagues, limited_sources, new_arb_rules, init_arbs, pick_type='arb'):
+			if not determiner.determine_valid_pick(arb_row, valid_sports, valid_leagues, limited_sources, new_arb_rules, init_arbs, todays_date, pick_type='arb'):
 				continue
 
 
@@ -693,8 +704,8 @@ def monitor_website(url, test, test_ev, max_retries=3):
 			
 			monitor_idx = 1
 
-			prev_arb_data = [] # first loop init=prev or None?
-			prev_ev_data = []
+			# prev_arb_data = [] # first loop init=prev or None?
+			# prev_ev_data = []
 
 			# if arb_type == 'pre':
 			# 	pre_btn.click()
@@ -723,8 +734,10 @@ def monitor_website(url, test, test_ev, max_retries=3):
 					# including invalid picks
 					# no duplicates
 					#print('Read Init Picks')
-					init_arbs = reader.read_json(arbs_file)
-					init_evs = reader.read_json(evs_file)	
+					# first loop init as current data but after can read from json direct
+					if monitor_idx != 1:
+						init_arbs = reader.read_json(arbs_file)
+						init_evs = reader.read_json(evs_file)	
 
 
 					# only 1 file for efficiency but in file it separates live and prematch arbs
@@ -849,14 +862,18 @@ def monitor_website(url, test, test_ev, max_retries=3):
 					if ev_data == '': # if keyboard interrupt return blank so we know to break loop
 						break
 					if ev_data is not None:
-						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, test)
-						
+						try:
+							new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, test)
+						except KeyboardInterrupt:
+							print('Stop Monitor EVs')
 						# prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
 						# writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
 					
+						#print('init_evs: ' + str(init_evs))
 						all_evs = init_evs
 						ev_idx = len(all_evs)
 
+						#print('ev_data: ' + str(ev_data))
 						for ev in ev_data:
 							if ev in all_evs.values():
 								#print('Found saved ev')
@@ -864,8 +881,11 @@ def monitor_website(url, test, test_ev, max_retries=3):
 						
 							all_evs[ev_idx] = ev
 							ev_idx += 1
+
 						# save new evs as json and remove if past
-						writer.write_json_to_file(all_evs, evs_file)
+						#print('all_evs: ' + str(all_evs))
+						if not test:
+							writer.write_json_to_file(all_evs, evs_file)
 
 
 					monitor_idx += 1 # used only for first loop
@@ -924,17 +944,17 @@ def monitor_website(url, test, test_ev, max_retries=3):
 if __name__ == "__main__":
 	# === TEST ===
 	test = False
-	# test_ev = {'market':'Total Sets', 
-	# 			'bet':'O 12.5', 
-	# 			'odds':'-103', 
-	# 			'game':'Nadia Podoroska vs Diana Shnaider',
-	# 			'sport':'tennis',
-	# 			'source':'betrivers',
-	# 			'league':'NA',
-	# 			'value':'5.0',
-	# 			'size':'$3.00',
-	# 			'game date':'Today',
-	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1021042635'}
+	test_ev = {'market':'Total Sets', 
+				'bet':'O 12.5', 
+				'odds':'-103', 
+				'game':'Nadia Podoroska vs Diana Shnaider',
+				'sport':'tennis',
+				'source':'betmgm',
+				'league':'NA',
+				'value':'5.0',
+				'size':'$3.00',
+				'game date':'Tue Aug 27 2024',
+				'link':'https://ny.betrivers.com/?page=sportsbook#event/1021042635'}
 	# test_ev = {'market':'Jose Altuve - Hits', 
 	# 			'bet':'U 0.5', 
 	# 			'odds':'-360', 
@@ -946,17 +966,17 @@ if __name__ == "__main__":
 	# 			'size':'$3.00',
 	# 			'game date':'Today',
 	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
-	test_ev = {'market':'Jose Altuve - Home Runs', 
-				'bet':'U 0.5', 
-				'odds':'-360', 
-				'game':'Houston Astros vs Baltimore Orioles',
-				'source':'betrivers',
-				'sport':'baseball',
-				'league':'mlb',
-				'value':'5.0',
-				'size':'$3.00',
-				'game date':'Today',
-				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
+	# test_ev = {'market':'Jose Altuve - Home Runs', 
+	# 			'bet':'U 0.5', 
+	# 			'odds':'-360', 
+	# 			'game':'Houston Astros vs Baltimore Orioles',
+	# 			'source':'betrivers',
+	# 			'sport':'baseball',
+	# 			'league':'mlb',
+	# 			'value':'5.0',
+	# 			'size':'$3.00',
+	# 			'game date':'Today',
+	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
 
 
 	# diff from read react website bc we keep site open and loop read data

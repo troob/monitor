@@ -27,6 +27,11 @@ import converter, reader # convert dicts to lists AND number formats
 
 import time
 
+from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait 
+from selenium.webdriver.support import expected_conditions as EC
+
 
 
 
@@ -178,6 +183,21 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
 
     #return driver
 
+def clear_betslip(driver):
+    # Require that betslip is empty
+    # So look for betslip html to see if open
+    # if open, click clear all
+    try:
+        clear_btn = driver.find_element('class name', 'mod-KambiBC-betslip__clear-btn')
+        clear_btn.click()
+        print('Cleared Betslip')
+    except:
+        try:
+            remove_pick_btn = driver.find_element('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+            remove_pick_btn.click()
+            print('Removed Pick')
+        except:
+            print('Betslip Empty')
 
 def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved_cookies, pick_type='ev', test=True):
     print('\n===Place Bet===\n')
@@ -190,20 +210,9 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
 
     # click bet btn to add to betslip
     if final_outcome is not None:
-        # Require that betslip is empty
-        # So look for betslip html to see if open
-        # if open, click clear all
-        try:
-            clear_btn = driver.find_element('class name', 'mod-KambiBC-betslip__clear-btn')
-            clear_btn.click()
-            print('Cleared Betslip')
-        except:
-            try:
-                remove_pick_btn = driver.find_element('class name', 'mod-KambiBC-betslip-outcome__close-btn')
-                remove_pick_btn.click()
-                print('Removed Pick')
-            except:
-                print('Betslip Empty')
+        time.sleep(1)
+        clear_betslip(driver)
+        
 
         # print('Has Page Shifted Inadvertently Yet??') No
         # time.sleep(100)
@@ -291,9 +300,15 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
         #submit_wager(bet_size, website_name)
         # the field uses a changing id so get container 
         # and then know 1st field is wager field
-        input_container = driver.find_element('class name', 'mod-KambiBC-to-win-input__container')
+        #input_container = driver.find_element('class name', 'mod-KambiBC-to-win-input__container')
         #print('input_container: ' + input_container.get_attribute('innerHTML'))
-        wager_field = input_container.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+        try:   
+            wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+        except:
+            final_outcome.click()
+            time.sleep(1)
+            wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+
         #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
         wager_field.send_keys(bet_size)
 
@@ -332,24 +347,63 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
 
         except:
             print('Bet Error')
-            place_bet = False
+            #place_bet = False
 
             # if wager too high, click back
             try:
                 error_title = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__title').get_attribute('innerHTML').lower() # Wager too high
                 print('error_title: ' + error_title)
+
+                #place_bet = True
+                back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
+                print('back_btn: ' + back_btn.get_attribute('innerHTML'))
+                back_btn.click()
+                time.sleep(3)
+                print('Clicked Back Btn')
+                
                 # Still place bet if not allowed above limit?
-                if error_title == 'wager too high':
-                    place_bet = True
-                    back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
-                    #print('back_btn: ' + back_btn.get_attribute('innerHTML'))
-                    back_btn.click()
+                #if error_title == 'wager too high':
+                    # click back and then place bet with max amount already in field
+
+                if error_title == 'not enough money':
+                    print('Not enough money')
+
+                    # need to close betslip bc send keys not working
+                    final_outcome.click()
                     time.sleep(1)
-                    print('Clicked Back Btn')
-                    
-                # elif error_title == 'odds changed':
-                #     # if arb, check other side to see if still valid
-                #     'mod-KambiBC-betslip-button'
+
+                    # enter max amount in field
+                    # data-target="menu-quick-deposit"
+                    funds_element = driver.find_element('xpath', '//div[@data-target="menu-quick-deposit"]')
+                    # remove $
+                    funds = float(funds_element.find_element('tag name', 'div').find_element('tag name', 'span').get_attribute('innerHTML')[1:])
+                    print('funds: ' + str(funds))
+
+                    # reopen
+                    final_outcome.click()
+                    time.sleep(1)
+
+                    #input_container = driver.find_element('class name', 'mod-KambiBC-to-win-input__container')
+                    #print('input_container: ' + input_container.get_attribute('innerHTML'))
+                    wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+                    # print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+                    # wager_field.clear()
+                    # time.sleep(3)
+                    # wager_field.clear()
+                    # print('Cleared Wager')
+                    # wager_field.send_keys(Keys.DELETE)
+                    # print('deleted')
+                    # time.sleep(1)
+                    wager_field.send_keys(funds)
+                    # #driver.execute_script("arguments[0].setAttribute('value',arguments[1])",wager_field, funds)
+                    # print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+                    #WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.CLASS_NAME, "mod-KambiBC-stake-input__container"))).send_keys(funds)
+                    time.sleep(3)
+                    print('Input Funds')
+                        
+                    # elif error_title == 'odds changed':
+                    #     # if arb, check other side to see if still valid
+                    #     'mod-KambiBC-betslip-button'
             except:
                 print('Unknown Error while placing bet')
 
@@ -361,6 +415,8 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             
             # For EV, place at limit
             if not test and place_bet:
+                place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
+                print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
                 place_bet_btn.click()
                 # time.sleep(1) # need wait
                 # # may need to click twice
@@ -387,6 +443,67 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                     print('Bet Failed')
                     print('Odds Change or Other Error???')
 
+                    try:
+
+                        error_title = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__title').get_attribute('innerHTML').lower() # Wager too high
+                        print('error_title: ' + error_title)
+
+                        back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
+                        print('back_btn: ' + back_btn.get_attribute('innerHTML'))
+                        back_btn.click()
+                        time.sleep(3)
+                        print('Clicked Back Btn')
+
+                        if error_title == 'not enough money':
+                            print('Not enough money')
+
+                            # close bet to reset
+                            final_outcome.click()
+                            time.sleep(1)
+
+                            # enter max amount in field
+                            # data-target="menu-quick-deposit"
+                            funds_element = driver.find_element('xpath', '//div[@data-target="menu-quick-deposit"]')
+                            # remove $
+                            funds = float(funds_element.find_element('tag name', 'div').find_element('tag name', 'span').get_attribute('innerHTML')[1:])
+                            print('funds: ' + str(funds))
+
+                            # reopen
+                            final_outcome.click()
+                            time.sleep(1)
+
+                            #input_container = driver.find_element('class name', 'mod-KambiBC-to-win-input__container')
+                            #print('input_container: ' + input_container.get_attribute('innerHTML'))
+                            wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+                            # print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+                            # wager_field.clear()
+                            # time.sleep(3)
+                            # wager_field.clear()
+                            # print('Cleared Wager')
+                            # time.sleep(1)
+                            # wager_field.send_keys(Keys.DELETE)
+                            # print('deleted')
+                            wager_field.send_keys(funds)
+                            # #driver.execute_script("arguments[0].setAttribute('value',arguments[1])",wager_field, funds)
+                            # print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+                            #WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.CLASS_NAME, "mod-KambiBC-stake-input__container"))).send_keys(funds)
+                            time.sleep(3)
+                            print('Input Funds')
+
+                            place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
+                            place_bet_btn.click()
+                            time.sleep(3)
+                            print('Placed Bet')
+
+                            close_receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                            close_receipt_btn.click()
+                            time.sleep(1)
+                            print('Closed Receipt')
+
+                    except:
+
+                        print('Error Placing Max Bet')
+
                 #aria-label="Navigate to My Bets"
                 my_bets_btn = driver.find_element('xpath', '//button[@aria-label="Navigate to My Bets"]')
                 my_bets_btn.click()
@@ -399,7 +516,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
     # Close Window before going to next pick
     # bc only 1 window at a time
     if not test:
-        print('Close Bet Window')
+        print('Close Bet Window\n')
         driver.close() # comment out to test
 
     # always switch bot back to main window so it can click btns  

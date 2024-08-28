@@ -76,10 +76,10 @@ def read_current_data(todays_date):
 		# print('todays_date: ' + str(todays_date))
 		# Tue Aug 27 2024
 		ev_date = datetime.strptime(ev_date_str, '%a %b %d %Y').date()
-		print('ev_date: ' + str(ev_date))
+		#print('ev_date: ' + str(ev_date))
 		if ev_date < todays_date:
 			print('Remove EV: ' + ev_date_str + ', ' + str(init_ev))
-			break
+			continue
 			
 		init_evs[str(idx)] = init_ev
 
@@ -93,21 +93,26 @@ def read_current_data(todays_date):
 		arb_date = datetime.strptime(arb_date_str, '%a %b %d %Y').date()
 		if arb_date < todays_date:
 			print('Remove Arb: ' + arb_date_str + ', ' + str(init_arb))
-			break
+			continue
 			
 		init_arbs[str(idx)] = init_arb
 
 		idx += 1
 
+	#print('init_evs: ' + str(init_evs))
+	#print('init_arbs: ' + str(init_arbs))
 	return init_evs, init_arbs
 
 
 # diff markets have diff formats
 # moneyline has only 1 div but others have 2
-def read_outcome_label(outcome, market, sport, team_sports, outcome_title=''):
+# convert source outcome label to input standard format
+def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=''):
 	print('\n===Read Outcome Label===\n')
 	print('Input: outcome: ' + outcome.get_attribute('innerHTML'))
 	print('Input: market = ' + market)
+	# print('sport: ' + sport)
+	# print('team_sports: ' + str(team_sports))
 
 	outcome_sub_element_1 = outcome.find_element('tag name', 'div')
 	parts = outcome_sub_element_1.find_elements('tag name', 'div')
@@ -124,17 +129,19 @@ def read_outcome_label(outcome, market, sport, team_sports, outcome_title=''):
 
 
 	outcome_label = ''
+
+	outcome_label = parts[1].get_attribute('innerHTML').lower()
+	print('init outcome_label: ' + outcome_label)
 	
 	# Moneyline
 	# First inning team total says yes/no bc only option to score or not
 	# so label is only 1 part
 	# set winner
-	if re.search('moneyline|lead|win|first inning .+ total', market):
+	if re.search('moneyline|lead|winner|first inning .+ total', market):
 	
-		outcome_label = parts[1].get_attribute('innerHTML').lower()
-
 		# tie outcome does not have either name
 		# but only sports with no tie need to be converted to comma format
+		# avoid yes/no win 1 set
 		if sport not in team_sports:
 			outcome_label = converter.convert_name_format(outcome_label)#, name_format=',')
 
@@ -152,17 +159,30 @@ def read_outcome_label(outcome, market, sport, team_sports, outcome_title=''):
 		outcome_label = part1 + ' ' + part2
 
 	
+	if sport == 'tennis' and re.search('spread', market):
+		# jessica bouzas maneiro -1.5 ->
+		# outcome_label: bouzas maneiro, jessica +1.5
+		# bet outcome must match outcome label
+		# separate spread part
+		outcome_parts = outcome_label.rsplit(' ', 1)
+		name = outcome_parts[0]
+		name = converter.convert_name_format(name)
+		spread = outcome_parts[1]
+
+		outcome_label = name + ' ' + spread
+		print('tennis spread outcome_label: ' + outcome_label)
 
 
 	#elif market == 'hits':
-
-	if outcome_label != '':
+	# soccer: palmeiras-sp -> palmeiras
+	if re.search('-', outcome_label) and sport not in team_sports:
+	#if outcome_label != '':
 		# remove dash from compound name for betrivers
 		# but not minus in spread -1.5
 		outcome_data = outcome_label.rsplit(' ', 1)
 		#outcome_label = re.sub('-', ' ', outcome_label)
 		outcome_label = re.sub('-', ' ', outcome_data[0]) + ' ' + outcome_data[1]
-
+		
 
 	outcome_odds = parts[-1].get_attribute('innerHTML')
 		
@@ -178,8 +198,6 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 
 	market_odds = ''
 
-	team_sports = ['baseball', 'basketball', 'football', 'hockey'] # soccer has full name bc just location???
-	sport = bet_dict['sport']
 	market = bet_dict['market'].lower()
 
 	# === Convert Bet Outcome to Source Format === 
@@ -254,7 +272,7 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 				if outcome_disabled is not None:
 					print('Outcome Disabled')
 
-				outcome_odds = read_outcome_label(final_outcome, market, sport, team_sports)[1]
+				outcome_odds = read_outcome_label(final_outcome, market)[1]
 				if outcome_disabled is None:
 					market_odds = outcome_odds #parts[-1].get_attribute('innerHTML')
 
@@ -315,7 +333,7 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 			for outcome in player_outcomes:
 
 				# phi pillies
-				outcome_label, outcome_odds = read_outcome_label(outcome, market, sport, team_sports)
+				outcome_label, outcome_odds = read_outcome_label(outcome, market)
 
 				print('\noutcome_label: ' + outcome_label)
 				print('bet_outcome: ' + bet_outcome)
@@ -353,8 +371,12 @@ def read_market_odds(market, market_element, bet_dict):
 
 	market_odds = ''
 
-	team_sports = ['baseball', 'basketball', 'football', 'hockey'] # soccer has full name bc just location???
+	# team sports needed to know if comma format
+	team_sports = ['baseball', 'basketball', 'football', 'hockey', 'soccer'] # soccer has full name bc just location???
 	sport = bet_dict['sport']
+	# leagues needed to know if loc abbrev format
+	national_leagues = ['mlb', 'nfl', 'nhl', 'nba']
+	league = bet_dict['league']
 
 	# === Convert Bet Outcome to Source Format === 
 	# Chicago Cubs +1.5
@@ -367,7 +389,7 @@ def read_market_odds(market, market_element, bet_dict):
 		# convert team loc to abbrev
 		#if market in team_markets or 
 		# ties are moneyline but no team name to convert
-		if re.search('moneyline|spread|run line', market) and sport in team_sports and bet_outcome != 'tie' and bet_outcome != 'draw':
+		if re.search('moneyline|spread|run line', market) and league in national_leagues and bet_outcome != 'tie' and bet_outcome != 'draw':
 			#multi_name_locs = ['new york', 'los angeles']
 			#team = bet_outcome.rsplit(' ', 1)[0]
 			
@@ -417,7 +439,7 @@ def read_market_odds(market, market_element, bet_dict):
 		# sometimes betrivers uses shorthand so velez instead of velez sarsfield
 		# so search for label in outcome
 		#if outcome_label == bet_outcome:
-		if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome):
+		if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome) or re.search(bet_outcome, outcome_label):
 			print('Found Outcome')
 			outcome_disabled = outcome.get_attribute('disabled')
 			if outcome_disabled is not None:
@@ -699,7 +721,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 					# section_idx = 7
 				elif player_market == 'home runs':
 					section_title = 'Batter HRs'
-				elif player_market == 'hits' or player_market == 'alt hits':
+				elif player_market == 'hits' or player_market == 'alt hits' or player_market == 'doubles':
 					section_title = 'Batter Hits'
 				elif player_market == 'runs' or player_market == 'rbi':
 					section_title = 'Batter Runs/RBIs'
@@ -846,7 +868,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 		print('betslip: ' + betslip.get_attribute('innerHTML'))
 
 
-		
+
 
 		# close receipt
 		# result-summary__actions
@@ -976,37 +998,72 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 						# KambiBC-outcomes-list__column
 						if market_keyword == 'home run':
 							print('Find HR players')
-							name_column = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')[0]
-							participants = name_column.find_elements('class name', 'KambiBC-outcomes-list__label')
-							for participant_element in participants:
-								participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
-								# remove jr to match source
-								participant = re.sub(' jr', '', participant)
-								print('participant: ' + participant)
-								participant_names.append(participant)
-
-								if participant == player_name:
-									print('Found Offer')
-									found_offer = True  
-						else:
-							participants = market_element.find_elements('class name', 'KambiBC-outcomes-list__row-header--participant')
+							participant_retries = 0
 							
-							#player_market_name = player_name
-							for participant_element in participants:
-								participant_element_str = participant_element.get_attribute('innerHTML')
-								#print('participant_element: ' + participant_element_str)
-								if re.search('\<span', participant_element_str):
-									participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
-									participant = re.sub(' jr', '', participant)
-									print('participant: ' + participant)
-									participant_names.append(participant)
+							while participant_retries < max_retries:
+								stale_participant = False
+								participant_names = []
 
-									# search for player
-									if participant == player_name:
-										print('Found Offer')
-										found_offer = True  
-										#player_market_name = player_name
-										#break # break player loop
+								name_column = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')[0]
+								participant_elements = name_column.find_elements('class name', 'KambiBC-outcomes-list__label')
+								for participant_element in participant_elements:
+									# avoid stale element
+									try:
+										participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+										# remove jr to match source
+										participant = re.sub(' jr', '', participant)
+										print('participant: ' + participant)
+										participant_names.append(participant)
+
+										if participant == player_name:
+											print('Found Offer')
+											found_offer = True 
+
+									except:
+										print('Participant Gone!')
+										stale_participant = True
+										participant_retries += 1
+										break
+
+								# if gets thru all participants, break to move on
+								if not stale_participant:
+									break 
+						else:
+							
+							participant_retries = 0
+							
+							while participant_retries < max_retries:
+								stale_participant = False
+								participant_names = []
+								participant_elements = market_element.find_elements('class name', 'KambiBC-outcomes-list__row-header--participant')
+								
+								#player_market_name = player_name
+								for participant_element in participant_elements:
+									# avoid stale element
+									try:
+										participant_element_str = participant_element.get_attribute('innerHTML')
+										#print('participant_element: ' + participant_element_str)
+										if re.search('\<span', participant_element_str):
+											participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+											participant = re.sub(' jr', '', participant)
+											print('participant: ' + participant)
+											participant_names.append(participant)
+
+											# search for player
+											if participant == player_name:
+												print('Found Offer')
+												found_offer = True  
+												#player_market_name = player_name
+												#break # break player loop
+									except:
+										print('Participant Gone!')
+										stale_participant = True
+										participant_retries += 1
+										break
+
+								# if gets thru all participants, break to move on
+								if not stale_participant:
+									break
 
 						if found_offer:
 							actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict)

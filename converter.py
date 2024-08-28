@@ -44,15 +44,18 @@ def convert_name_format(name, name_format=None):
         
     else:
         # Swiatek, Iga -> Iga Swiatek
+        # Bouzas Maneiro, Jessica -> Jessica Bouzas Maneiro
         if re.search(',', name):
             names = name.split(', ') 
             name = names[1] + ' ' + names[0]
 
         # Iga Swiatek -> Swiatek, Iga
+        # Jessica Bouzas Maneiro -> Bouzas Maneiro, Jessica
         else:
-            names = name.split() 
+            names = name.split(' ', 1) 
             name = names[1] + ', ' + names[0]
 
+    print('name: ' + name)
     return name
 
 def convert_team_to_loc_and_name(team):
