@@ -68,7 +68,11 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
         login_page = False
         while not login_page:
             # class = sc-gHLcSH cnmSeS
-            login_btn = driver.find_element('class name', 'sc-gHLcSH')
+            # id=rsi-top-navigation
+            # div
+            # second div
+            # button
+            login_btn = driver.find_element('id', 'rsi-top-navigation').find_element('tag name', 'div').find_element('xpath', 'div[2]').find_element('tag name', 'button')   # .find_element('class name', 'sc-gHLcSH')
             print('login_btn: ' + login_btn.get_attribute('innerHTML'))
             login_btn.click()
             time.sleep(1)

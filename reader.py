@@ -636,6 +636,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 		# === Baseball ===
 		else:
+			print('Baseball')
 
 			if market == 'spread':
 				market_title = 'run line'
@@ -716,35 +717,44 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				# or if in full market title
 				# more specific is better to specific sections
 				# alert error if unrecognized new section/market
+
+				# put default sections as well as check for section number redundancy bc sometimes error not all sections
 				if re.search('pitcher', market):
 					section_title = 'Pitcher Props'
-					# section_idx = 7
+					section_idx = 7
 				elif player_market == 'home runs':
 					section_title = 'Batter HRs'
+					section_idx = 8
 				elif player_market == 'hits' or player_market == 'alt hits' or player_market == 'doubles':
 					section_title = 'Batter Hits'
+					section_idx = 9
 				elif player_market == 'runs' or player_market == 'rbi':
 					section_title = 'Batter Runs/RBIs'
+					section_idx = 10
 				elif player_market == 'bases':
 					section_title = 'Total Bases'
+					section_idx = 11
 				elif player_market == 'stolen bases':
 					section_title = 'Stolen Bases'
+					section_idx = 12
 				else:
 					print('Unkown Player Market! Need to add! ' + player_market)
 
-				print('section_title: ' + section_title)
+				print('Section Title: ' + section_title + '\n')
 
 				for s_idx in range(len(sections)):
 					section = sections[s_idx]
 					# get title
 					# remove &nbsp;
 					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
-					print('section_title_element: ' + section_title_element)					
+					print('Section Title Element: ' + section_title_element)					
 
 					if section_title == section_title_element:
 						print('Found Player Section')
 						section_idx = s_idx
 						break
+
+				print('\nChecked All Sections\n')
 
 
 			# ===Live===
@@ -792,7 +802,7 @@ def save_cookies(driver, website_name, cookies_file, saved_cookies):
 	cookies = driver.get_cookies()
 	saved_cookies[website_name] = cookies
 	writer.write_json_to_file(saved_cookies, cookies_file)
-	print('Done')
+	print('Done\n')
 
 # get all categories on page
 # betrivers:
@@ -853,23 +863,114 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	
 	market = bet_dict['market'].lower()
 	print('market: ' + market)
+	bet_line = bet_dict['bet'].lower()
+	print('bet_line: ' + bet_line)
 	sport = bet_dict['sport']
 	print('sport: ' + sport)
 	league = bet_dict['league']
 	print('league: ' + league)
 
 	if website_name == 'betmgm':
+		print('\nCheck Bet Not Available')
+		bet_available = False
+		try:
+			driver.find_element('class name', 'modal-body')#.find_element('tag name', 'button')
+		except:
+			bet_available = True
 
-		print('Check Betslip')
+		# if bet na, close window
+		if bet_available == False:
+			return actual_odds, final_outcome, cookies_file, saved_cookies
+		
+		print('\nCheck Betslip')
 
+		# if not player props
+		# simply convert market to source format
+		# but player props need to split and match player name and market separate
+		market_title = ''
+		if not re.search(' - ', market):
+			# spread -> run line spread
+			# total -> totals
+			market_title = converter.convert_market_to_source_format(market, sport, website_name)
+
+		bet_line = converter.convert_bet_line_to_source_format(bet_line, market, website_name)
+
+		
+
+		#betslip = driver.find_element('tag name', 'bs-betslip')
+		#print('betslip: ' + betslip.get_attribute('innerHTML'))
+
+		# straight bet section
+		straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
+		#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
+
+		listed_bets = straights_section.find_elements('tag name', 'bs-digital-single-bet-pick')
+		# after finding bet in list and reading actual odds
+		# remove old unused bets
+		# keep bottom one unless second time calling bet 
+		# after being interrupted by another bet
+		found_market = False
+		for listed_bet in listed_bets:
+			# Under 1.5
+			listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container').find_element('tag name', 'span').get_attribute('innerHTML').lower()
+			print('\nlisted_line: ' + listed_line)
+
+			#  Masyn Winn (STL): Hits 
+			listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
+			print('listed_market: ' + listed_market)
+
+			# odds
+			listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
+			print('listed_odds: ' + listed_odds)
+
+			if listed_market == market_title:
+				
+				found_market = True
+
+			elif re.search(' - ', market):
+
+				# match name and market
+				#  Masyn Winn (STL): Hits 
+				listed_name = listed_market.split(' (')[0]
+				listed_market = listed_market.split(': ')[1]
+				print('listed_name: ' + listed_name)
+				print('listed_market: ' + listed_market)
+
+				market_data = market.split(' - ')
+				input_name = market_data[0]
+				input_market = market_data[1]
+				print('input_name: ' + input_name)
+				print('input_market: ' + input_market)
+
+				if listed_name == input_name and listed_market == input_market:
+					
+					found_market = True
+
+
+			if found_market and listed_line == bet_line:
+				print('Found Bet Listed')
+				actual_odds = listed_odds
+				final_outcome = listed_bet
+				# do not break bc need to remove old picks from slip
+				#break
+			else:
+				# remove old bet
+				print('Remove Old Pick from Slip')
+				remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
+				remove_btn.click()
+				time.sleep(1)
+
+
+
+
+
+
+
+
+
+
+		# === Place Bet ===
 		# clear old bets from slip
-
-		betslip = driver.find_element('tag name', 'bs-betslip')
-		print('betslip: ' + betslip.get_attribute('innerHTML'))
-
-
-
-
 		# close receipt
 		# result-summary__actions
 		# _ngcontent-ng-c980967766
@@ -4843,7 +4944,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 
 # init width=1212? too small for betslip sidepanel with proper zoom
 def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False, mobile=False):
-	print('\n===Open React Website===\n')
+	#print('\n===Open React Website===\n')
 
 	#try:
 

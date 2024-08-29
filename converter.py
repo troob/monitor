@@ -8,6 +8,40 @@ import math
 
 
 
+def convert_bet_line_to_source_format(bet_line, market, website_name):
+
+    if re.search('total', market):
+        bet_data = bet_line.split()
+        direction = bet_data[0]
+        line_val = bet_data[1]
+        if direction == 'o':
+            bet_line = 'over ' + line_val
+        else:
+            bet_line = 'under ' + line_val
+
+    print('bet_line: ' + bet_line)
+    return bet_line
+
+def convert_market_to_source_format(market, sport, website_name):
+
+    market_title = market
+
+    if website_name == 'betmgm':
+
+        if market == 'moneyline':
+
+            market_title = 'money line'
+        
+        elif sport == 'baseball' and market == 'spread':
+
+            market_title = 'run line spread'
+
+        elif market == 'total':
+
+            market_title = 'totals'
+
+
+    return market_title
 
 def convert_bet_to_team_loc(bet_outcome, market):
     print('\n===Convert Bet to Team Loc===\n')

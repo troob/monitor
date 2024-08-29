@@ -270,7 +270,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 			final_outcome = None
 			# Make sure source enabled
-			enabled_sources = ['betrivers']
+			enabled_sources = ['betrivers', 'betmgm']
 			# if we do not specify enabled markets
 			# then how can we tell if no odds bc they disappeared or just failed to read?
 			# bc those failed to read bc not yet enabled we still want notice to do manually
@@ -285,42 +285,42 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 			if ev_source in enabled_sources:
 
-				try: 
-					#market = ev_row['market'].lower()
-					# if in enabled markets
-					# or team total, shows as <team name> total
-					# or inning market
-					#if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
-					print('Auto Pick')
+				#try: 
+				#market = ev_row['market'].lower()
+				# if in enabled markets
+				# or team total, shows as <team name> total
+				# or inning market
+				#if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
+				print('Auto Pick')
 
-					# final outcome is bet btn if not already in betslip
-					# bc no need to click if mismatched odds
-					actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
-				
-					# Next level: accept different as long as still less than fair odds
-					pick_odds = ev_row['odds']
-					if actual_odds == '' or int(actual_odds) < int(pick_odds):
-						if actual_odds == '':
-							print('\nNo Bet')
-						# still accept better price
-						else:
-							print('\nOdds Mismatch')
-							print('init_odds: ' + ev_row['odds'])
-							print('actual_odds: ' + str(actual_odds) + '\n')
-							
-
-						driver.close()
-						driver.switch_to.window(driver.window_handles[0])
-
-						continue
-
+				# final outcome is bet btn if not already in betslip
+				# bc no need to click if mismatched odds
+				actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
+			
+				# Next level: accept different as long as still less than fair odds
+				pick_odds = ev_row['odds']
+				if actual_odds == '' or int(actual_odds) < int(pick_odds):
+					if actual_odds == '':
+						print('\nNo Bet')
+					# still accept better price
 					else:
-						# continue to place bet
-						# First notify users before placing bet
-						print('\nPlace Bet')
+						print('\nOdds Mismatch')
+						print('init_odds: ' + ev_row['odds'])
+						print('actual_odds: ' + str(actual_odds) + '\n')
+						
 
-				except KeyboardInterrupt:
-					print('Stop Auto Read')
+					driver.close()
+					driver.switch_to.window(driver.window_handles[0])
+
+					continue
+
+				else:
+					# continue to place bet
+					# First notify users before placing bet
+					print('\nPlace Bet')
+
+				# except KeyboardInterrupt:
+				# 	print('Stop Auto Read')
 					
 
 					 
@@ -944,28 +944,28 @@ def monitor_website(url, test, test_ev, max_retries=3):
 if __name__ == "__main__":
 	# === TEST ===
 	test = False
-	test_ev = {'market':'Total Sets', 
-				'bet':'O 12.5', 
-				'odds':'-103', 
-				'game':'Nadia Podoroska vs Diana Shnaider',
-				'sport':'tennis',
-				'source':'betmgm',
-				'league':'NA',
-				'value':'5.0',
-				'size':'$3.00',
-				'game date':'Tue Aug 27 2024',
-				'link':'https://ny.betrivers.com/?page=sportsbook#event/1021042635'}
-	# test_ev = {'market':'Jose Altuve - Hits', 
-	# 			'bet':'U 0.5', 
-	# 			'odds':'-360', 
-	# 			'game':'Houston Astros vs Baltimore Orioles',
-	# 			'source':'betrivers',
+	# test_ev = {'market':'Masyn Winn - Hits', 
+	# 			'bet':'U 1.5', 
+	# 			'odds':'-103', 
+	# 			'game':'Baltimore Orioles vs Los Angeles Dodgers',
 	# 			'sport':'baseball',
+	# 			'source':'betmgm',
 	# 			'league':'mlb',
 	# 			'value':'5.0',
 	# 			'size':'$3.00',
-	# 			'game date':'Today',
-	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
+	# 			'game date':'Wed Aug 28 2024',
+	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/baltimore-orioles-at-los-angeles-dodgers-16114283'}
+	test_ev = {'market':'David Hensley - Runs', 
+				'bet':'O 0.5', 
+				'odds':'+120', 
+				'game':'Miami Marlins vs Colorado Rockies',
+				'source':'betmgm',
+				'sport':'baseball',
+				'league':'mlb',
+				'value':'5.0',
+				'size':'$3.00',
+				'game date':'Today',
+				'link':'https://sports.ny.betmgm.com/en/sports/events/16114281?options=16114281-1160083614--967262071'}
 	# test_ev = {'market':'Jose Altuve - Home Runs', 
 	# 			'bet':'U 0.5', 
 	# 			'odds':'-360', 
