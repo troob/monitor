@@ -40,7 +40,12 @@ def convert_market_to_source_format(market, sport, website_name):
 
             market_title = 'totals'
 
+        # team total
+        elif re.search('total', market):
 
+            market_title = market + ' runs'
+
+    print('market_title: ' + market_title)
     return market_title
 
 def convert_bet_to_team_loc(bet_outcome, market):

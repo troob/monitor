@@ -321,6 +321,9 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 				# except KeyboardInterrupt:
 				# 	print('Stop Auto Read')
+
+				# except:
+				# 	print('Error during Auto Pick')
 					
 
 					 
@@ -352,12 +355,13 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			# if actual odds is none then we know not enabled to place bet
 			if actual_odds is not None:
 
-				try: 
+				#try: 
 
-					writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+				writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
 				
-				except KeyboardInterrupt:
-					print('Stop Auto Bet')
+				# still cuts connection internet
+				# except KeyboardInterrupt:
+				# 	print('Stop Auto Bet')
 			
 			
 			# CHANGE so instead of batching
@@ -862,10 +866,10 @@ def monitor_website(url, test, test_ev, max_retries=3):
 					if ev_data == '': # if keyboard interrupt return blank so we know to break loop
 						break
 					if ev_data is not None:
-						try:
-							new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, test)
-						except KeyboardInterrupt:
-							print('Stop Monitor EVs')
+						#try:
+						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, test)
+						# except KeyboardInterrupt:
+						# 	print('Stop Monitor EVs')
 						# prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
 						# writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
 					
@@ -943,7 +947,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 if __name__ == "__main__":
 	# === TEST ===
-	test = False
+	test = True
 	# test_ev = {'market':'Masyn Winn - Hits', 
 	# 			'bet':'U 1.5', 
 	# 			'odds':'-103', 
@@ -955,17 +959,17 @@ if __name__ == "__main__":
 	# 			'size':'$3.00',
 	# 			'game date':'Wed Aug 28 2024',
 	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/baltimore-orioles-at-los-angeles-dodgers-16114283'}
-	test_ev = {'market':'David Hensley - Runs', 
-				'bet':'O 0.5', 
-				'odds':'+120', 
-				'game':'Miami Marlins vs Colorado Rockies',
+	test_ev = {'market':'Arizona Diamondbacks Total', 
+				'bet':'U 6.5', 
+				'odds':'-400', 
+				'game':'Los Angeles Dodgers vs Arizona Diamondbacks',
 				'source':'betmgm',
 				'sport':'baseball',
 				'league':'mlb',
 				'value':'5.0',
 				'size':'$3.00',
-				'game date':'Today',
-				'link':'https://sports.ny.betmgm.com/en/sports/events/16114281?options=16114281-1160083614--967262071'}
+				'game date':'Thu Aug 29 2024',
+				'link':'https://sports.ny.betmgm.com/en/sports/events/16113963?options=16113963-1145097460--1006251588'}
 	# test_ev = {'market':'Jose Altuve - Home Runs', 
 	# 			'bet':'U 0.5', 
 	# 			'odds':'-360', 

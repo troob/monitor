@@ -78,7 +78,7 @@ def read_current_data(todays_date):
 		ev_date = datetime.strptime(ev_date_str, '%a %b %d %Y').date()
 		#print('ev_date: ' + str(ev_date))
 		if ev_date < todays_date:
-			print('Remove EV: ' + ev_date_str + ', ' + str(init_ev))
+			#print('Remove EV: ' + ev_date_str + ', ' + str(init_ev))
 			continue
 			
 		init_evs[str(idx)] = init_ev
@@ -92,7 +92,7 @@ def read_current_data(todays_date):
 		# Tue Aug 27
 		arb_date = datetime.strptime(arb_date_str, '%a %b %d %Y').date()
 		if arb_date < todays_date:
-			print('Remove Arb: ' + arb_date_str + ', ' + str(init_arb))
+			#print('Remove Arb: ' + arb_date_str + ', ' + str(init_arb))
 			continue
 			
 		init_arbs[str(idx)] = init_arb
@@ -109,10 +109,11 @@ def read_current_data(todays_date):
 # convert source outcome label to input standard format
 def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=''):
 	print('\n===Read Outcome Label===\n')
-	print('Input: outcome: ' + outcome.get_attribute('innerHTML'))
+	#print('Input: outcome: ' + outcome.get_attribute('innerHTML'))
 	print('Input: market = ' + market)
 	# print('sport: ' + sport)
 	# print('team_sports: ' + str(team_sports))
+	print('\nOutput: outcome_label = example\n')
 
 	outcome_sub_element_1 = outcome.find_element('tag name', 'div')
 	parts = outcome_sub_element_1.find_elements('tag name', 'div')
@@ -344,7 +345,7 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 				# sometimes betrivers uses shorthand so velez instead of velez sarsfield
 				# so search for label in outcome
 				#if outcome_label == bet_outcome:
-				if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome):
+				if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome) or re.search(bet_outcome, outcome_label):
 					print('\nFound Outcome')
 					outcome_disabled = outcome.get_attribute('disabled')
 					if outcome_disabled is not None:
@@ -871,15 +872,18 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	print('league: ' + league)
 
 	if website_name == 'betmgm':
-		print('\nCheck Bet Not Available')
+		print('\nCheck Bet Available')
 		bet_available = False
 		try:
 			driver.find_element('class name', 'modal-body')#.find_element('tag name', 'button')
+			print('No')
 		except:
 			bet_available = True
+			print('Yes')
 
 		# if bet na, close window
 		if bet_available == False:
+			print('Bet NA')
 			return actual_odds, final_outcome, cookies_file, saved_cookies
 		
 		print('\nCheck Betslip')
@@ -887,22 +891,36 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 		# if not player props
 		# simply convert market to source format
 		# but player props need to split and match player name and market separate
-		market_title = ''
+		market_title = input_name = input_market = ''
 		if not re.search(' - ', market):
 			# spread -> run line spread
 			# total -> totals
 			market_title = converter.convert_market_to_source_format(market, sport, website_name)
+		else:
+			market_data = market.split(' - ')
+			input_name = market_data[0]
+			input_market = market_data[1]
+			print('input_name: ' + input_name)
+			print('input_market: ' + input_market)
 
 		bet_line = converter.convert_bet_line_to_source_format(bet_line, market, website_name)
 
-		
 
 		#betslip = driver.find_element('tag name', 'bs-betslip')
 		#print('betslip: ' + betslip.get_attribute('innerHTML'))
 
-		# straight bet section
-		straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
-		#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
+		# wait to load
+		while True:
+			try:
+				# straight bet section
+				straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
+				#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
+				break
+			except KeyboardInterrupt:
+				exit()
+			except:
+				print('Loading...')
+				time.sleep(3)
 
 		listed_bets = straights_section.find_elements('tag name', 'bs-digital-single-bet-pick')
 		# after finding bet in list and reading actual odds
@@ -923,11 +941,8 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 			listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
 			print('listed_odds: ' + listed_odds)
 
-			if listed_market == market_title:
-				
-				found_market = True
-
-			elif re.search(' - ', market):
+			
+			if re.search(' - ', market):
 
 				# match name and market
 				#  Masyn Winn (STL): Hits 
@@ -936,14 +951,16 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 				print('listed_name: ' + listed_name)
 				print('listed_market: ' + listed_market)
 
-				market_data = market.split(' - ')
-				input_name = market_data[0]
-				input_market = market_data[1]
-				print('input_name: ' + input_name)
-				print('input_market: ' + input_market)
-
 				if listed_name == input_name and listed_market == input_market:
 					
+					found_market = True
+
+			else:
+
+				listed_market = re.sub(':','',listed_market)
+				print('listed_market: ' + listed_market)
+				if listed_market == market_title:
+				
 					found_market = True
 
 
