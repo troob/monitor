@@ -8,16 +8,23 @@ import math
 
 
 
-def convert_bet_line_to_source_format(bet_line, market, website_name):
+def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
 
-    if re.search('total', market):
-        bet_data = bet_line.split()
-        direction = bet_data[0]
-        line_val = bet_data[1]
-        if direction == 'o':
-            bet_line = 'over ' + line_val
-        else:
-            bet_line = 'under ' + line_val
+    if website_name == 'betmgm':
+
+        if sport == 'boxing':
+            # josh kelly -> j. kelly
+            names = bet_line.split(' ', 1)
+            bet_line = names[0][0] + '. ' + names[1]
+
+        elif re.search('total', market):
+            bet_data = bet_line.split()
+            direction = bet_data[0]
+            line_val = bet_data[1]
+            if direction == 'o':
+                bet_line = 'over ' + line_val
+            else:
+                bet_line = 'under ' + line_val
 
     print('bet_line: ' + bet_line)
     return bet_line
@@ -28,7 +35,11 @@ def convert_market_to_source_format(market, sport, website_name):
 
     if website_name == 'betmgm':
 
-        if market == 'moneyline':
+        if sport == 'boxing' and market == 'moneyline':
+
+            market_title = 'fight result'
+
+        elif market == 'moneyline':
 
             market_title = 'money line'
         

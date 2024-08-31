@@ -948,28 +948,37 @@ def monitor_website(url, test, test_ev, max_retries=3):
 if __name__ == "__main__":
 	# === TEST ===
 	test = True
-	# test_ev = {'market':'Masyn Winn - Hits', 
-	# 			'bet':'U 1.5', 
-	# 			'odds':'-103', 
-	# 			'game':'Baltimore Orioles vs Los Angeles Dodgers',
-	# 			'sport':'baseball',
+	# test_ev = {'market':'Jordin Canada - Rebounds', 
+	# 			'bet':'O 3.5', 
+	# 			'odds':'+100', 
+	# 			'game':'Las Vegas Aces vs Atlanta Dream',
+	# 			'sport':'basketball',
 	# 			'source':'betmgm',
 	# 			'league':'mlb',
 	# 			'value':'5.0',
 	# 			'size':'$3.00',
-	# 			'game date':'Wed Aug 28 2024',
-	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/baltimore-orioles-at-los-angeles-dodgers-16114283'}
-	test_ev = {'market':'Arizona Diamondbacks Total', 
-				'bet':'U 6.5', 
-				'odds':'-400', 
-				'game':'Los Angeles Dodgers vs Arizona Diamondbacks',
+	# 			'game date':'Fri Aug 30 2024',
+	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/16085726?options=16085726-1161494055--963549363'}
+	test_ev = {'market':'Moneyline', 
+				'bet':'Josh Kelly', 
+				'odds':'+105', 
+				'game':'Josh Kelly vs Liam Smith',
 				'source':'betmgm',
-				'sport':'baseball',
-				'league':'mlb',
+				'sport':'boxing',
+				'league':'international boxing',
 				'value':'5.0',
 				'size':'$3.00',
-				'game date':'Thu Aug 29 2024',
-				'link':'https://sports.ny.betmgm.com/en/sports/events/16113963?options=16113963-1145097460--1006251588'}
+				'game date':'Sat Sep 21 2024',
+				'link':'https://sports.ny.betmgm.com/en/sports/events/16058791?options=16058791-1139065602--1022063921'}
+	# https://sports.ny.betmgm.com/en/sports/events/16114424?options=16114424-1161634470--963207266
+	# https:...events/<game id>?options=<game id>- ... --<data-test-option-id>
+	
+	# test:
+	# j kelly: https://sports.ny.betmgm.com/en/sports/events/16058791?options=16058791-1139065602--1022063921
+	# https://sports.ny.betmgm.com/en/sports/events/16085726?options=16085726-1161494055--963549363
+	# cain sandoval: https://sports.ny.betmgm.com/en/sports/events/16249580?options=16249580-1160456875--966257383
+	# j canada rebounds: https://sports.ny.betmgm.com/en/sports/events/16085726?options=16085726-1161494055--963549363
+
 	# test_ev = {'market':'Jose Altuve - Home Runs', 
 	# 			'bet':'U 0.5', 
 	# 			'odds':'-360', 
@@ -981,6 +990,7 @@ if __name__ == "__main__":
 	# 			'size':'$3.00',
 	# 			'game date':'Today',
 	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
+
 
 
 	# diff from read react website bc we keep site open and loop read data

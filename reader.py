@@ -903,7 +903,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 			print('input_name: ' + input_name)
 			print('input_market: ' + input_market)
 
-		bet_line = converter.convert_bet_line_to_source_format(bet_line, market, website_name)
+		bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
 
 
 		#betslip = driver.find_element('tag name', 'bs-betslip')
@@ -976,23 +976,6 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 				remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
 				remove_btn.click()
 				time.sleep(1)
-
-
-
-
-
-
-
-
-
-
-		# === Place Bet ===
-		# clear old bets from slip
-		# close receipt
-		# result-summary__actions
-		# _ngcontent-ng-c980967766
-		# _ngcontent-ng-c980967766
-		# button
 
 
 	elif website_name == 'betrivers':
