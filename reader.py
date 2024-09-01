@@ -40,7 +40,7 @@ from urllib.request import Request, urlopen # request website, open webpage give
 # === Local Internal Libraries ===
 import converter, writer # convert year span to current season
 # #from converter import round_half_up
-# import determiner # determine played season before reading webpage to avoid exception/error
+import determiner # determine matching outcome
 # import isolator # isolate_player_game_data to read data from file
 # import writer # write to file so we can check if data exists in local file so we can read from file
 
@@ -345,7 +345,8 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 				# sometimes betrivers uses shorthand so velez instead of velez sarsfield
 				# so search for label in outcome
 				#if outcome_label == bet_outcome:
-				if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome) or re.search(bet_outcome, outcome_label):
+				#if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome) or re.search(bet_outcome, outcome_label):
+				if determiner.determine_matching_outcome(outcome_label, bet_outcome):
 					print('\nFound Outcome')
 					outcome_disabled = outcome.get_attribute('disabled')
 					if outcome_disabled is not None:
@@ -440,7 +441,8 @@ def read_market_odds(market, market_element, bet_dict):
 		# sometimes betrivers uses shorthand so velez instead of velez sarsfield
 		# so search for label in outcome
 		#if outcome_label == bet_outcome:
-		if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome) or re.search(bet_outcome, outcome_label):
+		#if outcome_label == bet_outcome or re.search(outcome_label, bet_outcome) or re.search(bet_outcome, outcome_label):
+		if determiner.determine_matching_outcome(outcome_label, bet_outcome):
 			print('Found Outcome')
 			outcome_disabled = outcome.get_attribute('disabled')
 			if outcome_disabled is not None:
@@ -482,7 +484,8 @@ def read_market_odds(market, market_element, bet_dict):
 				print('\noutcome_label: ' + outcome_label)
 				print('bet_outcome: ' + bet_outcome)
 
-				if outcome_label == bet_outcome:
+				#if outcome_label == bet_outcome:
+				if determiner.determine_matching_outcome(outcome_label, bet_outcome):
 					print('Found Outcome')
 					outcome_disabled = outcome.get_attribute('disabled')
 					#print('outcome_disabled: ' + str(outcome_disabled))
@@ -870,6 +873,8 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	print('sport: ' + sport)
 	league = bet_dict['league']
 	print('league: ' + league)
+	game = bet_dict['game'].lower()
+	print('game: ' + game)
 
 	if website_name == 'betmgm':
 		print('\nCheck Bet Available')
@@ -895,7 +900,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 		if not re.search(' - ', market):
 			# spread -> run line spread
 			# total -> totals
-			market_title = converter.convert_market_to_source_format(market, sport, website_name)
+			market_title = converter.convert_market_to_source_format(market, sport, game, website_name)
 		else:
 			market_data = market.split(' - ')
 			input_name = market_data[0]
@@ -942,7 +947,20 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 			print('listed_odds: ' + listed_odds)
 
 			
-			if re.search(' - ', market):
+			if not re.search(' - ', market):
+
+				listed_market = re.sub(':','',listed_market)
+				print('listed_market: ' + listed_market)
+
+				# match result - early payout
+				# remove early payout
+				listed_market = re.sub(' - early payout', '', listed_market)
+				
+				if listed_market == market_title:
+				
+					found_market = True
+
+			else:
 
 				# match name and market
 				#  Masyn Winn (STL): Hits 
@@ -954,14 +972,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 				if listed_name == input_name and listed_market == input_market:
 					
 					found_market = True
-
-			else:
-
-				listed_market = re.sub(':','',listed_market)
-				print('listed_market: ' + listed_market)
-				if listed_market == market_title:
 				
-					found_market = True
 
 
 			if found_market and listed_line == bet_line:
@@ -980,8 +991,26 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 
 	elif website_name == 'betrivers':
 
-		sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+		# error not getting all sections
+		sections = []
 		
+		while len(sections) < 2:# and section_retries < max_retries:
+			sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+			# if home page, close window
+			# id section-Games of the Week
+			if len(sections) < 2:
+				try:
+					# home_section = 
+					driver.find_element('id', 'section-Games of the Week')
+					print('Home Page: Game NA')
+					break
+				except:
+					print('Game Page: Get Sections')
+
+		# Game NA
+		if len(sections) < 2:
+			return actual_odds, final_outcome, cookies_file, saved_cookies
+
 		market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
 
 		market_keyword = ''
@@ -1042,7 +1071,16 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 				
 			# Markets in section
 			found_offer = False
-			markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+			market_retries = 0
+			markets = None
+			while market_retries < max_retries:
+				try:
+					markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+					break
+				except:
+					market_retries += 1
+					time.sleep(1)
+
 			# list_elements = section.find_elements('tag name', 'li')
 			# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
 			for market_idx in range(len(markets)):
@@ -1176,6 +1214,10 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 					actual_odds, final_outcome = read_market_odds(market, market_element, bet_dict)
 
 					break # done after found market
+
+
+		else:
+			print('Error: Missing Sections!')
 
 	# find element by bet dict
 	# first search for type element

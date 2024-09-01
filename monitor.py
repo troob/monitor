@@ -947,7 +947,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 if __name__ == "__main__":
 	# === TEST ===
-	test = True
+	test = False
 	# test_ev = {'market':'Jordin Canada - Rebounds', 
 	# 			'bet':'O 3.5', 
 	# 			'odds':'+100', 

@@ -17,7 +17,8 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             names = bet_line.split(' ', 1)
             bet_line = names[0][0] + '. ' + names[1]
 
-        elif re.search('total', market):
+        # totals and player props are over/unders
+        elif re.search('total| - ', market):
             bet_data = bet_line.split()
             direction = bet_data[0]
             line_val = bet_data[1]
@@ -29,32 +30,142 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
     print('bet_line: ' + bet_line)
     return bet_line
 
-def convert_market_to_source_format(market, sport, website_name):
+def convert_market_to_source_format(market, sport, game, website_name):
 
     market_title = market
 
     if website_name == 'betmgm':
 
-        if sport == 'boxing' and market == 'moneyline':
+        if sport == 'baseball':
 
-            market_title = 'fight result'
+            # Same
+            # first x innings spread
 
-        elif market == 'moneyline':
+            if market == 'moneyline':
 
-            market_title = 'money line'
-        
-        elif sport == 'baseball' and market == 'spread':
+                market_title = 'money line'
+            
+            elif market == 'spread':
 
-            market_title = 'run line spread'
+                market_title = 'run line spread'
 
-        elif market == 'total':
+            elif market == 'total':
 
-            market_title = 'totals'
+                market_title = 'totals'
 
-        # team total
-        elif re.search('total', market):
+            elif re.search('innings? moneyline', market):
 
-            market_title = market + ' runs'
+                market_title = re.sub('moneyline', 'money line', market)
+
+            elif re.search('innings? total', market):
+
+                market_title = market + ' runs'
+
+            elif re.search('innings? .+ total', market):
+                # first inning milwaukee brewers total
+                # milwaukee brewers 1st inning runs
+                parts = re.split('innings? ',market)
+                inning_part = parts[0] # 'first inning '
+                if re.search('first', inning_part): # # '1st inning '
+                    re.sub('first', '1st', market)
+                team_part = parts[1] # 'milwaukee brewers total'
+                team_name = team_part.split('total')[0] # 'milwaukee brewers '
+                market_title = team_name + inning_part + 'runs'
+
+            
+
+            # team total
+            elif re.search('total', market):
+
+                market_title = market + ' runs'
+
+        if sport == 'boxing':
+            
+            if market == 'moneyline':
+
+                market_title = 'fight result'
+
+        elif sport == 'football':
+
+            # Same
+            # Spread
+            
+            if market == 'moneyline':
+
+                market_title = 'money line'
+
+            elif market == 'total':
+
+                market_title = 'totals'
+
+            # 1st half totals is only market with abbrev
+            # others spell out first
+
+            # 1st Quarter Total -> first quarter totals
+            # 1st Half Total -> 1st half totals
+
+            # 1st Quarter Spread -> first quarter spread
+            # 1st Half Spread -> first half spread
+
+        elif sport == 'soccer':
+            
+            if market == 'moneyline':
+
+                market_title = 'match result'
+
+            # first half moneyline -> first half result
+            elif re.search('moneyline', market):
+
+                market_title = re.sub('moneyline', 'result', market)
+
+            elif market == 'total':
+
+                market_title = 'total goals'
+
+            # 1st Half Huracán Total -> Huracán - 1st half - total goals
+            elif re.search('half .+ total', market):
+                parts = market.split('half ')
+                period_part = parts[0] # '1st half '
+                team_part = parts[1]
+                team_name = team_part.split('total')[0] # 'huracan '
+
+                market_title = team_name + period_part + '- total goals'
+
+            # 1st half total -> 1st half - total goals
+            # elif re.search('half total', market):
+
+            #     market_title = re.sub('total', '- total goals', market)
+
+            # Huracán Total -> Huracán - total goals
+            elif re.search('total', market):
+                
+                market_title = re.sub('total', '- total goals', market)
+
+
+        elif sport == 'tennis':
+
+            # Same
+            # Set 1 winner
+            
+            if market == 'moneyline':
+
+                market_title = 'match winner'
+
+            elif re.search('least', market):
+
+                player_name = market.split(' to ')[0]
+
+                # flavio cobolli to win at least 1 set
+                # player 1 to win at least 1 set
+                players = game.split(' vs ')
+                player_num = '1'
+                if player_name == players[1]:
+                    player_num = '2'
+
+                market_title = 'player ' + player_num + ' to win at least 1 set'
+
+
+
 
     print('market_title: ' + market_title)
     return market_title
