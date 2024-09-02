@@ -40,6 +40,15 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
             # Same
             # first x innings spread
+            # pitcher outs
+            # home runs
+            # runs
+            # singles/doubles/triples
+            # bases/stolen bases
+            # batter walks
+
+            # NA
+            # hits allowed
 
             if market == 'moneyline':
 
@@ -72,14 +81,73 @@ def convert_market_to_source_format(market, sport, game, website_name):
                 team_name = team_part.split('total')[0] # 'milwaukee brewers '
                 market_title = team_name + inning_part + 'runs'
 
-            
-
             # team total
             elif re.search('total', market):
 
                 market_title = market + ' runs'
 
-        if sport == 'boxing':
+            # Player Props
+            elif market == 'pitcher strikeouts':
+
+                market_title = 'strikeouts'
+
+            elif market == 'earned runs allowed':
+
+                market_title = 'pitcher earned runs'
+
+            elif market == 'rbi':
+
+                market_title = 'runs batted in'
+
+
+        elif sport == 'basketball':
+
+            # Same
+            # spread
+            # assists
+            # points
+            # rebounds
+
+            if market == 'moneyline':
+
+                market_title = 'money line'
+            
+            elif market == 'total':
+
+                market_title = 'totals'
+
+
+            # Halfs
+            # first half spread
+            # 1st half totals
+            # first half money line
+            elif market == '1st half spread':
+                market_title = 'first half spread'
+            elif market == '1st half total':
+                market_title = '1st half totals'
+            elif market == '1st half moneyline':
+                market_title = 'first half money line'
+
+
+            # Quarters
+            # first quarter spread
+            # first quarter totals
+            # first quarter money line
+            elif market == '1st quarter spread':
+                market_title = 'first quarter spread'
+            elif market == '1st quarter total':
+                market_title = 'first quarter totals'
+            elif market == '1st quarter moneyline':
+                market_title = 'first quarter money line'
+
+
+            # Player Props
+            elif market == 'threes':
+
+                market_title = 'three-pointers made'
+
+
+        elif sport == 'boxing':
             
             if market == 'moneyline':
 
@@ -106,6 +174,22 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
             # 1st Quarter Spread -> first quarter spread
             # 1st Half Spread -> first half spread
+
+            elif market == '1st half spread':
+                market_title = 'first half spread'
+            elif market == '1st half total':
+                market_title = '1st half totals'
+            elif market == '1st half moneyline':
+                market_title = 'first half money line'
+
+            elif market == '1st quarter spread':
+                market_title = 'first quarter spread'
+            elif market == '1st quarter total':
+                market_title = 'first quarter totals'
+            elif market == '1st quarter moneyline':
+                market_title = 'first quarter money line'
+
+                
 
         elif sport == 'soccer':
             

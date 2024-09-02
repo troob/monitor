@@ -280,10 +280,17 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 			#enabled_markets = ['moneyline', 'run line', 'total']
 			cookies_file = 'data/cookies.json'
 			saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
-			actual_odds = None
+			# can init blank '' bc if enabled auto source but na then will set None
+			actual_odds = ''
 			#auto = False
 
 			if ev_source in enabled_sources:
+
+				# V2
+				actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group, pick_type)
+
+
+				# V1
 
 				#try: 
 				#market = ev_row['market'].lower()
@@ -291,33 +298,33 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 				# or team total, shows as <team name> total
 				# or inning market
 				#if market in enabled_markets or re.search('\stotal', market) or re.search('inning', market):
-				print('Auto Pick')
+				# print('Auto Pick')
 
-				# final outcome is bet btn if not already in betslip
-				# bc no need to click if mismatched odds
-				actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
+				# # final outcome is bet btn if not already in betslip
+				# # bc no need to click if mismatched odds
+				# actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group)
 			
-				# Next level: accept different as long as still less than fair odds
-				pick_odds = ev_row['odds']
-				if actual_odds == '' or int(actual_odds) < int(pick_odds):
-					if actual_odds == '':
-						print('\nNo Bet')
-					# still accept better price
-					else:
-						print('\nOdds Mismatch')
-						print('init_odds: ' + ev_row['odds'])
-						print('actual_odds: ' + str(actual_odds) + '\n')
+				# # Next level: accept different as long as still less than fair odds
+				# pick_odds = ev_row['odds']
+				# if actual_odds == None or int(actual_odds) < int(pick_odds):
+				# 	if actual_odds == None:
+				# 		print('\nNo Bet')
+				# 	# still accept better price
+				# 	else:
+				# 		print('\nOdds Mismatch')
+				# 		print('init_odds: ' + pick_odds)
+				# 		print('actual_odds: ' + str(actual_odds) + '\n')
 						
 
-					driver.close()
-					driver.switch_to.window(driver.window_handles[0])
+				# 	driver.close()
+				# 	driver.switch_to.window(driver.window_handles[0])
 
-					continue
+				# 	continue
 
-				else:
-					# continue to place bet
-					# First notify users before placing bet
-					print('\nPlace Bet')
+				# else:
+				# 	# continue to place bet
+				# 	# First notify users before placing bet
+				# 	print('\nPlace Bet')
 
 				# except KeyboardInterrupt:
 				# 	print('Stop Auto Read')
@@ -326,42 +333,43 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 				# 	print('Error during Auto Pick')
 					
 
-					 
-					
-			#if not auto: # not yet enabled for auto
-			#print('Manual Pick')
-			# only beep once on desktop after first arb so I can respond fast as possible
-			# but send notification after each arb???
-			# currently phone not used but ideally sends link to phone
-			# so we want to handle one at a time ideally
-			# so phone should get notice for each arb so it can start processing asap
-			if valid_ev_idx == 0:
-				os.system(say_str)
-				# Also say if still need to check mobile only sources
-				#os.system(say_mobile)
-				print('\n' + str(monitor_idx) + ': Found New EVs')
-				
-				
-			new_picks[valid_ev_idx] = ev_row
-			valid_ev_idx += 1
-
-
-			# notify before placing bet so other devices can start placing bets
-			# format string to post
-			writer.write_ev_to_post(ev_row, client, True)
-
-
-			# === Place Bet === 
-			# if actual odds is none then we know not enabled to place bet
 			if actual_odds is not None:
+					
+				#if not auto: # not yet enabled for auto
+				#print('Manual Pick')
+				# only beep once on desktop after first arb so I can respond fast as possible
+				# but send notification after each arb???
+				# currently phone not used but ideally sends link to phone
+				# so we want to handle one at a time ideally
+				# so phone should get notice for each arb so it can start processing asap
+				if valid_ev_idx == 0:
+					os.system(say_str)
+					# Also say if still need to check mobile only sources
+					#os.system(say_mobile)
+					print('\n' + str(monitor_idx) + ': Found New EVs')
+					
+					
+				new_picks[valid_ev_idx] = ev_row
+				valid_ev_idx += 1
 
-				#try: 
 
-				writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
-				
-				# still cuts connection internet
-				# except KeyboardInterrupt:
-				# 	print('Stop Auto Bet')
+				# notify before placing bet so other devices can start placing bets
+				# format string to post
+				writer.write_ev_to_post(ev_row, client, True)
+
+
+				# === Place Bet === 
+				# if actual odds is none then we know not enabled to place bet
+				# if actual odds blank '' then we know not enabled for auto pick so cannot place bet
+				if actual_odds != '':
+
+					#try: 
+
+					writer.place_bet(ev_row, ev_source, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+					
+					# still cuts connection internet
+					# except KeyboardInterrupt:
+					# 	print('Stop Auto Bet')
 			
 			
 			# CHANGE so instead of batching
@@ -409,7 +417,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports):
+def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, test, pick_time_group='prematch', pick_type='ev'):
 	# print('\n===Monitor New Arbs===\n')
 	# print('Input: arb_data = [{...},...]')# + str(arb_data))
 	# print('Input: init_arbs = {0:{...},...}')
@@ -461,6 +469,36 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# if len(arb_bets) == 0:
 			# 	continue
 
+			market = arb_row['market']
+
+			# if valid home run ev arb
+			if re.search('home', market):
+				# treat as ev
+				arb_source1 = arb_row['source1']
+				arb_source2 = arb_row['source2']
+				
+				hr_under_sources = ['betrivers', 'betmgm']
+
+				if determiner.determine_valid_hr_ev_arb(arb_source1, arb_source2):
+
+					print('\nValid HR EV Arb\n')
+
+					final_outcome = None
+					actual_odds = None
+
+					cookies_file = 'data/cookies.json'
+					saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
+					
+					enabled_sources = ['betrivers', 'betmgm']
+
+					# arb source 1 is always more likely
+					if arb_source1 in enabled_sources:
+
+						# final outcome is bet btn if not already in betslip
+						# bc no need to click if mismatched odds
+						actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(arb_row, arb_source1, driver, pick_time_group, pick_type)
+
+						
 			
 
 			# only beep once on desktop after first arb so I can respond fast as possible

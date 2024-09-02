@@ -197,7 +197,7 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 	#print('Input: market_element = <...> = ' + market_element.get_attribute('innerHTML'))
 	print('Input: bet_dict = {...} = ' + str(bet_dict))
 
-	market_odds = ''
+	market_odds = None
 
 	market = bet_dict['market'].lower()
 
@@ -371,7 +371,7 @@ def read_market_odds(market, market_element, bet_dict):
 	#print('Input: market_element = <...> = ' + market_element.get_attribute('innerHTML'))
 	print('Input: bet_dict = {...} = ' + str(bet_dict))
 
-	market_odds = ''
+	market_odds = None
 
 	# team sports needed to know if comma format
 	team_sports = ['baseball', 'basketball', 'football', 'hockey', 'soccer'] # soccer has full name bc just location???
@@ -461,7 +461,7 @@ def read_market_odds(market, market_element, bet_dict):
 	# then search alternates
 	# alt_markets = ['run line', 'total', 'total games']
 	# do not need to know alt markets bc just check for alt show list btn
-	if market_odds == '': # and market in alt_markets:
+	if market_odds == None: # and market in alt_markets:
 		# separate markets with only 1 option
 		#if market != 'moneyline':
 		# click Show list
@@ -839,7 +839,7 @@ def save_cookies(driver, website_name, cookies_file, saved_cookies):
 # -Races
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch', max_retries=3):
+def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch', pick_type='ev', max_retries=3):
 	print('\n===Read Actual Odds===\n')
 	print('Input: bet_dict = ' + str(bet_dict))
 	print('Input: website_name = ' + website_name)
@@ -908,6 +908,8 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 			print('input_name: ' + input_name)
 			print('input_market: ' + input_market)
 
+			input_market = converter.convert_market_to_source_format(input_market, sport, game, website_name)
+
 		bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
 
 
@@ -946,7 +948,8 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 			listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
 			print('listed_odds: ' + listed_odds)
 
-			
+			# if NOT player market, 
+			# match directly with listed market
 			if not re.search(' - ', market):
 
 				listed_market = re.sub(':','',listed_market)
@@ -955,23 +958,31 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 				# match result - early payout
 				# remove early payout
 				listed_market = re.sub(' - early payout', '', listed_market)
-				
-				if listed_market == market_title:
+
+				#if listed_market == market_title:
+				if determiner.determine_matching_outcome(listed_market, market_title):
 				
 					found_market = True
 
+			# if player market
+			# match name and market
 			else:
 
-				# match name and market
-				#  Masyn Winn (STL): Hits 
-				listed_name = listed_market.split(' (')[0]
-				listed_market = listed_market.split(': ')[1]
-				print('listed_name: ' + listed_name)
-				print('listed_market: ' + listed_market)
+				# Masyn Winn (STL): Hits 
+				# if no '):', then not player market so not match
+				if re.search('\):', listed_market):
+					listed_name	 = listed_market.split(' (')[0]
+					listed_market = listed_market.split(': ')[1]
+					print('listed_name: ' + listed_name)
+					print('listed_market: ' + listed_market)
 
-				if listed_name == input_name and listed_market == input_market:
-					
-					found_market = True
+					# bases (hits only)
+					# remove (...)
+					listed_market = re.sub(' \(.+\)', '', listed_market)
+
+					#if listed_name == input_name and listed_market == input_market:
+					if determiner.determine_matching_player_outcome(listed_name, listed_market, input_name, input_market):
+						found_market = True
 				
 
 
@@ -1222,6 +1233,37 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	# find element by bet dict
 	# first search for type element
 	#offer_element = driver.find_element()
+
+
+
+	# Next level: accept different as long as still less than fair odds
+	pick_odds = None
+	if pick_type == 'ev':
+		pick_odds = bet_dict['odds']
+	else:
+		pick_odds = bet_dict['odds1']
+
+	if actual_odds == None or int(actual_odds) < int(pick_odds):
+		if actual_odds == None:
+			print('\nNo Bet')
+		# still accept better price
+		else:
+			print('\nOdds Mismatch')
+			print('init_odds: ' + pick_odds)
+			print('actual_odds: ' + str(actual_odds) + '\n')
+			actual_odds = None # invalid indicator
+
+		driver.close()
+		driver.switch_to.window(driver.window_handles[0])
+
+		#return actual_odds, final_outcome, cookies_file, saved_cookies
+
+	else:
+		# continue to place bet
+		# First notify users before placing bet
+		print('\nPlace Bet')
+
+
 
 	print('actual_odds: ' + actual_odds)
 	return actual_odds, final_outcome, cookies_file, saved_cookies
