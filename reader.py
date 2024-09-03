@@ -376,15 +376,16 @@ def read_market_odds(market, market_element, bet_dict):
 	# team sports needed to know if comma format
 	team_sports = ['baseball', 'basketball', 'football', 'hockey', 'soccer'] # soccer has full name bc just location???
 	sport = bet_dict['sport']
+	source = bet_dict['source']
 	# leagues needed to know if loc abbrev format
-	national_leagues = ['mlb', 'nfl', 'nhl', 'nba']
+	national_leagues = ['mlb', 'nfl', 'nhl', 'nba', 'wnba']
 	league = bet_dict['league']
 
 	# === Convert Bet Outcome to Source Format === 
 	# Chicago Cubs +1.5
 	# U 0.5, O 0.5
 	bet_outcome = bet_dict['bet'].lower()
-	if bet_dict['source'] == 'betrivers':
+	if source == 'betrivers':
 		# if market has team name in it
 		#team_markets = ['moneyline', 'run line', 'spread']
 		
@@ -396,7 +397,8 @@ def read_market_odds(market, market_element, bet_dict):
 			#team = bet_outcome.rsplit(' ', 1)[0]
 			
 			team_loc = converter.convert_bet_to_team_loc(bet_outcome, market)
-			loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
+			#loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
+			loc_abbrev = converter.convert_team_loc_to_source_abbrev(team_loc, sport, source)
 			# Chicago -> CHI
 			# New York -> NY
 			bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
@@ -845,7 +847,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	print('Input: website_name = ' + website_name)
 	print('\nOutput: actual_odds = x\n')
 	
-	actual_odds = ''
+	actual_odds = None
 	
 	
 	size = driver.get_window_size() # get size of window 1 to determine window 2 x
@@ -889,6 +891,8 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 		# if bet na, close window
 		if bet_available == False:
 			print('Bet NA')
+			driver.close()
+			driver.switch_to.window(driver.window_handles[0])
 			return actual_odds, final_outcome, cookies_file, saved_cookies
 		
 		print('\nCheck Betslip')
@@ -1265,7 +1269,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 
 
 
-	print('actual_odds: ' + actual_odds)
+	print('actual_odds: ' + str(actual_odds))
 	return actual_odds, final_outcome, cookies_file, saved_cookies
 
 # get data from a file and format into a list (same as generator version of this fcn but more general)
@@ -5044,7 +5048,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 11') 
+	options.add_argument(r'--profile-directory=Profile 12') 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)

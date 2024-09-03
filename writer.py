@@ -115,6 +115,14 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
                 print('Close Profit Boost Popup')
                 popup = False
 
+                # 'data-translate="BTN_CLOSE_TITLE"'
+                try:
+                    close_boost_btn = driver.find_element('xpath', '//a[@data-translate="BTN_CLOSE_TITLE"]')
+                    close_boost_btn.click()
+                    print('Closed Profit Boost')
+                except:
+                    print('No Profit Boost')
+
         logged_in = True
 
     elif website_name == 'betmgm':
@@ -177,18 +185,69 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
         print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
         submit_btn.click()
         time.sleep(3)
+        #time.sleep(21) # 21 seconds enough time to inspect element for test
 
 
         # wait for verification manually first time
         # https://www.ny.betmgm.com/en/mobileportal/twofa
         verified = False
         while not verified:
-            url = driver.current_url
-            #print('current url: ' + url)
-            if not url == 'https://www.ny.betmgm.com/en/mobileportal/twofa':
+            try:
+                # if still login dialog, loading, not verified
+                driver.find_element('tag name', 'lh-login')
+                print('Still Logging In...')
+
+                try:
+                    # check error
+                    # class, m2-validation-message, Please enter your password.
+                    pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
+                    print('pwd_msg: ' + pwd_msg)
+
+                    # if pwd msg, reenter pwd
+                    pwd_field = driver.find_element('name', 'password')
+                    pwd_field.send_keys(token)
+                except:
+                    print('No pwd msg')
+
+            except:
+                print('No Login Dialog')
+                # if no login dialog after pressing submit
+                # then verified
                 verified = True
                 print('Verified')
-                time.sleep(1)
+
+            time.sleep(1)
+
+            
+            # if still submit btn then check if login error
+            # try:
+            #     submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+            #     print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+            
+            #     try:
+            #         # tag vn-message-panel, scope="login"
+            #         # class message-panel
+            #         # class theme-error-i
+            #         # class cms-container
+            #         #  We've encountered a problem. Please try again
+            #         error_msg = driver.find_element('class name', 'cms-container').get_attribute('innerHTML').lower()
+            #         print('error_msg: ' + error_msg)
+                    
+            #     except:
+            #         print('Loading...')
+
+            #     time.sleep(1)
+            # except:
+            #     verified = True
+            #     print('Verified')
+            #     time.sleep(1)
+
+            # url = driver.current_url
+            # #print('current url: ' + url)
+            # if not url == 'https://www.ny.betmgm.com/en/mobileportal/twofa':
+            #     verified = True
+            #     print('Verified')
+            #     time.sleep(1)
 
         logged_in = True
 
@@ -237,12 +296,14 @@ def wager_remaining_funds(driver):
     print('Input Funds')
 
 
-def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved_cookies, pick_type='ev', test=True):
+def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type='ev', test=True):
     print('\n===Place Bet===\n')
     print('Input: bet_dict = ' + str(bet_dict))
-    print('Input: website_name = ' + website_name)
-
+    
     place_bet = True
+
+    website_name = bet_dict['source']
+    print('website_name = ' + website_name)
 
     # wait to load if not clearing betslip???
 
@@ -284,14 +345,14 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
             place_bet_btn = driver.find_element('class name', 'place-button')
             # check if enough funds
             place_btn_text = place_bet_btn.find_element('class name', 'ds-btn-text').get_attribute('innerHTML').lower()
-            print('place_btn_text: ' + place_btn_text)
+            print('place_btn_text: ' + str(place_btn_text))
             if re.search('deposit', place_btn_text):
                 # bet all remaining funds
                 wager_remaining_funds(driver)
             place_bet_btn.click()
             time.sleep(1)
             print('Placed Bet to Find Limit')
-            time.sleep(5) 
+            time.sleep(3) 
             # except:
             #     print('Error: No Place Bet Button!')
 
@@ -312,7 +373,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                     close_receipt_btn.click()
                     time.sleep(1) 
                     print('Closed Receipt')
-                    time.sleep(5)
+                    time.sleep(3)
 
                     # test wait
                     #time.sleep(100)
@@ -325,10 +386,10 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                     print('Clicked My Bets')
                     time.sleep(3) # TEMP wait to manually check bet placed before closing
 
-                    open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[1]')
+                    open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[2]')
                     open_bets_btn.click()
                     print('Clicked Open Bets')
-                    time.sleep(5)
+                    time.sleep(3)
 
                 except:
                     print('\nBet Error\n')
@@ -393,7 +454,7 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
                         print('Clicked My Bets')
                         time.sleep(3) # TEMP wait to manually check bet placed before closing
 
-                        open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[1]')
+                        open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[2]')
                         open_bets_btn.click()
                         print('Clicked Open Bets')
                         time.sleep(3)
@@ -744,7 +805,227 @@ def place_bet(bet_dict, website_name, driver, final_outcome, cookies_file, saved
     # always switch bot back to main window so it can click btns  
     driver.switch_to.window(driver.window_handles[0])
 
+def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test):
+    print('\n===Find Bet Limit===\n')
 
+def place_bets_simultaneously(driver, bet1_size, bet2_size, wager_field1, wager_field2, place_btn1, place_btn2):
+    print('\n===Place Bets Simultaneously===\n')
+
+def place_arb_bets(arb, driver, final_outcome, cookies_file, saved_cookies, pick_type, test):
+    print('\n===Place Arb Bets===\n')
+    print('Input: arb = {...} = ' + str(arb))
+
+    # bet1
+    # bet_dict = {'market':arb['market'], 
+	# 			'bet':'Josh Kelly', 
+	# 			'odds':'+105', 
+	# 			'game':'Josh Kelly vs Liam Smith',
+	# 			'source':'betmgm',
+	# 			'sport':'boxing',
+	# 			'league':'international boxing',
+	# 			'value':'5.0',
+	# 			'size':'$3.00',
+	# 			'game date':'Sat Sep 21 2024',
+	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/16058791?options=16058791-1139065602--1022063921'}
+	
+    bet_dict = arb
+    bet_dict['bet'] = arb['bet1']
+    bet_dict['odds'] = arb['odds1']
+    bet_dict['source'] = arb['source1']
+    # go up to finding limit
+    # and then go to other side to get limit
+    bet1_limit, wager_field1, place_btn1 = find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+    #place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+
+    # bet2 
+    bet_dict['bet'] = arb['bet2']
+    bet_dict['odds'] = arb['odds2']
+    bet_dict['source'] = arb['source2']
+    bet2_limit, wager_field2, place_btn2 = find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+
+    bet1_size, bet2_size = determiner.determine_arb_bet_sizes(bet1_limit, bet2_limit)
+    
+    # write in and place bets
+    place_bets_simultaneously(driver, bet1_size, bet2_size, wager_field1, wager_field2, place_btn1, place_btn2)
+
+
+
+# write 1 arb in post
+def write_arb_to_post(arb, client, post=False):
+    print('\n===Write Arb to Post===\n')
+    print('arb = {val:x, ...} = ' + str(arb)) 
+
+    props_str = ''
+    
+    # Need diff string for each channel:
+    # 1. all
+    # 2. home runs
+    # 3. new user
+		
+    # for test_pick in test_picks:
+    # 	print('\n' + str(test_pick))
+
+    # all props str
+    all_props_str = '' # advanced when limited need to find more exploits
+    new_user_props_str = '' # changes constantly as user needs to blend in as normal
+    #for arb_idx in range(len(arbs)):
+    #for arb_idx, arb in arbs.items():
+    #arb = arbs[arb_idx]
+
+    value = arb['value']
+    #value_str = 'Value:\t' + value + '%'
+    game = arb['game']
+    #game_str = 'Game:\t' + game
+    market = arb['market']
+    #market_str = 'Market:\t' + market
+
+    bet1 = arb['bet1']
+    # bet1_str = 'Bet 1:\t' + bet1
+    bet2 = arb['bet2']
+    # bet2_str = 'Bet 2:\t' + bet2
+    odds1 = arb['odds1']
+    # odds1_str = 'Odds 1:\t' + odds1
+    odds2 = arb['odds2']
+    # bet2_str = 'Bet 2:\t' + bet2
+    link1 = arb['link1']
+    link2 = arb['link2']
+    source1 = arb['source1'].title()
+    source2 = arb['source2'].title()
+
+    
+    # Make list of sizes depending on limit, from 1000 to 100, every 100
+    # size1_options = []
+    # size2_options = []
+    max_limit = 1000
+    # Better to make hedge bet rounder number bc seems more normal/rec
+    size1 = converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
+    size1_str = '$' + str(size1)
+    size2_str = '$' + str(max_limit)
+
+    # compute payout, given odds and bet size
+    # For positive American odds, divide the betting odds by 100 and multiply the result by the amount of your wager (Profit = odds/100 x wager). 
+    # With negative odds, you divide 100 by the betting odds, then multiply that number by the wager amount (Profit = 100/odds x wager).
+    # take positive side bc = both sides
+    profit = str(converter.round_half_up(int(odds2) / 100 * max_limit) - size1)
+    #print('profit: ' + profit)
+
+
+    # Format Message
+    # Top part 4 lines of msg shows in notification preview 
+    # so show useful info to decide if need to see more
+    # 1. which books to avoid limits
+    # 2. market/prop to go to
+    # 3. odds to double check
+    # 4. value to see how important/valuable
+    # props_str += bet1 + ', ' + bet2 + '\t\t\t\t'
+    # props_str += game + '\t'
+    # props_str += market + '\t|\t'
+    # props_str += odds1 + ', ' + odds2 + '\t|\t'
+    # props_str += value + '%' + '\t|\t'
+
+    # props_str += '\n' + bet1 + ', ' + bet2 + '\t\n'
+    # props_str += odds1 + ', ' + odds2 + ' - \n' # + '\t'#|\t'
+
+    #arb_num = str(arb_idx + 1)
+    props_str = '\n===Arb===\n'
+    props_str += '\n' + source1 + ' ' + odds1 + ', ' + source2 + ' ' + odds2 +'. \n\n'
+    props_str += game + ' - \n\n'
+    props_str += market + ' - \n\n'
+    props_str += bet1 + ', ' + bet2 + ' - \n\n'
+    props_str += value + '%' + ' - \n\n'
+    
+
+    # split player and market in given market field
+    # so we can see market at the top and decide if we can take the bet or if limited or suspicious
+    player = ''
+    if re.search('-', market):
+        market_data = market.split('-')
+        player = market_data[0].strip()
+        market = market_data[1].strip()
+    #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
+    props_str += '\nSOURCE 1: ' + source1 + ', ' + odds1 + ' \n'
+    props_str += 'SOURCE 2: ' + source2 + ', ' + odds2 + ' \n\n'
+    props_str += 'MARKET: ' + market + ' \n\n'
+    props_str += 'BETS: ' + bet1 + ', ' + bet2 + ' \n\n'
+    props_str += 'GAME: ' + game + ' \n\n'
+    if player != '':
+        props_str += 'PLAYER: ' + player + ' \n\n'
+    props_str += 'VALUE: ' + value + '% \n\n'
+    props_str += 'PROFIT: $' + profit + ' \n\n'
+    props_str += 'LINK 1:\n' + link1 + ' \n'
+    props_str += 'LINK 2:\n' + link2 + ' \n\n'
+    
+
+    # if Betrivers show range bc inaccurate reading
+    # props_str += '\n' + value + '%\n'
+
+    # props_str += '\n' + game + '\n'
+
+    # props_str += '\n' + market + '\n'
+
+    # Betrivers		Fanatics
+    # -110			+110
+    # $1200			$1000
+    # -105			+110
+    # $1250			$1000
+    # props_str += '\n' + bet1 + '\t' + bet2
+
+    # props_str += '\n' + odds1 + '\t' + odds2
+
+    # props_str += '\n' + size1_str + '\t' + size2_str
+
+    arb_table = [[source1, '', source2], [odds1, '', odds2], [size1_str, '', size2_str]]
+
+    props_str += '\n' + tabulate(arb_table)
+
+    props_str += '\n==================\n==================\n\n'
+
+    # always add to all props str
+    all_props_str += props_str
+    # but selectively add to select channels
+    if not re.search('Home Run', market):
+        # add to new user str bc they avoid home runs
+        new_user_props_str += props_str
+
+    print('\n===New Arb===\n')
+    print(all_props_str)
+    #print(tabulate(arb_table))
+    # print('New User Arbs')
+    # print(new_user_props_str)
+
+    # separate props into diff channels for specific types of users
+    # 1 channel for all possible
+    # 1 channel for new user avoiding home runs
+    # 1 channel for limited users who can take home runs on specific apps
+    # Do not post home runs to general channel bc only use on limited apps
+    # post_arbs = []
+    # for pick in new_picks:
+    #     arb_market = pick[market_idx]
+    #     if not re.search('Home Run', arb_market):
+    #         post_arbs.append(pick)
+
+
+    #send msg on slack app
+    print('Post: ' + str(post) + '\n\n')
+    if post:
+        # to avoid double msg, 
+        # only apply 1 channel per user
+        # OR do not repeat arbs
+        # BUT all will repeat all which are separated into channels
+        post_all = True # for testing all arbs before finalizing all category channels
+        if all_props_str != '' and post_all:
+            client.chat_postMessage(
+                channel='all-arbs',
+                text=props_str,
+                username='Ball'
+            )
+
+        elif new_user_props_str != '':
+            client.chat_postMessage(
+                channel='ball', # arbitrary name given to first channel
+                text=props_str,
+                username='Ball'
+            )
 
 # def write_arb_to_post(arb, client, post=False):
 #     # print('\n===Write Arb to Post===\n')
