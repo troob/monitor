@@ -506,6 +506,25 @@ def read_market_odds(market, market_element, bet_dict):
 
 	return market_odds, final_outcome
 
+def read_section_idx(section_title, sections, default=0):
+
+	section_idx = default
+
+	for s_idx in range(len(sections)):
+		section = sections[s_idx]
+		# get title
+		# remove &nbsp;
+		section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML')#.split('&')[0]
+		print('section_title_element: ' + section_title_element)					
+
+		if section_title == section_title_element:
+			print('Found Player Section')
+			section_idx = s_idx
+			break
+
+	return section_idx
+
+
 def read_market_section(market, sport, league, website_name, sections, pick_time_group):
 	print('\n===Read Market Section===\n')
 	print('Input: market = example = ' + market)
@@ -527,6 +546,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 	# space before total implies team total
 	if website_name == 'betrivers':
 
+		# ===== Solo Sports =====
 		# === Tennis ===
 		# Only Set Winner currently offered in section 2 for tennis
 		if sport == 'tennis':
@@ -556,92 +576,11 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 		# 	if market == 'total':
 		# 		market_title = 'total rounds'
 
-		# ==== Team Sports ====
 
-		# === Soccer ===
-		# all current soccer valid props in section 0
-		# Currently only 3 markets for soccer on betrivers
-		elif sport == 'soccer':
-			# Spread not visible in betrivers for soccer???
-
-			if market == 'moneyline':
-				market_title = 'regular time'
-
-			elif market == 'total':
-				market_title = 'total goals'
-
-			# Team Total
-			elif re.search('\stotal', market):
-				team_name = re.sub('\stotal', '', market)
-				market_title = 'total goals by ' + team_name
-
-		# === Football & Basketball===
-		# both use 'points' and have 4 markets
-		elif sport == 'football' or sport == 'basketball':
-
-			# moneyline is moneyline
-			
-			if market == 'spread':
-				market_title = 'point spread'
-
-			elif market == 'total':
-				market_title = 'total points'
-
-			# Team Total
-			elif re.search('\stotal', market):
-				section_idx = 2
-
-				# if nfl then loc abbrev + name
-				# elif college just team name
-				# oakland athletics -> oak athletics
-				# team_name = re.sub('\stotal', '', market)
-				# if league == 'nfl':
-				team_name = converter.convert_market_to_team_name(market, league)
-				market_title = 'total points by ' + team_name
-
-			# Player Props
-			# so loop thru sections to match innertext
-			elif re.search(' - ', market):
-
-				market_data = market.split(' - ')
-				player_name = market_data[0]
-				player_market = market_data[1]
-				print('player_name: ' + player_name)
-				print('player_market: ' + player_market)
-
-				# market title is player name formatted to source
-				# first last -> last, first
-				market_title = converter.convert_name_format(player_name)
-
-				section_title = ''
-
-				if player_market == 'points':
-					section_title = 'Player Points'
-				elif player_market == 'threes':
-					section_title = 'Player Threes'
-				elif player_market == 'assists':
-					section_title = 'Player Assists'
-				elif player_market == 'rebounds':
-					section_title = 'Player Rebounds'
-				else:
-					print('Unkown Player Market! Need to add! ' + player_market)
-
-				print('section_title: ' + section_title)
-
-				for s_idx in range(len(sections)):
-					section = sections[s_idx]
-					# get title
-					# remove &nbsp;
-					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
-					print('section_title_element: ' + section_title_element)					
-
-					if section_title == section_title_element:
-						print('Found Player Section')
-						section_idx = s_idx
-						break
+		# ===== Team Sports =====
 
 		# === Baseball ===
-		else:
+		elif sport == 'baseball':
 			print('Baseball')
 
 			if market == 'spread':
@@ -662,7 +601,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				# just search total bc only first inning total available
 				# if not overall total then team total
 				elif re.search('total', market):
-					team_name = converter.convert_market_to_team_name(market, league)
+					team_name = converter.convert_market_to_team_name(market, league, sport)
 					market_title = team_name + ' to score a run - inning 1'
 
 			# Other Innings
@@ -693,7 +632,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				section_idx = 2
 
 				# oakland athletics -> oak athletics
-				team_name = converter.convert_market_to_team_name(market, league)
+				team_name = converter.convert_market_to_team_name(market, league, sport)
 				market_title = 'total runs by ' + team_name
 
 			# handle like any player prop
@@ -769,8 +708,282 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			# 	if re.search('run line|total', market):
 			# 		section_idx = 2
 
+		# === Basketball===
+		# both use 'points' and have 4 markets
+		elif sport == 'basketball':
+
+			# moneyline is moneyline
+			
+			if market == 'spread':
+				market_title = 'point spread'
+
+			elif market == 'total':
+				market_title = 'total points'
+
+			# Player Props
+			# so loop thru sections to match innertext
+			elif re.search(' - ', market):
+
+				market_data = market.split(' - ')
+				player_name = market_data[0]
+				player_market = market_data[1]
+				print('player_name: ' + player_name)
+				print('player_market: ' + player_market)
+
+				# market title is player name formatted to source
+				# first last -> last, first
+				market_title = converter.convert_name_format(player_name)
+
+				section_title = ''
+
+				if player_market == 'points':
+					section_title = 'Player Points'
+					section_idx = 5
+				elif player_market == 'threes':
+					section_title = 'Player Threes'
+					section_idx = 6
+				elif player_market == 'assists':
+					section_title = 'Player Assists'
+					section_idx = 7
+				elif player_market == 'rebounds':
+					section_title = 'Player Rebounds'
+					section_idx = 8
+				else:
+					print('Unkown Player Market! Need to add! ' + player_market)
+
+				print('section_title: ' + section_title)
+
+				for s_idx in range(len(sections)):
+					section = sections[s_idx]
+					# get title
+					# remove &nbsp;
+					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
+					print('section_title_element: ' + section_title_element)					
+
+					if section_title == section_title_element:
+						print('Found Player Section')
+						section_idx = s_idx
+						break
+
+			# 1st Quarter
+			# Halftime
+			# need to search for section by title bc at end
+			elif re.search('Quarter', market):
+				section_title = '1st Quarter'
+				section_idx = 9 # default
+				section_idx = read_section_idx(section_title, sections, section_idx)
+			
+				if re.search('3 way', market):
+					market_title = '1st quarter (3-way)'
+				elif re.search('moneyline', market):
+					market_title = 'moneyline - quarter 1'
+				elif re.search('spread', market):
+					market_title = 'spread - 1st quarter'
+				elif re.search('total', market):
+					market_title = 'total points - 1st quarter'
+
+			elif re.search('Half', market):
+				section_title = 'Half Time'
+				section_idx = 10 # default
+				section_idx = read_section_idx(section_title, sections, section_idx)
+			
+				if re.search('3 way', market):
+					market_title = '1st half (3-way)'
+				elif re.search('moneyline', market):
+					market_title = 'moneyline - 1st half'
+				elif re.search('spread', market):
+					market_title = 'spread - 1st half'
+				elif re.search('total', market):
+					market_title = 'total points - 1st half'
+
+
+			# Team Total in Game section
+			elif re.search('\stotal', market):
+				section_idx = 1
+
+				# if nfl then loc abbrev + name
+				# elif college just team name
+				# oakland athletics -> oak athletics
+				# team_name = re.sub('\stotal', '', market)
+				# if league == 'nfl':
+				team_name = converter.convert_market_to_team_name(market, league, sport)
+				market_title = 'total points by ' + team_name
+
+		# === Football ===
+		# both use 'points' and have 4 markets
+		elif sport == 'football':
+
+			# moneyline is moneyline
+			
+			if market == 'spread':
+				market_title = 'point spread'
+
+			elif market == 'total':
+				market_title = 'total points'
+
+
+			# Player Props
+			# so loop thru sections to match innertext
+			elif re.search(' - ', market):
+
+				market_data = market.split(' - ')
+				player_name = market_data[0]
+				player_market = market_data[1]
+				print('player_name: ' + player_name)
+				print('player_market: ' + player_market)
+
+				# market title is player name formatted to source
+				# first last -> last, first
+				market_title = converter.convert_name_format(player_name)
+
+				section_title = ''
+
+				passing_markets = ['passing yards', 'passing touchdowns', 'passing attempts', 'passing completions']
+				receiving_markets = ['receiving yards', 'longest reception']
+				rushing_markets = ['rushing yards', 'longest rush']
+				kicking_markets = ['kicking points', 'field goals']
+				if player_market == 'touchdowns':
+					section_title = 'Touchdown Scorer'
+					section_idx = 2
+				elif player_market in passing_markets:
+					section_title = 'Player Passing'
+					section_idx = 3
+				elif player_market == 'passing and rushing yards':
+					section_title = 'Player Passing & Rushing'
+					section_idx = 4
+				elif player_market in receiving_markets:
+					section_title = 'Player Receiving'
+					section_idx = 5
+				elif player_market in rushing_markets:
+					section_title = 'Player Rushing'
+					section_idx = 6
+				elif player_market == 'rushing and receiving yards':
+					section_title = 'Player Rushing & Receiving'
+					section_idx = 7
+				elif player_market in kicking_markets:
+					section_title = 'Game Field Goals'
+					section_idx = 10
+				elif player_market == 'interceptions':
+					section_title = 'Defensive Props'
+					section_idx = 11
+				else:
+					print('Unkown Player Market! Need to add! ' + player_market)
+
+				print('section_title: ' + section_title)
+
+				section_idx = read_section_idx(section_title, sections, section_idx)
+				# for s_idx in range(len(sections)):
+				# 	section = sections[s_idx]
+				# 	# get title
+				# 	# remove &nbsp;
+				# 	section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML')#.split('&')[0]
+				# 	print('section_title_element: ' + section_title_element)					
+
+				# 	if section_title == section_title_element:
+				# 		print('Found Player Section')
+				# 		section_idx = s_idx
+				# 		break
+
+			# 1st Half
+			# 2nd Half
+			# Quarter
+			# need to search for section by title bc at end
+			elif re.search('1st Half', market):
+				section_title = '1st Half'
+				section_idx = 12 # default
+				section_idx = read_section_idx(section_title, sections, section_idx)
+			
+				if re.search('3 way', market):
+					market_title = '1st half (3-way)'
+				elif re.search('moneyline', market):
+					market_title = 'moneyline - 1st half'
+				elif re.search('spread', market):
+					market_title = 'spread - 1st half'
+				elif re.search('1st half .+ touchdowns', market):
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total touchdowns by ' + team_name + ' - 1st half'
+				elif re.search('touchdowns', market):
+					market_title = 'total touchdowns - 1st half'
+				elif re.search('1st half .+ total', market):
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total points by ' + team_name + ' - 1st half'
+				elif re.search('field goals', market):
+					market_title = 'total successful field goals - 1st half'
+				elif re.search('total', market):
+					market_title = 'total points - 1st half'
+
+			elif re.search('2nd Half', market):
+				section_title = '2nd Half'
+				section_idx = 13 # default
+				section_idx = read_section_idx(section_title, sections, section_idx)
+			
+				if re.search('3 way', market):
+					market_title = '2nd half - including overtime'
+				elif re.search('moneyline', market):
+					market_title = 'moneyline - 2nd half - including overtime'
+				elif re.search('spread', market):
+					market_title = 'spread - 2nd half - including overtime'
+				elif re.search('total', market):
+					market_title = 'total points - 2nd half - including overtime'
+
+			elif re.search('Quarter', market):
+				section_title = 'Quarter'
+				section_idx = 14 # default
+				section_idx = read_section_idx(section_title, sections, section_idx)
+
+				if re.search('3 way', market):
+					market_title = 'Quarter 1 (3-way)'
+				elif re.search('moneyline', market):
+					market_title = 'moneyline - Quarter 1'
+				elif re.search('spread', market):
+					market_title = 'spread - Quarter 1'
+				elif re.search('total', market):
+					market_title = 'total points - Quarter 1'
+
+			# Team Total in Game section
+			elif re.search('\stotal', market):# and not re.search('half|quarter', market):
+				section_idx = 1
+
+				# if nfl then loc abbrev + name
+				# elif college just team name
+				# oakland athletics -> oak athletics
+				# team_name = re.sub('\stotal', '', market)
+				# if league == 'nfl':
+				team_name = converter.convert_market_to_team_name(market, league, sport)
+				market_title = 'total points by ' + team_name
+
+			elif re.search('touchdown', market):
+				section_title = 'Game Touchdown'
+				section_idx = 9
+				section_idx = read_section_idx(section_title, sections, section_idx)
+		
+				if market == 'touchdowns':
+					market_title = 'total touchdowns'
+				else:
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total touchdowns by ' + team_name
+
+
+		# === Soccer ===
+		# all current soccer valid props in section 0
+		# Currently only 3 markets for soccer on betrivers
+		elif sport == 'soccer':
+			# Spread not visible in betrivers for soccer???
+
+			if market == 'moneyline':
+				market_title = 'regular time'
+
+			elif market == 'total':
+				market_title = 'total goals'
+
+			# Team Total
+			elif re.search('\stotal', market):
+				team_name = re.sub('\stotal', '', market)
+				market_title = 'total goals by ' + team_name
 
 			
+		else:
+			print('Unknown Sport while reading market section!')
 
 	print('market_title: ' + market_title)
 	print('section_idx: ' + str(section_idx))
@@ -1006,233 +1219,250 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 
 	elif website_name == 'betrivers':
 
-		# error not getting all sections
-		sections = []
-		
-		while len(sections) < 2:# and section_retries < max_retries:
-			sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
-			# if home page, close window
-			# id section-Games of the Week
-			if len(sections) < 2:
-				try:
-					# home_section = 
-					driver.find_element('id', 'section-Games of the Week')
-					print('Home Page: Game NA')
-					break
-				except:
-					print('Game Page: Get Sections')
+		section_retries = 0
+		while section_retries < max_retries:
 
-		# Game NA
-		if len(sections) < 2:
-			return actual_odds, final_outcome, cookies_file, saved_cookies
-
-		market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
-
-		market_keyword = ''
-		if re.search(' - ', market):
-			# market keyword must be found in offer label
-			# market_data = market.split(' - ')
-			market_keyword = market.split(' - ')[1] #market_data[1]
-
-			# pitcher props
-			# pitcher strikeouts -> strikeouts
-			# pitcher outs -> total outs
-			market_keyword = re.sub('pitcher |alt ', '', market_keyword)
-			# if re.search('strikeout', market):
-			#     keyword = keyword.split()[-1]
-			# strikeouts diff than outs
-			if market_keyword == 'outs' or market_keyword == 'bases':
-				market_keyword = 'total ' + market_keyword
-
-			# remove s from home runs bc only 1 home run
-			# not yet multiple
-			if market_keyword == 'home runs':
-				market_keyword = 'home run'
-			elif market_keyword == 'threes':
-				market_keyword = '3-point'
-
-			print('market_keyword: ' + market_keyword)
-
-		#offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
-		
-		# click if not expanded   
-		# print('\nSections:') 
-		# for section in sections:
-		#     print('\nSection: ' + section.get_attribute('innerHTML'))
-		# 
-		if len(sections) > section_idx:
-			section = sections[section_idx]
-			#print('\nsection: ' + section.get_attribute('innerHTML'))
-			# format makes it so it only opens but does not close with same element
+			# error not getting all sections
+			sections = []
 			
-			retries = 0
-			# do not click section if only 1 section
-			if len(sections) > 1:
-				# starts at top of page so only scroll if > section 0
-				#if section_idx > 0:
-				# scrolls to bottom? and does not scroll back up to find element!
-
-				while retries < max_retries:
+			while len(sections) < 2:# and section_retries < max_retries:
+				sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+				# if home page, close window
+				# id section-Games of the Week
+				if len(sections) < 2:
+					print('len(sections) < 2')
 					try:
-						section.click()
-						print('\nOpened Section ' + str(section_idx))
-						time.sleep(1)
+						# home_section = 
+						# class 'sc-cTVAEU iceBwx'
+						# data-testid="parlay-widget-header"
+						#driver.find_element('id', 'sportsbook-ui-widget-top-container-sgp-feat') #('id', 'section-Games of the Week')
+						driver.find_element('xpath', '//div[@data-testid="parlay-widget-header"]')
+						print('Home Page: Game NA\n')
 						break
 					except:
-						print('Error clicking Section')
-						driver.execute_script("arguments[0].scrollIntoView(true);", section)
-						retries += 1
-						time.sleep(1)
-				
-			# Markets in section
-			found_offer = False
-			market_retries = 0
-			markets = None
-			while market_retries < max_retries:
-				try:
-					markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
-					break
-				except:
-					market_retries += 1
-					time.sleep(1)
+						print('Game Page: Get Sections\n')
 
-			# list_elements = section.find_elements('tag name', 'li')
-			# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
-			for market_idx in range(len(markets)):
-				market_element = markets[market_idx]
-				#list_element = list_elements[market_idx]
-				#market = offer_categories[1]
-				#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
-				# print('\nouter market_element: ' + market_element.get_attribute('outerHTML'))
-				# print('\nlist_element: ' + list_element.get_attribute('innerHTML'))
-				# moneyline always first if available
-				# but others might shift depending if moneyline or others are NA
-				# so need to search for given offer in subcategory label
-				offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower()
-				print('\noffer_label: ' + offer_label)
+			# Game NA
+			if len(sections) < 2:
+				driver.close()
+				driver.switch_to.window(driver.window_handles[0])
+				return actual_odds, final_outcome, cookies_file, saved_cookies
+
+			market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
+
+			market_keyword = ''
+			if re.search(' - ', market):
+				# market keyword must be found in offer label
+				# market_data = market.split(' - ')
+				market_keyword = market.split(' - ')[1] #market_data[1]
+
+				# pitcher props
+				# pitcher strikeouts -> strikeouts
+				# pitcher outs -> total outs
+				market_keyword = re.sub('pitcher |alt ', '', market_keyword)
+				# if re.search('strikeout', market):
+				#     keyword = keyword.split()[-1]
+				# strikeouts diff than outs
+				if market_keyword == 'outs' or market_keyword == 'bases':
+					market_keyword = 'total ' + market_keyword
+
+				# remove s from home runs bc only 1 home run
+				# not yet multiple
+				if market_keyword == 'home runs':
+					market_keyword = 'home run'
+				elif market_keyword == 'touchdowns':
+					market_keyword = 'touchdown'
+				elif market_keyword == 'longest completion':
+					market_keyword = 'longest completed pass'
+				elif market_keyword == 'threes':
+					market_keyword = '3-point'
+
+				market_keyword = re.sub(' and ', ' & ', market_keyword)
+
 				print('market_keyword: ' + market_keyword)
 
-				# easiest when = but not the case for player props
-				if offer_label == market_title:
-					print('Found Offer')
-					found_offer = True
+			#offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
+			
+			# click if not expanded   
+			# print('\nSections:') 
+			# for section in sections:
+			#     print('\nSection: ' + section.get_attribute('innerHTML'))
+			# 
+			if len(sections) > section_idx:
+				section = sections[section_idx]
+				#print('\nsection: ' + section.get_attribute('innerHTML'))
+				# format makes it so it only opens but does not close with same element
+				
+				retries = 0
+				# do not click section if only 1 section
+				if len(sections) > 1:
+					# starts at top of page so only scroll if > section 0
+					#if section_idx > 0:
+					# scrolls to bottom? and does not scroll back up to find element!
 
-				# player props market label always has - with spaces on either side
-				# KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant
-				elif re.search(' - ', market):
-					# market keyword must be found in offer label
-					# market_data = market.split(' - ')
-					# market_keyword = market.split(' - ')[1] #market_data[1]
-
-					# # pitcher props
-					# # pitcher strikeouts -> strikeouts
-					# # pitcher outs -> total outs
-					# market_keyword = re.sub('pitcher |alt ', '', market_keyword)
-					# # if re.search('strikeout', market):
-					# #     keyword = keyword.split()[-1]
-					# # strikeouts diff than outs
-					# if market_keyword == 'outs' or market_keyword == 'bases':
-					# 	market_keyword = 'total ' + market_keyword
-
-					# # remove s from home runs bc only 1 home run
-					# # not yet multiple
-					# if market_keyword == 'home runs':
-					# 	market_keyword = 'home run'
+					while retries < max_retries:
+						try:
+							section.click()
+							print('\nOpened Section ' + str(section_idx))
+							time.sleep(1)
+							break
+						except:
+							print('Error clicking Section')
+							driver.execute_script("arguments[0].scrollIntoView(true);", section)
+							retries += 1
+							time.sleep(1)
 					
-					if re.search(market_keyword, offer_label):
-						print('Found Player Market, Search for Offer')
+				# Markets in section
+				found_offer = False
+				market_retries = 0
+				markets = None
+				while market_retries < max_retries:
+					try:
+						markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+						break
+					except:
+						market_retries += 1
+						time.sleep(1)
 
-						player_name = market_title
-						print('player_name: ' + player_name)
+				# list_elements = section.find_elements('tag name', 'li')
+				# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
+				for market_idx in range(len(markets)):
+					market_element = markets[market_idx]
+					#list_element = list_elements[market_idx]
+					#market = offer_categories[1]
+					#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
+					# print('\nouter market_element: ' + market_element.get_attribute('outerHTML'))
+					# print('\nlist_element: ' + list_element.get_attribute('innerHTML'))
+					# moneyline always first if available
+					# but others might shift depending if moneyline or others are NA
+					# so need to search for given offer in subcategory label
+					offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower()
+					print('\noffer_label: ' + offer_label)
+					print('market_keyword: ' + market_keyword)
 
-						participant_names = []
+					# easiest when = but not the case for player props
+					if offer_label == market_title:
+						print('Found Offer')
+						found_offer = True
 
-						# Home Runs do not have participant elements
-						# instead participants in first column of table
-						# KambiBC-outcomes-list__column
-						if market_keyword == 'home run':
-							print('Find HR players')
-							participant_retries = 0
-							
-							while participant_retries < max_retries:
-								stale_participant = False
-								participant_names = []
+					# player props market label always has - with spaces on either side
+					# KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant
+					elif re.search(' - ', market):
+						# market keyword must be found in offer label
+						# market_data = market.split(' - ')
+						# market_keyword = market.split(' - ')[1] #market_data[1]
 
-								name_column = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')[0]
-								participant_elements = name_column.find_elements('class name', 'KambiBC-outcomes-list__label')
-								for participant_element in participant_elements:
-									# avoid stale element
-									try:
-										participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
-										# remove jr to match source
-										participant = re.sub(' jr', '', participant)
-										print('participant: ' + participant)
-										participant_names.append(participant)
+						# # pitcher props
+						# # pitcher strikeouts -> strikeouts
+						# # pitcher outs -> total outs
+						# market_keyword = re.sub('pitcher |alt ', '', market_keyword)
+						# # if re.search('strikeout', market):
+						# #     keyword = keyword.split()[-1]
+						# # strikeouts diff than outs
+						# if market_keyword == 'outs' or market_keyword == 'bases':
+						# 	market_keyword = 'total ' + market_keyword
 
-										if participant == player_name:
-											print('Found Offer')
-											found_offer = True 
+						# # remove s from home runs bc only 1 home run
+						# # not yet multiple
+						# if market_keyword == 'home runs':
+						# 	market_keyword = 'home run'
+						# find 'home run' in 'player to hit home run...'
+						if re.search(market_keyword, offer_label):
+							print('Found Player Market, Search for Offer')
 
-									except:
-										print('Participant Gone!')
-										stale_participant = True
-										participant_retries += 1
-										break
+							player_name = market_title
+							print('player_name: ' + player_name)
 
-								# if gets thru all participants, break to move on
-								if not stale_participant:
-									break 
-						else:
-							
-							participant_retries = 0
-							
-							while participant_retries < max_retries:
-								stale_participant = False
-								participant_names = []
-								participant_elements = market_element.find_elements('class name', 'KambiBC-outcomes-list__row-header--participant')
+							participant_names = []
+
+							# Home Runs do not have participant elements
+							# instead participants in first column of table
+							# KambiBC-outcomes-list__column
+							if market_keyword == 'home run':
+								print('Find HR players')
+								participant_retries = 0
 								
-								#player_market_name = player_name
-								for participant_element in participant_elements:
-									# avoid stale element
-									try:
-										participant_element_str = participant_element.get_attribute('innerHTML')
-										#print('participant_element: ' + participant_element_str)
-										if re.search('\<span', participant_element_str):
-											participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+								while participant_retries < max_retries:
+									stale_participant = False
+									participant_names = []
+
+									name_column = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')[0]
+									participant_elements = name_column.find_elements('class name', 'KambiBC-outcomes-list__label')
+									for participant_element in participant_elements:
+										# avoid stale element
+										try:
+											participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+											# remove jr to match source
 											participant = re.sub(' jr', '', participant)
 											print('participant: ' + participant)
 											participant_names.append(participant)
 
-											# search for player
 											if participant == player_name:
 												print('Found Offer')
-												found_offer = True  
-												#player_market_name = player_name
-												#break # break player loop
-									except:
-										print('Participant Gone!')
-										stale_participant = True
-										participant_retries += 1
+												found_offer = True 
+
+										except:
+											print('Participant Gone!')
+											stale_participant = True
+											participant_retries += 1
+											break
+
+									# if gets thru all participants, break to move on
+									if not stale_participant:
+										break 
+							else:
+								
+								participant_retries = 0
+								
+								while participant_retries < max_retries:
+									stale_participant = False
+									participant_names = []
+									participant_elements = market_element.find_elements('class name', 'KambiBC-outcomes-list__row-header--participant')
+									
+									#player_market_name = player_name
+									for participant_element in participant_elements:
+										# avoid stale element
+										try:
+											participant_element_str = participant_element.get_attribute('innerHTML')
+											#print('participant_element: ' + participant_element_str)
+											if re.search('\<span', participant_element_str):
+												participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+												participant = re.sub(' jr', '', participant)
+												print('participant: ' + participant)
+												participant_names.append(participant)
+
+												# search for player
+												if participant == player_name:
+													print('Found Offer')
+													found_offer = True  
+													#player_market_name = player_name
+													#break # break player loop
+										except:
+											print('Participant Gone!')
+											stale_participant = True
+											participant_retries += 1
+											break
+
+									# if gets thru all participants, break to move on
+									if not stale_participant:
 										break
 
-								# if gets thru all participants, break to move on
-								if not stale_participant:
-									break
+							if found_offer:
+								actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict)
 
-						if found_offer:
-							actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict)
+							break # done after found market
+
+
+					if found_offer:
+						actual_odds, final_outcome = read_market_odds(market, market_element, bet_dict)
 
 						break # done after found market
 
+				break # done retry loop
 
-				if found_offer:
-					actual_odds, final_outcome = read_market_odds(market, market_element, bet_dict)
-
-					break # done after found market
-
-
-		else:
-			print('Error: Missing Sections!')
+			else:
+				print('Error: Missing Sections!')
+				section_retries += 1
 
 	# find element by bet dict
 	# first search for type element
@@ -4518,6 +4748,11 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 					
 
 					market = ev_data[val_idx + 2].find_element('tag name', 'p').get_attribute('innerHTML')
+					if sport == 'football' and re.search(' - ', market):
+						market_data = market.split(' - ')
+						player_name = market_data[0]
+						player_market = re.sub('_', ' ', market_data[1]).title()
+						market = player_name + ' - ' + player_market
 					#print('market: ' + str(market))
 
 					bet = ev_data[val_idx + 3].find_element('tag name', 'p').get_attribute('innerHTML')
@@ -4796,7 +5031,14 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 
 					try:
 						#market_idx = val_idx + 3
+						# poor source format sometimes includes _ and all caps for football player markets (source will probably fix soon???)
+						# so make uniform here
 						market = arb_data[val_idx + 3].find_element('tag name', 'p').get_attribute('innerHTML')
+						if sport == 'football' and re.search(' - ', market):
+							market_data = market.split(' - ')
+							player_name = market_data[0]
+							player_market = re.sub('_', ' ', market_data[1]).title()
+							market = player_name + ' - ' + player_market
 						#print('market: ' + str(market))
 					except:
 						print('No Market')

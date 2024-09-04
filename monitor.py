@@ -70,8 +70,8 @@ new_pick_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-valid_sports = ['baseball']#,'hockey'] # big markets to stay subtle
-valid_leagues = ['mlb']
+valid_sports = ['baseball']#, 'football']#,'hockey', 'basketball] # big markets to stay subtle
+valid_leagues = ['mlb']#, 'nfl'] 9/5, 10/8, 10/22
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 monitor_ev = True
 
@@ -342,7 +342,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		# either likely source valid hr enabled
 		# OR both sources enabled
 
-		market = arb_row['market']
+		market = arb_row['market'].lower()
+		print('market: ' + market)
 
 		arb_source1 = arb_row['source1']
 		arb_source2 = arb_row['source2']
@@ -355,21 +356,29 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		cookies_file = 'data/cookies.json'
 		saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
 
+		# === If Treat As EV ===
 		# if valid home run ev arb
-		if re.search('home', market):
+		if determiner.determine_valid_hr_ev_arb(market, arb_source1, arb_source2):
+			print('\nValid HR EV Arb\n')
+			# treat as ev
 			
-			if determiner.determine_valid_hr_ev_arb(arb_source1, arb_source2):
-				print('\nValid HR EV Arb\n')
-				# treat as ev
-				
-				enabled_sources = ['betrivers', 'betmgm']
+			enabled_sources = ['betrivers', 'betmgm']
 
-				# arb source 1 is always more likely
-				if arb_source1 in enabled_sources:
+			# arb source 1 is always more likely
+			if arb_source1 in enabled_sources:
 
-					# final outcome is bet btn if not already in betslip
-					# bc no need to click if mismatched odds
-					actual_odds1, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(arb_row, arb_source1, driver, pick_time_group, pick_type)
+				# final outcome is bet btn if not already in betslip
+				# bc no need to click if mismatched odds
+				actual_odds1, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(arb_row, arb_source1, driver, pick_time_group, pick_type)
+
+
+		# === If Treat As Arb ===
+		else:
+			bet_dict = arb_row
+			bet_dict['bet'] = arb_row['bet1']
+			bet_dict['odds'] = arb_row['odds1']
+			bet_dict['source'] = arb_row['source1']
+			bet_dict['link'] = arb_row['link1']
 
 					
 		# if actual odds is set none then we know not valid to place bet

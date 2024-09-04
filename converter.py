@@ -329,24 +329,26 @@ def convert_team_to_loc_and_name(team):
 
 
 # seattle seahawks total -> sea seahawks
-def convert_market_to_team_name(market, league):
+def convert_market_to_team_name(market, league, sport):
     print('\n===Convert Market to Team Name===\n')
     print('Input: market = ' + market)
 
     # only convert team name format if usa league
     source_team_name = re.sub('\stotal', '', market)
 
-    usa_leagues = ['mlb', 'nba', 'nfl']
+    usa_leagues = ['mlb', 'nba', 'nfl', 'wnba', 'nhl']
 
     if league not in usa_leagues:
         return source_team_name
 
     # first x innings kansas city royals total -> kansas city royals
     # first inning kansas city royals total -> kansas city royals
-    if re.search('innings', market):
-        market = market.split('innings ')[1]
-    elif re.search('inning', market):
-        market = market.split('inning ')[1]
+    if re.search('innings?|halfs?|quarters?', market):
+        #market = market.split('innings ')[1]
+        market = re.split('innings? |halfs? |quarters? ', market)[1]
+    # elif re.search('inning|half|quarter', market):
+    #     #market = market.split('inning ')[1]
+    #     market = re.split('inning |half |quarter ', market)[1]
     # kansas city royals total
     print('market: ' + market)
 
@@ -356,7 +358,7 @@ def convert_market_to_team_name(market, league):
 
     team_loc, team_name = convert_team_to_loc_and_name(team_full_name)
 
-    loc_abbrev = convert_team_loc_to_abbrev(team_loc, 'baseball')
+    loc_abbrev = convert_team_loc_to_abbrev(team_loc, sport)
 
     # final format depends on source
     # betrivers uses loc abbrev + team name
@@ -364,6 +366,7 @@ def convert_market_to_team_name(market, league):
     # kansas city royals -> kc royals
     source_team_name = loc_abbrev + ' ' + team_name
 
+    print('source_team_name: ' + source_team_name)
     return source_team_name
 
 
@@ -1098,7 +1101,7 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
     return abbrev
 
 def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
-    #print('\n===Convert Team Location to Abbrev: ' + team_name + '===\n')
+    print('\n===Convert Team Location to Abbrev: ' + team_loc + '===\n')
     
     abbrev = ''
 
@@ -1173,8 +1176,9 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
         elif sport == 'football':
             team_locs = {'buffalo':'buf',
                             'miami':'mia',
-                            'new england':'nep',
-                            'new york jets':'nyj',
+                            'new england':'ne',
+                            'new york':'ny',
+                            'new york jets':'ny',
                             'baltimore':'bal',
                             'cincinnati':'cin',
                             'cleveland':'cle',
@@ -1184,24 +1188,25 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
                             'jacksonville':'jax',
                             'tennessee':'ten',
                             'denver':'den',
-                            'kansas city':'kcc',
-                            'las vegas':'lvr',
-                            'los angeles colts':'lac',
+                            'kansas city':'kc',
+                            'las vegas':'lv',
+                            'los angeles':'la',
+                            'los angeles colts':'la',
                             'dallas':'dal',
-                            'new york giants':'nyg',
+                            'new york giants':'ny',
                             'philadelphia':'phi',
-                            'washington':'wsh',
+                            'washington':'was',
                             'chicago':'chi',
                             'detroit':'det',
-                            'green bay':'gbp',
+                            'green bay':'gb',
                             'minnesota':'min',
                             'atlanta':'atl',
                             'carolina':'car',
-                            'new orleans':'nos',
-                            'tampa bay':'tbb',
+                            'new orleans':'no',
+                            'tampa bay':'tb',
                             'arizona':'ari',
-                            'los angeles rams':'lar',
-                            'san francisco':'sff',
+                            'los angeles rams':'la',
+                            'san francisco':'sf',
                             'seattle':'sea'}
             
         else: # basketball
@@ -1311,8 +1316,8 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
         elif sport == 'football':
             team_locs = {'buffalo':'buf',
                             'miami':'mia',
-                            'new england':'nep',
-                            'new york jets':'nyj',
+                            'new england':'ne',
+                            'new york jets':'ny',
                             'baltimore':'bal',
                             'cincinnati':'cin',
                             'cleveland':'cle',
@@ -1322,24 +1327,24 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
                             'jacksonville':'jax',
                             'tennessee':'ten',
                             'denver':'den',
-                            'kansas city':'kcc',
-                            'las vegas':'lvr',
-                            'los angeles colts':'lac',
+                            'kansas city':'kc',
+                            'las vegas':'lv',
+                            'los angeles colts':'la',
                             'dallas':'dal',
-                            'new york giants':'nyg',
+                            'new york giants':'ny',
                             'philadelphia':'phi',
-                            'washington':'wsh',
+                            'washington':'was',
                             'chicago':'chi',
                             'detroit':'det',
-                            'green bay':'gbp',
+                            'green bay':'gb',
                             'minnesota':'min',
                             'atlanta':'atl',
                             'carolina':'car',
-                            'new orleans':'nos',
-                            'tampa bay':'tbb',
+                            'new orleans':'no',
+                            'tampa bay':'tb',
                             'arizona':'ari',
-                            'los angeles rams':'lar',
-                            'san francisco':'sff',
+                            'los angeles rams':'la',
+                            'san francisco':'sf',
                             'seattle':'sea'}
             
         else: # basketball

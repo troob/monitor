@@ -149,9 +149,12 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
                 login_btn.click()
                 time.sleep(1)
             except:
-                print('\nCheck if Session Timed Out to Login Page\n')
+                print('\nCheck if Session Timed Out to Login Page or Glitch Home Page\n')
                 # login button???
                 time.sleep(100)
+
+                # if funds say zero not enough to tell if timed out bc may actually be 0 funds
+                # so what is identifier of timeout???
                 
                 print('\nAlready Logged In\n')
                 return
@@ -176,10 +179,13 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
         if re.search('ng-untouched', usr_field_html):
             usr_field = driver.find_element('id', 'userId')
             usr_field.send_keys(email)
+            time.sleep(1)
 
         if re.search('ng-untouched', pwd_field_html):
             pwd_field = driver.find_element('name', 'password')
+            pwd_field.clear()
             pwd_field.send_keys(token)
+            time.sleep(1)
 
         submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
         print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
@@ -206,6 +212,10 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
                     # if pwd msg, reenter pwd
                     pwd_field = driver.find_element('name', 'password')
                     pwd_field.send_keys(token)
+                    time.sleep(1)
+
+                    submit_btn.click()
+                    time.sleep(3)
                 except:
                     print('No pwd msg')
 
@@ -261,7 +271,8 @@ def login_website(website_name, driver, cookies_file, saved_cookies):
         reader.save_cookies(driver, website_name, cookies_file, saved_cookies)
 
 
-    #return driver
+    #return driver not needed bc already in parent fcn
+    #gets updated
 
 def clear_betslip(driver):
     # Require that betslip is empty
@@ -473,7 +484,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 driver.close()
 
         elif website_name == 'betrivers':
-            time.sleep(1) # load
+            #time.sleep(1) # load
 
         
             clear_betslip(driver)
@@ -805,8 +816,23 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
     # always switch bot back to main window so it can click btns  
     driver.switch_to.window(driver.window_handles[0])
 
+# just like place bet but only up to getting limit
+# remove the final place bet click
 def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test):
     print('\n===Find Bet Limit===\n')
+    print('Input: bet_dict = {...} = ' + str(bet_dict))
+    print('Input: final_outcome = ' + str(final_outcome))
+    print('\nOutput: bet_limit = x\n')
+
+    bet_limit = 0
+
+    website_name = bet_dict['source']
+    print('website_name = ' + website_name)
+
+
+
+    return bet_limit
+
 
 def place_bets_simultaneously(driver, bet1_size, bet2_size, wager_field1, wager_field2, place_btn1, place_btn2):
     print('\n===Place Bets Simultaneously===\n')
