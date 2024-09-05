@@ -263,8 +263,9 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 		if ev_source in enabled_sources:
 
-			actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, ev_source, driver, pick_time_group, pick_type)
+			actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
 		
+		#if not test:
 		# if actual odds is set none then we know not valid to place bet
 		if actual_odds is None:
 			continue
@@ -348,7 +349,9 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		arb_source1 = arb_row['source1']
 		arb_source2 = arb_row['source2']
 
-		final_outcome = None
+		final_outcome1 = None
+		final_outcome2 = None
+		final_outcomes = (final_outcome1, final_outcome2)
 		
 		actual_odds1 = actual_odds2 = ''
 		#actual_odds = (actual_odds1, actual_odds2)
@@ -356,30 +359,55 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		cookies_file = 'data/cookies.json'
 		saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
 
+		enabled_sources = ['betrivers', 'betmgm']
+		bet1_dict = {}
+		bet2_dict = {}
+
 		# === If Treat As EV ===
+		treat_ev = False
 		# if valid home run ev arb
 		if determiner.determine_valid_hr_ev_arb(market, arb_source1, arb_source2):
 			print('\nValid HR EV Arb\n')
 			# treat as ev
-			
-			enabled_sources = ['betrivers', 'betmgm']
+			treat_ev = True
 
 			# arb source 1 is always more likely
 			if arb_source1 in enabled_sources:
 
 				# final outcome is bet btn if not already in betslip
 				# bc no need to click if mismatched odds
-				actual_odds1, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(arb_row, arb_source1, driver, pick_time_group, pick_type)
+				bet1_dict = arb_row
+				bet1_dict['bet'] = arb_row['bet1']
+				bet1_dict['odds'] = arb_row['odds1']
+				bet1_dict['source'] = arb_row['source1']
+				bet1_dict['link'] = arb_row['link1']
+				actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
 
 
 		# === If Treat As Arb ===
 		else:
-			bet_dict = arb_row
-			bet_dict['bet'] = arb_row['bet1']
-			bet_dict['odds'] = arb_row['odds1']
-			bet_dict['source'] = arb_row['source1']
-			bet_dict['link'] = arb_row['link1']
+			if arb_source1 in enabled_sources or arb_source2 in enabled_sources:
+				print('\nAuto Arb\n')
 
+				if arb_source1 in enabled_sources:
+					bet1_dict = arb_row
+					bet1_dict['bet'] = arb_row['bet1']
+					bet1_dict['odds'] = arb_row['odds1']
+					bet1_dict['source'] = arb_row['source1']
+					bet1_dict['link'] = arb_row['link1']
+
+					actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
+
+				if arb_source2 in enabled_sources:
+					bet2_dict = arb_row
+					bet2_dict['bet'] = arb_row['bet2']
+					bet2_dict['odds'] = arb_row['odds2']
+					bet2_dict['source'] = arb_row['source2']
+					bet2_dict['link'] = arb_row['link2']
+
+					actual_odds2, final_outcome2, cookies_file, saved_cookies = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type)
+
+				final_outcomes = (final_outcome1, final_outcome2)
 					
 		# if actual odds is set none then we know not valid to place bet
 		if actual_odds1 is None or actual_odds2 is None:
@@ -408,12 +436,12 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			continue
 		
 		# if onyl odds1 populated, then place single bet
-		if actual_odds2 == '':
-			writer.place_bet(arb_row, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+		# if actual_odds2 == '' and treat_ev:
+		# 	writer.place_bet(bet1_dict, driver, final_outcome1, cookies_file, saved_cookies, pick_type, test)
 	
-		# if both odds given, then place both bets
-		else:
-			writer.place_arb_bets(arb_row, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+		# # if both odds given, then place both bets
+		# else:
+		# 	writer.place_arb_bets(arb_row, driver, final_outcomes, cookies_file, saved_cookies, pick_type, test)
 
 
 		# === Place Bets === 
@@ -594,6 +622,11 @@ def monitor_website(url, test, test_ev, max_retries=3):
 			arb_btn = website[1]
 			pre_btn = website[2]
 			ev_btn = website[3]
+
+
+
+			
+
 
 			# time.sleep(100) # wait before opening next page to seem human
 			# cookies = driver.get_cookies()
@@ -867,29 +900,29 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 if __name__ == "__main__":
 	# === TEST ===
-	test = False
-	# test_ev = {'market':'Jordin Canada - Rebounds', 
-	# 			'bet':'O 3.5', 
-	# 			'odds':'+100', 
-	# 			'game':'Las Vegas Aces vs Atlanta Dream',
-	# 			'sport':'basketball',
-	# 			'source':'betmgm',
-	# 			'league':'mlb',
-	# 			'value':'5.0',
-	# 			'size':'$3.00',
-	# 			'game date':'Fri Aug 30 2024',
-	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/16085726?options=16085726-1161494055--963549363'}
-	test_ev = {'market':'Moneyline', 
-				'bet':'Josh Kelly', 
-				'odds':'+105', 
-				'game':'Josh Kelly vs Liam Smith',
+	test = True
+	test_ev = {'market':'Patrick Mahomes - Rushing Yards', 
+				'bet':'U 19.5', 
+				'odds':'+115', 
+				'game':'Baltimore Ravens vs Kansas City Chiefs',
+				'sport':'football',
 				'source':'betmgm',
-				'sport':'boxing',
-				'league':'international boxing',
+				'league':'nfl',
 				'value':'5.0',
 				'size':'$3.00',
-				'game date':'Sat Sep 21 2024',
-				'link':'https://sports.ny.betmgm.com/en/sports/events/16058791?options=16058791-1139065602--1022063921'}
+				'game date':'Thu Sep 5 2024',
+				'link':'https://sports.ny.betmgm.com/en/sports/events/baltimore-ravens-at-kansas-city-chiefs-15817162'}
+	# test_ev = {'market':'Spread', 
+	# 			'bet':'Washington Commanders -4', 
+	# 			'odds':'+105', 
+	# 			'game':'Washington Commanders vs Tampa Bay Buccaneers',
+	# 			'source':'betmgm',
+	# 			'sport':'football',
+	# 			'league':'nfl',
+	# 			'value':'5.0',
+	# 			'size':'$3.00',
+	# 			'game date':'Sat Sep 8 2024',
+	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/washington-commanders-at-tampa-bay-buccaneers-15830750'}
 	# https://sports.ny.betmgm.com/en/sports/events/16114424?options=16114424-1161634470--963207266
 	# https:...events/<game id>?options=<game id>- ... --<data-test-option-id>
 	
@@ -899,19 +932,25 @@ if __name__ == "__main__":
 	# cain sandoval: https://sports.ny.betmgm.com/en/sports/events/16249580?options=16249580-1160456875--966257383
 	# j canada rebounds: https://sports.ny.betmgm.com/en/sports/events/16085726?options=16085726-1161494055--963549363
 
-	# test_ev = {'market':'Jose Altuve - Home Runs', 
-	# 			'bet':'U 0.5', 
-	# 			'odds':'-360', 
-	# 			'game':'Houston Astros vs Baltimore Orioles',
-	# 			'source':'betrivers',
-	# 			'sport':'baseball',
+	# test_ev = {'market':'Moneyline', 
+	# 			'bet':'Paris Saint Germain', 
+	# 			'odds':'-300', 
+	# 			'game':'Paris Saint Germain',
+	# 			'source':'betmgm',
+	# 			'sport':'soccer',
 	# 			'league':'mlb',
 	# 			'value':'5.0',
 	# 			'size':'$3.00',
-	# 			'game date':'Today',
-	# 			'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376333'}
+	# 			'game date':'Thu Sep 14 2024',
+	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/2:6542108?options=2:6542108-164995050-560588838'}
 
 
+	
+	# if test:
+	# 	print('\n===TEST===\n')
+	# 	url = 'https://sports.ny.betmgm.com/en/sports/events/baltimore-ravens-at-kansas-city-chiefs-15817162'
+	# 	driver = reader.open_react_website(url)
+	# 	time.sleep(100)
 
 	# diff from read react website bc we keep site open and loop read data
 	# oodsview was free but now charges

@@ -403,6 +403,9 @@ def read_market_odds(market, market_element, bet_dict):
 			# New York -> NY
 			bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
 			# bet_outcome = loc_abbrev + team_full_name[1]
+
+			# remove 'university of ' and ' university'
+			bet_outcome = re.sub('university of | university', '', bet_outcome)
 			
 		# Totals and Player Props
 		elif re.search('^[ou]\s', bet_outcome):
@@ -514,7 +517,8 @@ def read_section_idx(section_title, sections, default=0):
 		section = sections[s_idx]
 		# get title
 		# remove &nbsp;
-		section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML')#.split('&')[0]
+		section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&nbsp;')[0]
+		section_title_element = re.sub('&amp;', '&', section_title_element)
 		print('section_title_element: ' + section_title_element)					
 
 		if section_title == section_title_element:
@@ -545,6 +549,9 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 	# '[a-z]{3}\s[a-z]+\stotal'
 	# space before total implies team total
 	if website_name == 'betrivers':
+
+		# remove alt to match market
+		market = re.sub('alt ', '', market)
 
 		# ===== Solo Sports =====
 		# === Tennis ===
@@ -646,7 +653,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			elif re.search(' - ', market):
 
 				market_data = market.split(' - ')
-				player_name = market_data[0]
+				player_name = re.sub(' jr\.?| ii+','',market_data[0])
 				player_market = market_data[1]
 				print('player_name: ' + player_name)
 				print('player_market: ' + player_market)
@@ -725,7 +732,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			elif re.search(' - ', market):
 
 				market_data = market.split(' - ')
-				player_name = market_data[0]
+				player_name = re.sub(' jr\.?| ii+','',market_data[0])
 				player_market = market_data[1]
 				print('player_name: ' + player_name)
 				print('player_market: ' + player_market)
@@ -827,7 +834,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			elif re.search(' - ', market):
 
 				market_data = market.split(' - ')
-				player_name = market_data[0]
+				player_name = re.sub(' jr\.?| ii+','',market_data[0])
 				player_market = market_data[1]
 				print('player_name: ' + player_name)
 				print('player_market: ' + player_market)
@@ -888,7 +895,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			# 2nd Half
 			# Quarter
 			# need to search for section by title bc at end
-			elif re.search('1st Half', market):
+			elif re.search('1st half', market):
 				section_title = '1st Half'
 				section_idx = 12 # default
 				section_idx = read_section_idx(section_title, sections, section_idx)
@@ -912,7 +919,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				elif re.search('total', market):
 					market_title = 'total points - 1st half'
 
-			elif re.search('2nd Half', market):
+			elif re.search('2nd half', market):
 				section_title = '2nd Half'
 				section_idx = 13 # default
 				section_idx = read_section_idx(section_title, sections, section_idx)
@@ -926,19 +933,19 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				elif re.search('total', market):
 					market_title = 'total points - 2nd half - including overtime'
 
-			elif re.search('Quarter', market):
+			elif re.search('quarter', market):
 				section_title = 'Quarter'
 				section_idx = 14 # default
 				section_idx = read_section_idx(section_title, sections, section_idx)
 
 				if re.search('3 way', market):
-					market_title = 'Quarter 1 (3-way)'
+					market_title = 'quarter 1 (3-way)'
 				elif re.search('moneyline', market):
-					market_title = 'moneyline - Quarter 1'
+					market_title = 'moneyline - quarter 1'
 				elif re.search('spread', market):
-					market_title = 'spread - Quarter 1'
+					market_title = 'spread - quarter 1'
 				elif re.search('total', market):
-					market_title = 'total points - Quarter 1'
+					market_title = 'total points - quarter 1'
 
 			# Team Total in Game section
 			elif re.search('\stotal', market):# and not re.search('half|quarter', market):
@@ -1054,13 +1061,15 @@ def save_cookies(driver, website_name, cookies_file, saved_cookies):
 # -Races
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch', pick_type='ev', max_retries=3):
+def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', max_retries=3):
 	print('\n===Read Actual Odds===\n')
 	print('Input: bet_dict = ' + str(bet_dict))
-	print('Input: website_name = ' + website_name)
 	print('\nOutput: actual_odds = x\n')
 	
 	actual_odds = None
+
+	website_name = bet_dict['source']
+	print('website_name = ' + website_name)
 	
 	
 	size = driver.get_window_size() # get size of window 1 to determine window 2 x
@@ -1092,6 +1101,21 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 	print('game: ' + game)
 
 	if website_name == 'betmgm':
+
+		# session timeout may happen when opening new window
+		# if cookies not added properly
+		print('\nCheck Session Expired')
+		try:
+
+			# Your session expired. Please log in again.
+			msg = driver.find_element('tag name', 'vn-message-panel').find_element('class name', 'cms-container').get_attribute('innerHTML').lower()
+			print('msg: ' + msg)
+			if re.search('session expired', msg):
+				writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
+		
+		except:
+			print('No Message, Session Current')
+
 		print('\nCheck Bet Available')
 		bet_available = False
 		try:
@@ -1272,6 +1296,8 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 					market_keyword = 'home run'
 				elif market_keyword == 'touchdowns':
 					market_keyword = 'touchdown'
+				elif market_keyword == 'passing touchdowns':
+					market_keyword = 'touchdown passes'
 				elif market_keyword == 'longest completion':
 					market_keyword = 'longest completed pass'
 				elif market_keyword == 'threes':
@@ -1393,7 +1419,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 										try:
 											participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
 											# remove jr to match source
-											participant = re.sub(' jr', '', participant)
+											participant = re.sub(' jr\.?| ii+', '', participant)
 											print('participant: ' + participant)
 											participant_names.append(participant)
 
@@ -1427,7 +1453,7 @@ def read_actual_odds(bet_dict, website_name, driver, pick_time_group='prematch',
 											#print('participant_element: ' + participant_element_str)
 											if re.search('\<span', participant_element_str):
 												participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
-												participant = re.sub(' jr', '', participant)
+												participant = re.sub(' jr\.?| ii+', '', participant)
 												print('participant: ' + participant)
 												participant_names.append(participant)
 

@@ -99,6 +99,10 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
                 market_title = 'runs batted in'
 
+            elif market == 'hits + runs + rbis':
+
+                market_title = 'total hits, runs and rbis'
+
 
         elif sport == 'basketball':
 
