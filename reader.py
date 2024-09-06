@@ -146,6 +146,9 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 		if sport not in team_sports:
 			outcome_label = converter.convert_name_format(outcome_label)#, name_format=',')
 
+		# remove ole from ole miss
+		outcome_label = re.sub('^ole ', '', outcome_label)
+
 	# all others, except home runs bc no outcome label, bc yes/no list
 	# spread or total, except first inning total bc yes/no
 	#elif # Home Run button shows only odds bc it is yes/no list
@@ -392,20 +395,21 @@ def read_market_odds(market, market_element, bet_dict):
 		# convert team loc to abbrev
 		#if market in team_markets or 
 		# ties are moneyline but no team name to convert
-		if re.search('moneyline|spread|run line', market) and league in national_leagues and bet_outcome != 'tie' and bet_outcome != 'draw':
-			#multi_name_locs = ['new york', 'los angeles']
-			#team = bet_outcome.rsplit(' ', 1)[0]
-			
-			team_loc = converter.convert_bet_to_team_loc(bet_outcome, market)
-			#loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
-			loc_abbrev = converter.convert_team_loc_to_source_abbrev(team_loc, sport, source)
-			# Chicago -> CHI
-			# New York -> NY
-			bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
-			# bet_outcome = loc_abbrev + team_full_name[1]
-
-			# remove 'university of ' and ' university'
-			bet_outcome = re.sub('university of | university', '', bet_outcome)
+		if re.search('moneyline|spread|run line', market):
+			if league in national_leagues and bet_outcome != 'tie' and bet_outcome != 'draw':
+				#multi_name_locs = ['new york', 'los angeles']
+				#team = bet_outcome.rsplit(' ', 1)[0]
+				
+				team_loc = converter.convert_bet_to_team_loc(bet_outcome, market)
+				#loc_abbrev = converter.convert_team_loc_to_abbrev(team_loc, 'baseball')
+				loc_abbrev = converter.convert_team_loc_to_source_abbrev(team_loc, sport, source)
+				# Chicago -> CHI
+				# New York -> NY
+				bet_outcome = re.sub(team_loc, loc_abbrev, bet_outcome)
+				# bet_outcome = loc_abbrev + team_full_name[1]
+			else:
+				# remove 'university of ' and ' university'
+				bet_outcome = re.sub('university of | university', '', bet_outcome)
 			
 		# Totals and Player Props
 		elif re.search('^[ou]\s', bet_outcome):
@@ -1080,9 +1084,9 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 	# Must navigate to page before adding cookies
 	driver.get(url)
 	cookies_file = 'data/cookies.json'
-	saved_cookies = add_cookies(driver, website_name, cookies_file)
-	time.sleep(2) # wait to load. sometimes fails at 1 sec
-	save_cookies(driver, website_name, cookies_file, saved_cookies)
+	saved_cookies = ''#add_cookies(driver, website_name, cookies_file)
+	#time.sleep(2) # wait to load. sometimes fails at 1 sec
+	#save_cookies(driver, website_name, cookies_file, saved_cookies)
 
 	
 	section_idx = 0
@@ -1227,7 +1231,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 				
 
 
-			if found_market and listed_line == bet_line:
+			if found_market and determiner.determine_matching_outcome(listed_line, bet_line):#listed_line == bet_line:
 				print('Found Bet Listed')
 				actual_odds = listed_odds
 				final_outcome = listed_bet

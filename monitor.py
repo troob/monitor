@@ -263,8 +263,11 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 		if ev_source in enabled_sources:
 
-			actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
-		
+			#actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
+			actual_odds_data = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
+			actual_odds = actual_odds_data[0]
+			final_outcome = actual_odds_data[1]
+
 		#if not test:
 		# if actual odds is set none then we know not valid to place bet
 		if actual_odds is None:
@@ -366,49 +369,56 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		# === If Treat As EV ===
 		treat_ev = False
 		# if valid home run ev arb
-		if determiner.determine_valid_hr_ev_arb(market, arb_source1, arb_source2):
+		# arb source 1 is always more likely
+		if determiner.determine_valid_hr_ev_arb(market, arb_source1, arb_source2) and arb_source1 in enabled_sources:
 			print('\nValid HR EV Arb\n')
 			# treat as ev
 			treat_ev = True
 
-			# arb source 1 is always more likely
-			if arb_source1 in enabled_sources:
-
-				# final outcome is bet btn if not already in betslip
-				# bc no need to click if mismatched odds
-				bet1_dict = arb_row
-				bet1_dict['bet'] = arb_row['bet1']
-				bet1_dict['odds'] = arb_row['odds1']
-				bet1_dict['source'] = arb_row['source1']
-				bet1_dict['link'] = arb_row['link1']
-				actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
-
+			# final outcome is bet btn if not already in betslip
+			# bc no need to click if mismatched odds
+			bet1_dict = arb_row
+			bet1_dict['bet'] = arb_row['bet1']
+			bet1_dict['odds'] = arb_row['odds1']
+			bet1_dict['source'] = arb_row['source1']
+			bet1_dict['link'] = arb_row['link1']
+			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
+			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
+			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
+			actual_odds1 = actual_odds_data[0]
+			final_outcome1 = actual_odds_data[1]
 
 		# === If Treat As Arb ===
-		else:
-			if arb_source1 in enabled_sources or arb_source2 in enabled_sources:
-				print('\nAuto Arb\n')
+		# else:
+		# 	print('\nTreat as Arb\n')
+		# 	if arb_source1 in enabled_sources or arb_source2 in enabled_sources:
+		# 		print('\nAuto Arb\n')
 
-				if arb_source1 in enabled_sources:
-					bet1_dict = arb_row
-					bet1_dict['bet'] = arb_row['bet1']
-					bet1_dict['odds'] = arb_row['odds1']
-					bet1_dict['source'] = arb_row['source1']
-					bet1_dict['link'] = arb_row['link1']
+		# 		if arb_source1 in enabled_sources:
+		# 			bet1_dict = arb_row
+		# 			bet1_dict['bet'] = arb_row['bet1']
+		# 			bet1_dict['odds'] = arb_row['odds1']
+		# 			bet1_dict['source'] = arb_row['source1']
+		# 			bet1_dict['link'] = arb_row['link1']
 
-					actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
+		# 			actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
 
-				if arb_source2 in enabled_sources:
-					bet2_dict = arb_row
-					bet2_dict['bet'] = arb_row['bet2']
-					bet2_dict['odds'] = arb_row['odds2']
-					bet2_dict['source'] = arb_row['source2']
-					bet2_dict['link'] = arb_row['link2']
+		# 		if arb_source2 in enabled_sources:
+		# 			bet2_dict = arb_row
+		# 			bet2_dict['bet'] = arb_row['bet2']
+		# 			bet2_dict['odds'] = arb_row['odds2']
+		# 			bet2_dict['source'] = arb_row['source2']
+		# 			bet2_dict['link'] = arb_row['link2']
 
-					actual_odds2, final_outcome2, cookies_file, saved_cookies = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type)
+		# 			actual_odds2, final_outcome2, cookies_file, saved_cookies = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type)
 
-				final_outcomes = (final_outcome1, final_outcome2)
-					
+		# 		final_outcomes = (final_outcome1, final_outcome2)
+
+		# if actual odds is set none then we know not valid to place bet
+		if treat_ev and actual_odds1 is None:
+			continue	
+
+
 		# if actual odds is set none then we know not valid to place bet
 		if actual_odds1 is None or actual_odds2 is None:
 			continue
@@ -432,8 +442,11 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 		# === Place Bet === 
 		# if actual odds blank '' then we know valid pick but not enabled for auto pick so cannot place bet
-		if actual_odds1 == '':
+		if treat_ev and actual_odds1 == '':
 			continue
+
+		if treat_ev:
+			writer.place_bet(bet1_dict, driver, final_outcome1, cookies_file, saved_cookies, pick_type, test)
 		
 		# if onyl odds1 populated, then place single bet
 		# if actual_odds2 == '' and treat_ev:
@@ -900,7 +913,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 
 if __name__ == "__main__":
 	# === TEST ===
-	test = True
+	test = False
 	test_ev = {'market':'Patrick Mahomes - Rushing Yards', 
 				'bet':'U 19.5', 
 				'odds':'+115', 

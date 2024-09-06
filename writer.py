@@ -147,32 +147,97 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         # Check if need to login
 
         
+        need_login = True
+        # check session expired by login duration Nan
+        try:
+            login_duration = driver.find_element('class name', 'login-duration-time').get_attribute('innerHTML')
+            print('login_duration: ' + login_duration)
+            if login_duration != 'NaN:NaN:NaN':
+                print('Found Valid Login duration: ' + login_duration)
+                need_login = False
+        except:
+            print('No login duration, so log in.')
 
+        if need_login:
+            driver.get(login_url) 
+            time.sleep(3)   
+        else:
+            print('\nAlready Logged In\n')
+            return
+        
         login_page = False
         while not login_page:
+            
             try:
-                # open login dialog
-                login_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="signin"]')
-                #print('login_btn: ' + login_btn.get_attribute('innerHTML'))
-                # problem with login dialog
-                # so instead of clicking login button to get dialog
-                # go direct to login url page
-                #login_btn.click()
-                driver.get(login_url)
-                time.sleep(5)
+                usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
+                #usr_field_html = usr_field_div.get_attribute('innerHTML')
+                #print('usr_field_html: ' + usr_field_html)
+
+                pwd_field = driver.find_element('id', 'password')
+                pwd_field_html = pwd_field.get_attribute('innerHTML')
+                print('pwd_field_html: ' + pwd_field_html)
+
+                login_page = True
+                print('Login Page')
             except:
+                print('Not Login Page')
+
                 
-                # tag vn-login-duration
-                # class login-duration-time
-                # NaN:NaN:NaN
-                login_duration = driver.find_element('class name', 'login-duration-time').get_attribute('innerHTML')
-                print('login_duration: ' + login_duration)
-                if login_duration == 'NaN:NaN:NaN':
-                    driver.get(login_url)
-                    time.sleep(5)
-                else:
-                    print('\nAlready Logged In\n')
-                    return
+            # try:
+            #     # if login page open btn available
+            #     # OR login submit btn available
+            #     # got to login url
+
+            #     # check for btn to open login dialog bc that means not logged in
+            #     try:
+            #         login_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="signin"]')
+            #         #print('login_btn: ' + login_btn.get_attribute('innerHTML'))
+            #         driver.get(login_url)
+            #     except:
+            #         print('No button to open login dialog, so check if session expired so already on login page.')
+                
+                    
+            #         # check already sent to login page
+            #         try:
+            #             pwd_field = driver.find_element('id', 'password')
+            #         except:
+            #             print('Not on login page, so go to login page.')
+            #             driver.get(login_url)
+                        
+            #         # check session expired by login duration Nan
+            #         try:
+            #             login_duration = driver.find_element('class name', 'login-duration-time').get_attribute('innerHTML')
+            #             print('login_duration: ' + login_duration)
+            #             if login_duration == 'NaN:NaN:NaN':
+            #                 # go to login page
+            #                 driver.get(login_url)
+            #         except:
+            #             print('No login duration, so check if sent to login page.')
+
+            #     if need_login:
+            #         driver.get(login_url)    
+            #     else:
+            #         print('\nAlready Logged In\n')
+
+            #     # problem with login dialog
+            #     # so instead of clicking login button to get dialog
+            #     # go direct to login url page
+            #     #login_btn.click()
+            #     #driver.get(login_url)
+            #     time.sleep(5)
+            # except:
+                
+            #     # tag vn-login-duration
+            #     # class login-duration-time
+            #     # NaN:NaN:NaN
+            #     login_duration = driver.find_element('class name', 'login-duration-time').get_attribute('innerHTML')
+            #     print('login_duration: ' + login_duration)
+            #     if login_duration == 'NaN:NaN:NaN':
+            #         driver.get(login_url)
+            #         time.sleep(5)
+            #     else:
+            #         print('\nAlready Logged In\n')
+            #         return
 
 
 
@@ -205,19 +270,7 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
                 #     print('\nAlready Logged In\n')
                 #     return
 
-            try:
-                usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
-                #usr_field_html = usr_field_div.get_attribute('innerHTML')
-                #print('usr_field_html: ' + usr_field_html)
-
-                pwd_field = driver.find_element('id', 'password')
-                pwd_field_html = pwd_field.get_attribute('innerHTML')
-                print('pwd_field_html: ' + pwd_field_html)
-
-                login_page = True
-                print('Login Page')
-            except:
-                print('Not Login Page')
+            
 
         # if username already entered previously and saved
         # then go to next field
@@ -355,8 +408,8 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
     time.sleep(1)
 
     if logged_in:
-        print('Logged In, Save Cookies')
-        reader.save_cookies(driver, website_name, cookies_file, saved_cookies)
+        print('Logged In, Do We Need to Save Cookies???')
+        #reader.save_cookies(driver, website_name, cookies_file, saved_cookies)
 
 
     #return driver not needed bc already in parent fcn
@@ -471,6 +524,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                     close_receipt_btn = driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
                     loading = False
                     print('Done Loading')
+                    time.sleep(3)
                     close_receipt_btn.click()
                     time.sleep(1) 
                     print('Closed Receipt')
@@ -567,11 +621,11 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
             
 
-            if test:
-                # test wait
-                time.sleep(100)
-                # test close
-                driver.close()
+            # if test:
+            #     # test wait
+            #     time.sleep(100)
+            #     # test close
+            #     driver.close()
 
         elif website_name == 'betrivers':
             #time.sleep(1) # load
