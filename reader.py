@@ -602,7 +602,9 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				
 			# First Inning
 			elif re.search('first inning', market):
+				section_title = 'Inning 1'
 				section_idx = 4
+				section_idx = read_section_idx(section_title, sections, section_idx)
 
 				if market == 'first inning moneyline 3 way':
 					market_title = 'inning 1'
@@ -617,7 +619,10 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 			# Other Innings
 			elif re.search('inning', market):
+				section_title = 'Innings'
 				section_idx = 5
+				section_idx = read_section_idx(section_title, sections, section_idx)
+
 
 				# prematch only 3 and 5 but live for all innings
 				# innings = ['3', '5']
@@ -640,7 +645,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			# Team Total
 			elif re.search('\stotal', market):
 				# section_name = 'team totals'
-				section_idx = 2
+				section_idx = 1
 
 				# oakland athletics -> oak athletics
 				team_name = converter.convert_market_to_team_name(market, league, sport)
@@ -698,17 +703,18 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 				print('Section Title: ' + section_title + '\n')
 
-				for s_idx in range(len(sections)):
-					section = sections[s_idx]
-					# get title
-					# remove &nbsp;
-					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
-					print('Section Title Element: ' + section_title_element)					
+				section_idx = read_section_idx(section_title, sections, section_idx)
+				# for s_idx in range(len(sections)):
+				# 	section = sections[s_idx]
+				# 	# get title
+				# 	# remove &nbsp;
+				# 	section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
+				# 	print('Section Title Element: ' + section_title_element)					
 
-					if section_title == section_title_element:
-						print('Found Player Section')
-						section_idx = s_idx
-						break
+				# 	if section_title == section_title_element:
+				# 		print('Found Player Section')
+				# 		section_idx = s_idx
+				# 		break
 
 				print('\nChecked All Sections\n')
 
@@ -764,17 +770,18 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 				print('section_title: ' + section_title)
 
-				for s_idx in range(len(sections)):
-					section = sections[s_idx]
-					# get title
-					# remove &nbsp;
-					section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
-					print('section_title_element: ' + section_title_element)					
+				section_idx = read_section_idx(section_title, sections, section_idx)
+				# for s_idx in range(len(sections)):
+				# 	section = sections[s_idx]
+				# 	# get title
+				# 	# remove &nbsp;
+				# 	section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
+				# 	print('section_title_element: ' + section_title_element)					
 
-					if section_title == section_title_element:
-						print('Found Player Section')
-						section_idx = s_idx
-						break
+				# 	if section_title == section_title_element:
+				# 		print('Found Player Section')
+				# 		section_idx = s_idx
+				# 		break
 
 			# 1st Quarter
 			# Halftime
@@ -1065,7 +1072,7 @@ def save_cookies(driver, website_name, cookies_file, saved_cookies):
 # -Races
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', max_retries=3):
+def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3):
 	print('\n===Read Actual Odds===\n')
 	print('Input: bet_dict = ' + str(bet_dict))
 	print('\nOutput: actual_odds = x\n')
@@ -1078,7 +1085,8 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 	
 	size = driver.get_window_size() # get size of window 1 to determine window 2 x
 	driver.switch_to.new_window(type_hint='window')
-	window2_x = size['width'] + 1
+	# side num refers to side of arb
+	window2_x = size['width'] * side_num + 1 # why +1???
 	driver.set_window_position(window2_x, 0)
 	url = bet_dict['link']
 	# Must navigate to page before adding cookies
@@ -1187,7 +1195,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 			#  Masyn Winn (STL): Hits 
 			listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
-			print('listed_market: ' + listed_market)
+			print('init listed_market: ' + listed_market)
 
 			# odds
 			listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
@@ -1253,8 +1261,12 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 			# error not getting all sections
 			sections = []
 			
-			while len(sections) < 2:# and section_retries < max_retries:
+			game_available = True
+			# sometimes only 1 section valid for ncaaf football
+			while len(sections) < 2 and game_available:# and not game_available:# and section_retries < max_retries:
+				print('Get Sections')
 				sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+				
 				# if home page, close window
 				# id section-Games of the Week
 				if len(sections) < 2:
@@ -1266,12 +1278,16 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 						#driver.find_element('id', 'sportsbook-ui-widget-top-container-sgp-feat') #('id', 'section-Games of the Week')
 						driver.find_element('xpath', '//div[@data-testid="parlay-widget-header"]')
 						print('Home Page: Game NA\n')
-						break
+						game_available = False
+						#break
 					except:
 						print('Game Page: Get Sections\n')
+						game_available = True
 
 			# Game NA
-			if len(sections) < 2:
+			#if len(sections) < 2:
+			if not game_available:
+			#if len(sections) < 1:
 				driver.close()
 				driver.switch_to.window(driver.window_handles[0])
 				return actual_odds, final_outcome, cookies_file, saved_cookies
@@ -1302,6 +1318,10 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 					market_keyword = 'touchdown'
 				elif market_keyword == 'passing touchdowns':
 					market_keyword = 'touchdown passes'
+				elif market_keyword == 'passing attempts':
+					market_keyword = 'pass attempts'
+				elif market_keyword == 'passing completions':
+					market_keyword = 'pass completions'
 				elif market_keyword == 'longest completion':
 					market_keyword = 'longest completed pass'
 				elif market_keyword == 'threes':
@@ -1423,7 +1443,8 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 										try:
 											participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
 											# remove jr to match source
-											participant = re.sub(' jr\.?| ii+', '', participant)
+											
+											participant = converter.convert_name_to_standard_format(participant)
 											print('participant: ' + participant)
 											participant_names.append(participant)
 
@@ -1457,7 +1478,8 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 											#print('participant_element: ' + participant_element_str)
 											if re.search('\<span', participant_element_str):
 												participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
-												participant = re.sub(' jr\.?| ii+', '', participant)
+												#participant = re.sub(' jr\.?| ii+', '', participant)
+												participant = converter.convert_name_to_standard_format(participant)
 												print('participant: ' + participant)
 												participant_names.append(participant)
 
@@ -1501,31 +1523,53 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 
 	# Next level: accept different as long as still less than fair odds
-	pick_odds = None
+	# if EV, close if gone or odds got worse
 	if pick_type == 'ev':
 		pick_odds = bet_dict['odds']
-	else:
-		pick_odds = bet_dict['odds1']
 
-	if actual_odds == None or int(actual_odds) < int(pick_odds):
+		if actual_odds == None or int(actual_odds) < int(pick_odds):
+			if actual_odds == None:
+				print('\nNo Bet')
+			# still accept better price
+			else:
+				print('\nOdds Mismatch')
+				print('init_odds: ' + pick_odds)
+				print('actual_odds: ' + str(actual_odds) + '\n')
+				actual_odds = None # invalid indicator
+
+			driver.close()
+			driver.switch_to.window(driver.window_handles[0])
+
+			#return actual_odds, final_outcome, cookies_file, saved_cookies
+
+		else:
+			# continue to place bet
+			# First notify users before placing bet
+			print('\nPlace Bet')
+	
+	# if Arb, do not close unless gone or changed more than other side
+	else:
+		
 		if actual_odds == None:
 			print('\nNo Bet')
-		# still accept better price
+
+			driver.close()
+
+			# close side 1 window
+			if side_num == 2:
+				driver.switch_to.window(driver.window_handles[1])
+				driver.close()
+
+			driver.switch_to.window(driver.window_handles[0])
+
+			#return actual_odds, final_outcome, cookies_file, saved_cookies
+
 		else:
-			print('\nOdds Mismatch')
-			print('init_odds: ' + pick_odds)
-			print('actual_odds: ' + str(actual_odds) + '\n')
-			actual_odds = None # invalid indicator
+			# continue to place bet
+			# First notify users before placing bet
+			print('\nPlace Bet')
 
-		driver.close()
-		driver.switch_to.window(driver.window_handles[0])
-
-		#return actual_odds, final_outcome, cookies_file, saved_cookies
-
-	else:
-		# continue to place bet
-		# First notify users before placing bet
-		print('\nPlace Bet')
+	
 
 
 

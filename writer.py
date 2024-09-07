@@ -141,8 +141,9 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         # https://www.ny.betmgm.com/en/labelhost/login
         # session expired url: 
         # ny url seems to work but sports.ny fails 
+        # now both urls fail!!! after a day of working ok
         login_url = 'https://www.ny.betmgm.com/en/labelhost/login'#'https://sports.ny.betmgm.com/en/labelhost/login' #?rurl=https:%2F%2Fsports.ny.betmgm.com%2Fen%2Fsports%2Fevents%2Farizona-diamondbacks-at-san-francisco-giants-16215229%3Fmarket%3DPlayers:Batting
-
+        login_url2 = 'https://sports.ny.betmgm.com/en/labelhost/login'
         # Check if already logged in
         # Check if need to login
 
@@ -159,28 +160,88 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
             print('No login duration, so log in.')
 
         if need_login:
-            driver.get(login_url) 
-            time.sleep(3)   
+            print('Go to Login Page')
+            # OPTION 1
+            # driver.get(login_url) 
+             
+            # OPTION 2
+            login_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="signin"]')
+            print('login_btn: ' + login_btn.get_attribute('innerHTML'))
+            login_btn.click()
+
+            time.sleep(3)  
         else:
             print('\nAlready Logged In\n')
             return
         
+        # Need to click register>login to avoid tech glitch
         login_page = False
         while not login_page:
-            
             try:
-                usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
-                #usr_field_html = usr_field_div.get_attribute('innerHTML')
-                #print('usr_field_html: ' + usr_field_html)
-
-                pwd_field = driver.find_element('id', 'password')
-                pwd_field_html = pwd_field.get_attribute('innerHTML')
-                print('pwd_field_html: ' + pwd_field_html)
-
+                reg_link = driver.find_element('class name', 'registration-link')
                 login_page = True
-                print('Login Page')
             except:
-                print('Not Login Page')
+                print('Loading Login Page')
+                time.sleep(1)
+            
+        reg_link.click()
+        time.sleep(3)
+
+        login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
+        login_link.click()
+        time.sleep(3) 
+
+        submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+        print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        submit_btn.click()
+        time.sleep(3) 
+
+
+        # If Error, click sign up > log in again
+        pwd_msg = ''
+        try:
+            pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
+            print('pwd_msg: ' + pwd_msg)
+        except:
+            print('Loading...')
+
+        # glitch error
+        if pwd_msg != '':
+            signup_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="registerbutton"]')
+            signup_btn.click()
+            time.sleep()
+
+            login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
+            login_link.click()
+            time.sleep(3) 
+
+            submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+            print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+            submit_btn.click()
+            time.sleep(3) 
+
+
+
+
+
+
+        # login_page = False
+        # usr_field_html = pwd_field_html = ''
+        # while not login_page:
+            
+        #     try:
+        #         usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
+        #         #usr_field_html = usr_field_div.get_attribute('innerHTML')
+        #         #print('usr_field_html: ' + usr_field_html)
+
+        #         pwd_field = driver.find_element('id', 'password')
+        #         pwd_field_html = pwd_field.get_attribute('innerHTML')
+        #         print('pwd_field_html: ' + pwd_field_html)
+
+        #         login_page = True
+        #         print('Login Page')
+        #     except:
+        #         print('Not Login Page')
 
                 
             # try:
@@ -271,55 +332,119 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
                 #     return
 
             
-
+        # Login Page
         # if username already entered previously and saved
         # then go to next field
         # if untouched empty field, then input email
         # if starts off blank, then save cookies bc we know not saved yet
         
-        if re.search('ng-untouched', usr_field_html):
-            print('Enter Username')
-            usr_field = driver.find_element('id', 'userId')
-            usr_field.send_keys(email)
-            time.sleep(1)
+        # if re.search('ng-untouched', usr_field_html):
+        #     print('Enter Username')
+        #     usr_field = driver.find_element('id', 'userId')
+        #     usr_field.send_keys(email)
+        #     time.sleep(1)
 
-        # for some reason not recognizing password already there
-        # clear not working
-        # pwd field has class ng untouched even tho pwd already there
-        # print('pwd_field_html: ' + pwd_field.get_attribute('outerHTML'))
-        # if re.search('ng-untouched', pwd_field_html):
-        print('Enter Password')
-        pwd_field = driver.find_element('name', 'password')
-        pwd_field.clear()
-        # time.sleep(3)
-        # #print('Cleared Twice') # does not work
-        # print('Cleared 1') # works but still error after clicking submit
-        # time.sleep(3)
-
-        pwd_field.send_keys(token)
-        # time.sleep(3)
-        # print('Entered 1')
-        # time.sleep(3)
-        
-        pwd_field.clear()
-        # time.sleep(3)
-        # print('Cleared 2')
-        # time.sleep(3)
-
-        pwd_field.send_keys(token)
-        # time.sleep(3)
-        # print('Entered 2')
-        # time.sleep(3)
-
-        #driver.switch_to.active_element
+        # # for some reason not recognizing password already there
+        # # clear not working
+        # # pwd field has class ng untouched even tho pwd already there
+        # # print('pwd_field_html: ' + pwd_field.get_attribute('outerHTML'))
+        # # if re.search('ng-untouched', pwd_field_html):
+        # print('Enter Password')
         # pwd_field = driver.find_element('name', 'password')
-        # pwd_field.send_keys('')
+        # pwd_field.clear()
+        # #time.sleep(3)
+        # # # #print('Cleared Twice') # does not work
+        # # # print('Cleared 1') # works but still error after clicking submit
+        # # # time.sleep(3)
 
-        submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
-        print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
-        submit_btn.click()
-        time.sleep(3)
+        # pwd_field.send_keys(token)
+        # #time.sleep(3)
+        # # # print('Entered 1')
+        # # # time.sleep(3)
+        
+        # pwd_field.clear()
+        # #time.sleep(3)
+        # # # print('Cleared 2')
+        # # # time.sleep(3)
+
+        # # pwd_field.send_keys(token)
+        # # time.sleep(3)
+        # pwd_field.send_keys(token)
+        # #time.sleep(3)
+        # # print('Entered 2')
+        # # time.sleep(3)
+
+        # #driver.switch_to.active_element
+        # # pwd_field = driver.find_element('name', 'password')
+        # # pwd_field.send_keys('')
+
+        # try:
+        #     submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+        #     print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        #     submit_btn.click()
+        #     time.sleep(3)
+        # except:
+        #     print('Cannot Click Submit Button')
         #time.sleep(21) # 21 seconds enough time to inspect element for test
+
+
+
+
+        # if still loading, not logged in
+        while not logged_in:
+            try:
+                pwd_field = driver.find_element('name', 'password')
+            except:
+                logged_in = True
+                print('\nLogin Success\n')
+
+        # if not logged_in:
+        #     print('Not Logged In Yet, Try Again')
+        #     # OPTION 1 fails
+        #     # go to other login link fails too
+        #     driver.get(login_url2) 
+        #     time.sleep(3) 
+
+        #     print('Enter Password')
+        #     pwd_field = driver.find_element('name', 'password')
+        #     pwd_field.clear()
+        #     pwd_field.send_keys(token)
+        #     pwd_field.clear()
+        #     pwd_field.send_keys(token)
+        #     submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+        #     print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        #     submit_btn.click()
+        #     time.sleep(3) 
+
+        #     # OPTION 2
+        #     # OR try clicking thru registration page bc seems to work
+        #     reg_link = driver.find_element('class name', 'registration-link')
+        #     reg_link.click()
+        #     time.sleep(3)
+
+        #     login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
+        #     login_link.click()
+        #     time.sleep(3) 
+
+        #     # may not need to renter pwd bc login already clickable
+        #     # print('Enter Password')
+        #     # pwd_field = driver.find_element('name', 'password')
+        #     # pwd_field.clear()
+        #     # pwd_field.send_keys(token)
+        #     # pwd_field.clear()
+        #     # pwd_field.send_keys(token)
+        #     submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+        #     print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        #     submit_btn.click()
+        #     time.sleep(3) 
+
+
+
+        # Close Survey Popup
+        # data-aut="button-close"
+        # class surveyBtn_close
+
+
 
 
         # wait for verification manually first time
@@ -400,7 +525,7 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         #     #     print('Verified')
         #     #     time.sleep(1)
 
-        logged_in = True
+        
 
 
 
@@ -469,12 +594,19 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
         if website_name == 'betmgm':
             #time.sleep(1) # load should be after action not before
 
+            logged_in = False
             login_website(website_name, driver, cookies_file, saved_cookies, url)
 
             bet_size = determiner.determine_limit(bet_dict, website_name, pick_type, test)
 
-            #try:
-            wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
+            while not logged_in:
+                try:
+                    wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
+                    logged_in = True
+                except:
+                    print('Not Logged In Yet')
+                    time.sleep(1)
+            
             #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
             placeholder = wager_field.get_attribute('placeholder')
             #print('placeholder: ' + placeholder)
@@ -687,6 +819,31 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 time.sleep(1)
 
             #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
+
+            # Need to double check no old bets in slip 
+            # bc glitch may hide old betslip until new bet clicked
+            # for now simplest way is to keep only last bet in slip bc adds to bottom
+            # later parlays will need to keep multiple so cannot assume only 1
+            remove_bet_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+            if len(remove_bet_btns) > 1:
+                # remove old bets
+                print('Remove Old Bets')
+                for btn in remove_bet_btns[:-2]:
+                    btn.click()
+                    time.sleep(1)
+            #listed_bets = []
+            # for listed_bet in listed_bets:
+            #     # if not current bet, remove
+            #     print('listed_bet: ' + str(listed_bet))
+
+            #     if found_market and determiner.determine_matching_outcome(listed_line, bet_line):
+            #         print('Found Bet Listed')
+            #     else:
+            #         # remove old bet
+            #         print('Remove Old Pick from Slip')
+            #         remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
+            #         remove_btn.click()
+            #         time.sleep(1)
 
             # print('Has Page Shifted Inadvertently Yet??') No
             # time.sleep(100)
@@ -1134,13 +1291,13 @@ def write_arb_to_post(arb, client, post=False):
         player = market_data[0].strip()
         market = market_data[1].strip()
     #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
-    props_str += '\nSOURCE 1: ' + source1 + ', ' + odds1 + ' \n'
-    props_str += 'SOURCE 2: ' + source2 + ', ' + odds2 + ' \n\n'
-    props_str += 'MARKET: ' + market + ' \n\n'
-    props_str += 'BETS: ' + bet1 + ', ' + bet2 + ' \n\n'
-    props_str += 'GAME: ' + game + ' \n\n'
+    props_str += '\nSOURCE 1: ' + source1 + ', ' + odds1 + ', ' + bet1 + ' \n'
+    props_str += 'SOURCE 2: ' + source2 + ', ' + odds2 + ', ' + bet2 + ' \n\n'
     if player != '':
         props_str += 'PLAYER: ' + player + ' \n\n'
+    props_str += 'MARKET: ' + market + ' \n\n'
+    #props_str += 'BETS: ' + bet1 + ', ' + bet2 + ' \n\n'
+    props_str += 'GAME: ' + game + ' \n\n'
     props_str += 'VALUE: ' + value + '% \n\n'
     props_str += 'PROFIT: $' + profit + ' \n\n'
     props_str += 'LINK 1:\n' + link1 + ' \n'
@@ -1478,10 +1635,10 @@ def write_ev_to_post(ev, client, post=False):
         market = market_data[1].strip()
     #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
     props_str += '\nSOURCE: ' + source + ', ' + odds + ' \n\n'
-    props_str += 'MARKET: ' + market + ', ' + bet + ' \n\n'
-    props_str += 'GAME: ' + game + ' \n\n'
     if player != '':
         props_str += 'PLAYER: ' + player + ' \n\n'
+    props_str += 'MARKET: ' + market + ', ' + bet + ' \n\n'
+    props_str += 'GAME: ' + game + ' \n\n'
     props_str += 'SIZE: ' + size + ' \n\n'
     props_str += 'VALUE: ' + value + '% \n\n'
     #props_str += 'PROFIT: $' + profit + ' \n\n'

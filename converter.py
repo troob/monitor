@@ -8,6 +8,13 @@ import math
 
 
 
+def convert_name_to_standard_format(name):
+
+    name = re.sub(' jr\.?| ii+', '', name)
+    name = re.sub('á', 'a', name)
+
+    return name
+
 def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
 
     if website_name == 'betmgm':
@@ -193,7 +200,22 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif market == '1st quarter moneyline':
                 market_title = 'first quarter money line'
 
+            
+            # 1st Half Philadelphia Eagles Total -> Philadelphia Eagles 1st half points
+            elif re.search('half .+ total|quarter .+ total', market):
+                #parts = market.split('half ')
+                parts = re.split('half |quarter ')
+                period_part = parts[0] # '1st half '
+                team_part = parts[1]
+                team_name = team_part.split('total')[0] # 'Philadelphia Eagles '
+
+                market_title = team_name + period_part + ' points'
+
+            # eagles total -> eagles total points
+            elif re.search('total', market):
                 
+                market_title += ' points'
+
 
         elif sport == 'soccer':
             

@@ -70,7 +70,7 @@ new_pick_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-valid_sports = ['baseball']#, 'football']#,'hockey', 'basketball] # big markets to stay subtle
+valid_sports = ['baseball', 'football']#,'hockey', 'basketball] # big markets to stay subtle
 valid_leagues = ['mlb']#, 'nfl'] 9/5, 10/8, 10/22
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 monitor_ev = True
@@ -79,56 +79,56 @@ stop_record = False
 
 
 
-def record_screen():
-	print('\n===Record Screen===\n')
-	# Record Screen Specs
-	# Specify resolution
-	resolution = (1920, 1080)
+# def record_screen():
+# 	print('\n===Record Screen===\n')
+# 	# Record Screen Specs
+# 	# Specify resolution
+# 	resolution = (1920, 1080)
 	
-	# Specify video codec
-	codec = cv2.VideoWriter_fourcc(*"XVID")
+# 	# Specify video codec
+# 	codec = cv2.VideoWriter_fourcc(*"XVID")
 	
-	# Specify name of Output file
-	filename = "data/Recording.avi"
+# 	# Specify name of Output file
+# 	filename = "data/Recording.avi"
 	
-	# Specify frames rate. We can choose any 
-	# value and experiment with it
-	fps = 60.0
+# 	# Specify frames rate. We can choose any 
+# 	# value and experiment with it
+# 	fps = 60.0
 
-	# Creating a VideoWriter object
-	out = cv2.VideoWriter(filename, codec, fps, resolution)
+# 	# Creating a VideoWriter object
+# 	out = cv2.VideoWriter(filename, codec, fps, resolution)
 	
-	# Create an Empty window
-	cv2.namedWindow("Live", cv2.WINDOW_NORMAL)
+# 	# Create an Empty window
+# 	cv2.namedWindow("Live", cv2.WINDOW_NORMAL)
 	
-	# Resize this window
-	cv2.resizeWindow("Live", 480, 270)
+# 	# Resize this window
+# 	cv2.resizeWindow("Live", 480, 270)
 	
-	while True:
-		# Take screenshot using PyAutoGUI
-		img = pyautogui.screenshot()
+# 	while True:
+# 		# Take screenshot using PyAutoGUI
+# 		img = pyautogui.screenshot()
 	
-		# Convert the screenshot to a numpy array
-		frame = np.array(img)
+# 		# Convert the screenshot to a numpy array
+# 		frame = np.array(img)
 	
-		# Convert it from BGR(Blue, Green, Red) to
-		# RGB(Red, Green, Blue)
-		frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+# 		# Convert it from BGR(Blue, Green, Red) to
+# 		# RGB(Red, Green, Blue)
+# 		frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 	
-		# Write it to the output file
-		out.write(frame)
+# 		# Write it to the output file
+# 		out.write(frame)
 		
-		# Optional: Display the recording screen
-		#cv2.imshow('Live', frame)
+# 		# Optional: Display the recording screen
+# 		#cv2.imshow('Live', frame)
 
-		if stop_record:
-			print('Stop Record')
-			break
+# 		if stop_record:
+# 			print('Stop Record')
+# 			break
 
-	# Release the Video writer
-	out.release()
-	# Destroy all windows
-	cv2.destroyAllWindows()
+# 	# Release the Video writer
+# 	out.release()
+# 	# Destroy all windows
+# 	cv2.destroyAllWindows()
 
 
 # def read_and_place_bet(ev_row, ev_source, driver, pick_time_group, pick_type, monitor_idx, test):
@@ -250,7 +250,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 		# 		continue
 
 		# Make sure source enabled
-		enabled_sources = ['betrivers', 'betmgm']
+		enabled_sources = ['betrivers', 'betmgm'] # ['betmgm'] #
 		# how can we tell if no odds bc they disappeared or just failed to read?
 		# bc if fails to read will be set none
 		
@@ -306,7 +306,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, test, pick_time_group='prematch', pick_type='ev'):
+def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, test, pick_time_group='prematch', pick_type='arb'):
 	# print('\n===Monitor New Arbs===\n')
 	# print('Input: arb_data = [{...},...]')# + str(arb_data))
 	# print('Input: init_arbs = {0:{...},...}')
@@ -384,35 +384,82 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			bet1_dict['link'] = arb_row['link1']
 			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
+			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type='ev')
 			actual_odds1 = actual_odds_data[0]
 			final_outcome1 = actual_odds_data[1]
 
 		# === If Treat As Arb ===
-		# else:
-		# 	print('\nTreat as Arb\n')
-		# 	if arb_source1 in enabled_sources or arb_source2 in enabled_sources:
-		# 		print('\nAuto Arb\n')
+		else:
+			print('\nTreat as Arb\n')
 
-		# 		if arb_source1 in enabled_sources:
-		# 			bet1_dict = arb_row
-		# 			bet1_dict['bet'] = arb_row['bet1']
-		# 			bet1_dict['odds'] = arb_row['odds1']
-		# 			bet1_dict['source'] = arb_row['source1']
-		# 			bet1_dict['link'] = arb_row['link1']
+			# If both arbs enabled for auto, attempt to place both bets
+			# if only 1 side enabled for auto, stop after find limit
 
-		# 			actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
+			# 1. both arbs enabled
+			# if arb_source1 in enabled_sources and arb_source2 in enabled_sources:
+			# 	print('\nBoth Sides Auto Arb\n')
 
-		# 		if arb_source2 in enabled_sources:
-		# 			bet2_dict = arb_row
-		# 			bet2_dict['bet'] = arb_row['bet2']
-		# 			bet2_dict['odds'] = arb_row['odds2']
-		# 			bet2_dict['source'] = arb_row['source2']
-		# 			bet2_dict['link'] = arb_row['link2']
+			# if arb_source1 in enabled_sources or arb_source2 in enabled_sources:
+			# 	print('\nAuto Arb\n')
 
-		# 			actual_odds2, final_outcome2, cookies_file, saved_cookies = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type)
+			# check first side to make sure odds still valid arb
+			if arb_source1 in enabled_sources:
+				print('Auto Check Side 1 Odds')
+				bet1_dict = arb_row
+				bet1_dict['bet'] = arb_row['bet1']
+				bet1_dict['odds'] = arb_row['odds1']
+				bet1_dict['source'] = arb_row['source1']
+				bet1_dict['link'] = arb_row['link1']
+				bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
 
-		# 		final_outcomes = (final_outcome1, final_outcome2)
+				# side num defines placement of window
+				# actual_odds1, final_outcome1, cookies_file, saved_cookies = 
+				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type, side_num=1)
+				actual_odds1 = actual_odds_data[0]
+				final_outcome1 = actual_odds_data[1]
+
+				# if actual odds 1 = none then no need to check side 2
+				if actual_odds1 is None:
+					continue
+
+			# even if first side changed, 
+			# need to check second side to make sure invalid
+			if arb_source2 in enabled_sources:
+				print('Auto Check Side 2 Odds')
+				bet2_dict = arb_row
+				bet2_dict['bet'] = arb_row['bet2']
+				bet2_dict['odds'] = arb_row['odds2']
+				bet2_dict['source'] = arb_row['source2']
+				bet2_dict['link'] = arb_row['link2']
+				bet2_dict['size'] = determiner.determine_source_limit(bet2_dict['source'])
+
+				# actual_odds2, final_outcome2, cookies_file, saved_cookies
+				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type, side_num=2)
+				actual_odds2 = actual_odds_data[0]
+				final_outcome2 = actual_odds_data[1]
+
+				# if actual odds 2 = none then invalid so continue
+				if actual_odds2 is None:
+					continue
+
+			final_outcomes = (final_outcome1, final_outcome2)
+			print('final_outcomes: ' + str(final_outcomes))
+
+			# check if arb sides odds still valid
+			# if + side 2 abs val > - side 1 abs val, then valid
+			# if + side 2 abs val <= - side 1 abs val, then invlaid
+			# if - side 1 abs val >= + side 2 abs val, then invalid
+			#if abs(bet2_odds) <= bet1_odds:
+			if not determiner.determine_valid_arb_odds(actual_odds1, actual_odds2):
+				print('Arb Odds Changed to Invalid: ' + actual_odds1 + ', ' + actual_odds2)
+				print('\nClose Both Arb Windows\n')
+				driver.close()
+				driver.switch_to.window(driver.window_handles[1])
+				driver.close()
+				driver.switch_to.window(driver.window_handles[0])
+				continue
+
+
 
 		# if actual odds is set none then we know not valid to place bet
 		if treat_ev and actual_odds1 is None:
@@ -420,8 +467,9 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 
 		# if actual odds is set none then we know not valid to place bet
-		if actual_odds1 is None or actual_odds2 is None:
-			continue
+		# already checked
+		# if actual_odds1 is None or actual_odds2 is None:
+		# 	continue
 
 		# only beep once on desktop after first arb so I can respond fast as possible
 		# but send notification after each arb
@@ -541,62 +589,62 @@ def monitor_arb_type(first_live_time, last_pre_time):
 # and automate as much as possible to place bets
 #for new_arb in new_arbs:
 # TEST 1
-def open_arb_bets(arb):
-	print('\n===Open Arb Bets===\n')
-	print('\n===')
+# def open_arb_bets(arb):
+# 	print('\n===Open Arb Bets===\n')
+# 	print('\n===')
 	
-	notify_arb = None
+# 	notify_arb = None
 
-	# if len(bets) > 0:
-	# 	new_arb = bets[0]
+# 	# if len(bets) > 0:
+# 	# 	new_arb = bets[0]
 
-	market_idx = 2
-	bet1_idx = 3
-	bet2_idx = 4
-	link1_idx = 7
-	link2_idx = 8
+# 	market_idx = 2
+# 	bet1_idx = 3
+# 	bet2_idx = 4
+# 	link1_idx = 7
+# 	link2_idx = 8
 
-	arb_url1 = arb[link1_idx]
-	arb_url2 = arb[link2_idx]
+# 	arb_url1 = arb[link1_idx]
+# 	arb_url2 = arb[link2_idx]
 
 
 
-	if not re.search('fliff|fanatics', arb_url1):
-		arb_driver1 = reader.open_react_website(arb_url1)
-	# if not re.search('fliff|fanatics', arb_url2):
-	# 	arb_driver2 = reader.open_react_website(arb_url2)
+# 	if not re.search('fliff|fanatics', arb_url1):
+# 		arb_driver1 = reader.open_react_website(arb_url1)
+# 	# if not re.search('fliff|fanatics', arb_url2):
+# 	# 	arb_driver2 = reader.open_react_website(arb_url2)
 
-	bet1 = arb[bet1_idx]
-	bet2 = arb[bet2_idx]
-	neg_odds = reader.read_bet_odds(bet1, arb_driver1)
-	#pos_odds = reader.read_bet_odds(bet2, arb_url2)
+# 	bet1 = arb[bet1_idx]
+# 	bet2 = arb[bet2_idx]
+# 	neg_odds = reader.read_bet_odds(bet1, arb_driver1)
+# 	#pos_odds = reader.read_bet_odds(bet2, arb_url2)
 
-	neg_odds = -105 #arb_driver1.find_element('id', 'odds')
-	pos_odds = 100 #arb_driver2
+# 	neg_odds = -105 #arb_driver1.find_element('id', 'odds')
+# 	pos_odds = 100 #arb_driver2
 
-	# read odds direct from webpage
-	real_odds = (neg_odds, pos_odds)
+# 	# read odds direct from webpage
+# 	real_odds = (neg_odds, pos_odds)
 
-	# notify as soon as we know 1 is valid
-	# so we can immediately take it and not waste time checking others
-	# bc by the time we are done checking a lot the first 1 will be gone
-	if determiner.determine_valid_arb_odds(real_odds):
-		notify_arb = arb
+# 	# notify as soon as we know 1 is valid
+# 	# so we can immediately take it and not waste time checking others
+# 	# bc by the time we are done checking a lot the first 1 will be gone
+# 	if determiner.determine_valid_arb_odds(real_odds):
+# 		notify_arb = arb
 
-	return notify_arb
+# 	return notify_arb
 
-# open all arb windows at the same time
-# open, check, and close if false flag
-def open_new_arb_bets(new_arbs):
-	print('\n===Open New Arb Bets===\n')
+# # open all arb windows at the same time
+# # open, check, and close if false flag
+# def open_new_arb_bets(new_arbs):
+# 	print('\n===Open New Arb Bets===\n')
 	
-	notify_arbs = []
+# 	notify_arbs = []
 	
-	for arb in new_arbs:
-		notify_arb = open_arb_bets(arb)
+# 	for arb in new_arbs:
+# 		notify_arb = open_arb_bets(arb)
 
-		if notify_arb is not None:
-			notify_arbs.append(notify_arb)
+# 		if notify_arb is not None:
+# 			notify_arbs.append(notify_arb)
 
 
 # open website once 
@@ -914,17 +962,17 @@ def monitor_website(url, test, test_ev, max_retries=3):
 if __name__ == "__main__":
 	# === TEST ===
 	test = False
-	test_ev = {'market':'Patrick Mahomes - Rushing Yards', 
-				'bet':'U 19.5', 
-				'odds':'+115', 
-				'game':'Baltimore Ravens vs Kansas City Chiefs',
+	test_ev = {'market':'Moneyline', 
+				'bet':'Yoelvis Gomez', 
+				'odds':'-2000', 
+				'game':'Yoelvis Gomez',
 				'sport':'football',
 				'source':'betmgm',
 				'league':'nfl',
 				'value':'5.0',
 				'size':'$3.00',
 				'game date':'Thu Sep 5 2024',
-				'link':'https://sports.ny.betmgm.com/en/sports/events/baltimore-ravens-at-kansas-city-chiefs-15817162'}
+				'link':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417'}
 	# test_ev = {'market':'Spread', 
 	# 			'bet':'Washington Commanders -4', 
 	# 			'odds':'+105', 
