@@ -404,7 +404,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 			# check first side to make sure odds still valid arb
 			if arb_source1 in enabled_sources:
-				print('Auto Check Side 1 Odds')
+				print('\nAuto Check Side 1 Odds\n')
 				bet1_dict = arb_row
 				bet1_dict['bet'] = arb_row['bet1']
 				bet1_dict['odds'] = arb_row['odds1']
@@ -425,7 +425,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# even if first side changed, 
 			# need to check second side to make sure invalid
 			if arb_source2 in enabled_sources:
-				print('Auto Check Side 2 Odds')
+				print('\nAuto Check Side 2 Odds\n')
 				bet2_dict = arb_row
 				bet2_dict['bet'] = arb_row['bet2']
 				bet2_dict['odds'] = arb_row['odds2']
@@ -453,11 +453,18 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			if not determiner.determine_valid_arb_odds(actual_odds1, actual_odds2):
 				print('Arb Odds Changed to Invalid: ' + actual_odds1 + ', ' + actual_odds2)
 				print('\nClose Both Arb Windows\n')
+				# close last window, either idx 2 or 3
 				driver.close()
-				driver.switch_to.window(driver.window_handles[1])
-				driver.close()
+				# if both odds auto read, 
+				# also close third window, idx 2
+				if actual_odds1 != '' and actual_odds2 != '':
+					driver.switch_to.window(driver.window_handles[2])
+					driver.close()
+				# relinquish control to monitor window
 				driver.switch_to.window(driver.window_handles[0])
 				continue
+
+			
 
 
 
@@ -496,6 +503,49 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		if treat_ev:
 			writer.place_bet(bet1_dict, driver, final_outcome1, cookies_file, saved_cookies, pick_type, test)
 		
+		else: # Arb
+			# If both sides auto, then place bets and continue
+			# If neither side auto, then continue
+			# If half auto, then find auto side limit
+			# -If present, then wait for cmd to continue
+			# -If absent, then continue
+
+			# 1. both sides auto
+			if actual_odds1 != '' and actual_odds2 != '':
+				print('Place Both Bets')
+				#writer.place_arb_bets(arb_row, driver, final_outcomes, cookies_file, saved_cookies, pick_type, test)
+
+				print('Done Placing Both Bets')
+				driver.close()
+				driver.switch_to.window(driver.window_handles[2])
+				driver.close()
+				driver.switch_to.window(driver.window_handles[0])
+
+			# 2. neither side auto, pass
+
+			# 3. half auto
+
+			# if 1 side actual odds is blank bc manual 
+			# but other side auto read confirmed
+			# then find limit on auto side
+			# then keep auto window open but switch control to monitor window
+			elif determiner.determine_half_auto(actual_odds1, actual_odds2):
+				# find limit
+				print('Find Auto Side Limit')
+				
+
+				# if able to manually place other side
+				# keep open until manual cmd given
+
+				# if auto only, then notify manual picks and continue
+
+				print('Done Half Auto')
+				# close window
+				driver.close()
+
+				# finally, switch back to main window
+				driver.switch_to.window(driver.window_handles[0])
+
 		# if onyl odds1 populated, then place single bet
 		# if actual_odds2 == '' and treat_ev:
 		# 	writer.place_bet(bet1_dict, driver, final_outcome1, cookies_file, saved_cookies, pick_type, test)

@@ -34,6 +34,14 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             else:
                 bet_line = 'under ' + line_val
 
+        elif sport == 'soccer' and market == 'spread':
+            # +0.5 -> (0.5)
+            # remove + sign?
+            # no bc need +/- to indicate cutoff
+            #bet_line = re.sub('\+', '', bet_line)
+            bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
+            bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
+
     print('bet_line: ' + bet_line)
     return bet_line
 
@@ -231,6 +239,10 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif market == 'total':
 
                 market_title = 'total goals'
+
+            elif market == 'spread':
+
+                market_title = 'handicap'
 
             # 1st Half Huracán Total -> Huracán - 1st half - total goals
             elif re.search('half .+ total', market):

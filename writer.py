@@ -606,136 +606,74 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 except:
                     print('Not Logged In Yet')
                     time.sleep(1)
-            
-            #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
-            placeholder = wager_field.get_attribute('placeholder')
-            #print('placeholder: ' + placeholder)
-            if not placeholder == '':
-                wager_field.clear()
-                time.sleep(1)
-            wager_field.send_keys(bet_size)
-            time.sleep(1)
-            #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
-            # except:
-            #     print('Error: No Wager Field. Check Bet Locked???')
-            # test wait
-            #time.sleep(100)
 
-            # === MONEY ===
-            # Place Bet 1
-            # maybe success
-            # more likely above limit
-            # or rarely not enough funds
-            # place bet at known max limit to find bet limit
-            #try:
+            # login takes time so check if odds changed
             place_bet_btn = driver.find_element('class name', 'place-button')
             # check if enough funds
             place_btn_text = place_bet_btn.find_element('class name', 'ds-btn-text').get_attribute('innerHTML').lower()
             print('place_btn_text: ' + str(place_btn_text))
-            if re.search('deposit', place_btn_text):
-                # bet all remaining funds
-                wager_remaining_funds(driver)
-            place_bet_btn.click()
-            time.sleep(1)
-            print('Placed Bet to Find Limit')
-            time.sleep(3) 
-            # except:
-            #     print('Error: No Place Bet Button!')
-
-            # wait to finish loading
-            loading = True
-            while loading:
-
-                # close receipt
-                # tag bs-digital-result-state
-                # tag bs-linear-result-summary
-                # class result-summary__actions
-                # _ngcontent-ng-c980967766
-                # button
-                try:
-                    close_receipt_btn = driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-                    loading = False
-                    print('Done Loading')
-                    time.sleep(3)
-                    close_receipt_btn.click()
-                    time.sleep(1) 
-                    print('Closed Receipt')
-                    time.sleep(3)
-
-                    # test wait
-                    #time.sleep(100)
-
-                    
-
-                    # Go to my bets to confirm
-                    my_bets_btn = driver.find_element('class name', 'myBetsTab')
-                    my_bets_btn.click()
-                    print('Clicked My Bets')
-                    time.sleep(3) # TEMP wait to manually check bet placed before closing
-
-                    open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[2]')
-                    open_bets_btn.click()
-                    print('Clicked Open Bets')
-                    time.sleep(3)
-
-                except:
-                    print('\nBet Error\n')
-                    #place_bet = False
-
-                    # if test:
-                    #     # test wait
-                    #     time.sleep(100)
-
-                    # if wager too high, click back
-                    # tag name: bs-alert
-                    # >class="alert-content__message"
-                    # limit
-                    alert_msg = driver.find_element('class name', 'alert-content__message').get_attribute('innerHTML').lower() # Wager too high
-                    print('alert_msg: ' + alert_msg)
-
-                    if not re.search('limit', alert_msg):
-                        # if not limit problem, then odds changed so close and continue
-                        place_bet = False
-                        # if not limit problem, check if locked or odds changed
-                        # if locked, remove bet from slip and close window
-                        #try:
-                        # class name: place-button-message
-                        btn_msg = driver.find_element('class name', 'place-button-message').get_attribute('innerHTML').lower() # Wager too high
-                        print('btn_msg: ' + btn_msg)
-
+            # if odds changed, if ev, stop and continue to monitor
+            if not re.search('accept', place_btn_text):
+            
+                #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+                placeholder = wager_field.get_attribute('placeholder')
+                #print('placeholder: ' + placeholder)
+                if not placeholder == '':
+                    wager_field.clear()
+                    time.sleep(1)
+                wager_field.send_keys(bet_size)
+                time.sleep(1)
+                #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
                 # except:
-                #     print('Unknown Error while placing bet')
+                #     print('Error: No Wager Field. Check Bet Locked???')
+                # test wait
+                #time.sleep(100)
 
+                # === MONEY ===
+                # Place Bet 1
+                # maybe success
+                # more likely above limit
+                # or rarely not enough funds
+                # place bet at known max limit to find bet limit
+                #try:
+                
 
-                    # For EV, place at limit
-                    if not test and place_bet:
-                        place_bet_btn = driver.find_element('class name', 'place-button')
-                        print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
-                        place_bet_btn.click()
+                if re.search('deposit', place_btn_text):
+                    # bet all remaining funds
+                    wager_remaining_funds(driver)
+                place_bet_btn.click()
+                time.sleep(1)
+                print('Placed Bet to Find Limit')
+                time.sleep(3) 
+                # except:
+                #     print('Error: No Place Bet Button!')
+
+                # wait to finish loading
+                loading = True
+                while loading:
+
+                    # close receipt
+                    # tag bs-digital-result-state
+                    # tag bs-linear-result-summary
+                    # class result-summary__actions
+                    # _ngcontent-ng-c980967766
+                    # button
+                    try:
+                        close_receipt_btn = driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
+                        loading = False
+                        print('Done Loading')
                         time.sleep(3)
-                        print('Placed Bet')
+                        close_receipt_btn.click()
+                        time.sleep(1) 
+                        print('Closed Receipt')
+                        time.sleep(3)
 
-                        # NEED to Handle Odds Change on subsequent attempts
-                        # loop while odds in range and not yet placed
-                        # but for EV if odds change then skip
-                        try:
-                            close_receipt_btn = driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-                            print('Done Loading')
-                            close_receipt_btn.click()
-                            # DEMO:
-                            time.sleep(1)
-                            #time.sleep(1) # Wait for bet to fully load and submit before moving on
-                            print('Closed Receipt')
-                        except:
-                            print('\nBet Failed\n')
-                            print('Odds Change or Other Error???')
+                        # test wait
+                        #time.sleep(100)
 
-                            # handle session timeout
-                            # read bottom msg below button or wager field???
-                            print('\nHandle Session Timeout\n')
-                            time.sleep(100)
+                        
 
-
+                        # Go to my bets to confirm
                         my_bets_btn = driver.find_element('class name', 'myBetsTab')
                         my_bets_btn.click()
                         print('Clicked My Bets')
@@ -746,18 +684,86 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                         print('Clicked Open Bets')
                         time.sleep(3)
 
-                        # break loading loop even if bet failed
-                        loading = False
-                        print('Done Loading')
+                    except:
+                        print('\nBet Error\n')
+                        #place_bet = False
+
+                        # if test:
+                        #     # test wait
+                        #     time.sleep(100)
+
+                        # if wager too high, click back
+                        # tag name: bs-alert
+                        # >class="alert-content__message"
+                        # limit
+                        alert_msg = driver.find_element('class name', 'alert-content__message').get_attribute('innerHTML').lower() # Wager too high
+                        print('alert_msg: ' + alert_msg)
+
+                        if not re.search('limit', alert_msg):
+                            # if not limit problem, then odds changed so close and continue
+                            place_bet = False
+                            # if not limit problem, check if locked or odds changed
+                            # if locked, remove bet from slip and close window
+                            #try:
+                            # class name: place-button-message
+                            btn_msg = driver.find_element('class name', 'place-button-message').get_attribute('innerHTML').lower() # Wager too high
+                            print('btn_msg: ' + btn_msg)
+
+                    # except:
+                    #     print('Unknown Error while placing bet')
 
 
-            
+                        # For EV, place at limit
+                        if not test and place_bet:
+                            place_bet_btn = driver.find_element('class name', 'place-button')
+                            print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
+                            place_bet_btn.click()
+                            time.sleep(3)
+                            print('Placed Bet')
 
-            # if test:
-            #     # test wait
-            #     time.sleep(100)
-            #     # test close
-            #     driver.close()
+                            # NEED to Handle Odds Change on subsequent attempts
+                            # loop while odds in range and not yet placed
+                            # but for EV if odds change then skip
+                            try:
+                                close_receipt_btn = driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
+                                print('Done Loading')
+                                close_receipt_btn.click()
+                                # DEMO:
+                                time.sleep(1)
+                                #time.sleep(1) # Wait for bet to fully load and submit before moving on
+                                print('Closed Receipt')
+                            except:
+                                print('\nBet Failed\n')
+                                print('Odds Change or Other Error???')
+
+                                # handle session timeout
+                                # read bottom msg below button or wager field???
+                                print('\nHandle Session Timeout\n')
+                                time.sleep(100)
+
+
+                            my_bets_btn = driver.find_element('class name', 'myBetsTab')
+                            my_bets_btn.click()
+                            print('Clicked My Bets')
+                            time.sleep(3) # TEMP wait to manually check bet placed before closing
+
+                            open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[2]')
+                            open_bets_btn.click()
+                            print('Clicked Open Bets')
+                            time.sleep(3)
+
+                            # break loading loop even if bet failed
+                            loading = False
+                            print('Done Loading')
+
+
+                
+
+                # if test:
+                #     # test wait
+                #     time.sleep(100)
+                #     # test close
+                #     driver.close()
 
         elif website_name == 'betrivers':
             #time.sleep(1) # load
@@ -1001,11 +1007,13 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                         # close and continue and if odds changed
                         place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
                         print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
-                        try:
-                            place_btn_disabled = place_bet_btn.get_attribute('disabled')
-                            print('place_btn_disabled: ' + place_btn_disabled)
-                        except:
-                            print('Place Button Enabled')
+                        # wait for place bet btn to enable
+                        while place_btn_disabled:
+                            try:
+                                place_btn_disabled = place_bet_btn.get_attribute('disabled')
+                                print('place_btn_disabled: ' + place_btn_disabled)
+                            except:
+                                print('Place Button Enabled')
                         place_bet_btn.click()
                         # time.sleep(1) # need wait
                         # # may need to click twice

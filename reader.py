@@ -146,8 +146,14 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 		if sport not in team_sports:
 			outcome_label = converter.convert_name_format(outcome_label)#, name_format=',')
 
-		# remove ole from ole miss
-		outcome_label = re.sub('^ole ', '', outcome_label)
+		# monitor format uses draw and betrivers uses tie
+		# so convert source format to standard format
+		elif outcome_label == 'tie':
+			outcome_label = 'draw'
+
+		else:
+			# remove ole from ole miss
+			outcome_label = re.sub('^ole ', '', outcome_label)
 
 	# all others, except home runs bc no outcome label, bc yes/no list
 	# spread or total, except first inning total bc yes/no
@@ -1197,6 +1203,9 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 			listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
 			print('init listed_market: ' + listed_market)
 
+			# listed_line: ca independiente avellaneda (0.5)
+			# init listed_market: 2way handicap (-0.5) -> spread
+
 			# odds
 			listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
 			print('listed_odds: ' + listed_odds)
@@ -1204,6 +1213,10 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 			# if NOT player market, 
 			# match directly with listed market
 			if not re.search(' - ', market):
+
+				# already converted spread to handicap
+				# if re.search('handicap', listed_market):
+				# 	listed_market = 'spread'
 
 				listed_market = re.sub(':','',listed_market)
 				print('listed_market: ' + listed_market)
@@ -1238,7 +1251,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 						found_market = True
 				
 
-
+			# ca independiente avellaneda (0.5) -> independiente +0.5
 			if found_market and determiner.determine_matching_outcome(listed_line, bet_line):#listed_line == bet_line:
 				print('Found Bet Listed')
 				actual_odds = listed_odds
@@ -1260,17 +1273,20 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 			# error not getting all sections
 			sections = []
+
+			section_idx = 2
+			market_title = market
 			
 			game_available = True
 			# sometimes only 1 section valid for ncaaf football
-			while len(sections) < 2 and game_available:# and not game_available:# and section_retries < max_retries:
+			while len(sections) < section_idx and game_available:# and not game_available:# and section_retries < max_retries:
 				print('Get Sections')
 				sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
-				
+				print('num sections: ' + str(len(sections)))
 				# if home page, close window
 				# id section-Games of the Week
-				if len(sections) < 2:
-					print('len(sections) < 2')
+				if len(sections) < section_idx:
+					print('len(sections) < section_idx ' + str(section_idx))
 					try:
 						# home_section = 
 						# class 'sc-cTVAEU iceBwx'
@@ -1284,15 +1300,19 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 						print('Game Page: Get Sections\n')
 						game_available = True
 
-			# Game NA
-			#if len(sections) < 2:
-			if not game_available:
-			#if len(sections) < 1:
-				driver.close()
-				driver.switch_to.window(driver.window_handles[0])
-				return actual_odds, final_outcome, cookies_file, saved_cookies
+				# Game NA
+				#if len(sections) < 2:
+				if not game_available:
+				#if len(sections) < 1:
+					driver.close()
+					driver.switch_to.window(driver.window_handles[0])
+					return actual_odds, final_outcome, cookies_file, saved_cookies
 
-			market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
+				# get new sections if stale element
+				try:
+					market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
+				except:
+					print('Error Reading Market Section, Get New Sections')
 
 			market_keyword = ''
 			if re.search(' - ', market):
@@ -1368,11 +1388,16 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 				markets = None
 				while market_retries < max_retries:
 					try:
+						print('Get Markets in Section')
 						markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
 						break
 					except:
+						
 						market_retries += 1
+						print('No Markets in Section, try ' + str(market_retries) + '/3')
 						time.sleep(1)
+
+				# if markets=None, reload sections
 
 				# list_elements = section.find_elements('tag name', 'li')
 				# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
