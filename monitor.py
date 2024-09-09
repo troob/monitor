@@ -512,14 +512,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 			# 1. both sides auto
 			if actual_odds1 != '' and actual_odds2 != '':
-				print('Place Both Bets')
-				#writer.place_arb_bets(arb_row, driver, final_outcomes, cookies_file, saved_cookies, pick_type, test)
-
-				print('Done Placing Both Bets')
-				driver.close()
-				driver.switch_to.window(driver.window_handles[2])
-				driver.close()
-				driver.switch_to.window(driver.window_handles[0])
+				writer.place_arb_bets(arb_row, driver, final_outcomes, cookies_file, saved_cookies, pick_type, test)
 
 			# 2. neither side auto, pass
 
@@ -539,10 +532,9 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# if auto only, then notify manual picks and continue
 
-				print('Done Half Auto')
+				print('Done Half Auto Arb')
 				# close window
 				driver.close()
-
 				# finally, switch back to main window
 				driver.switch_to.window(driver.window_handles[0])
 

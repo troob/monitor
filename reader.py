@@ -1412,6 +1412,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 					# but others might shift depending if moneyline or others are NA
 					# so need to search for given offer in subcategory label
 					offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower()
+					offer_label = re.sub('amp;','',offer_label)
 					print('\noffer_label: ' + offer_label)
 					print('market_keyword: ' + market_keyword)
 
@@ -1582,7 +1583,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 			# close side 1 window
 			if side_num == 2:
-				driver.switch_to.window(driver.window_handles[1])
+				driver.switch_to.window(driver.window_handles[2])
 				driver.close()
 
 			driver.switch_to.window(driver.window_handles[0])

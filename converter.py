@@ -17,9 +17,11 @@ def convert_name_to_standard_format(name):
 
 def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
 
+    # abbrev player name
+    solo_sports = ['boxing', 'mma', 'tennis']
     if website_name == 'betmgm':
 
-        if sport == 'boxing':
+        if sport in solo_sports:
             # josh kelly -> j. kelly
             names = bet_line.split(' ', 1)
             bet_line = names[0][0] + '. ' + names[1]
@@ -210,11 +212,12 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
             
             # 1st Half Philadelphia Eagles Total -> Philadelphia Eagles 1st half points
-            elif re.search('half .+ total|quarter .+ total', market):
+            elif re.search('half|quarter .+ total', market):
                 #parts = market.split('half ')
-                parts = re.split('half |quarter ')
-                period_part = parts[0] # '1st half '
-                team_part = parts[1]
+                team_part = re.split('half |quarter ', market)[1] # 'Philadelphia Eagles Total
+                
+                period_part = market.split(team_part)[0] # '1st half '
+                
                 team_name = team_part.split('total')[0] # 'Philadelphia Eagles '
 
                 market_title = team_name + period_part + ' points'
@@ -246,9 +249,10 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
             # 1st Half Huracán Total -> Huracán - 1st half - total goals
             elif re.search('half .+ total', market):
-                parts = market.split('half ')
-                period_part = parts[0] # '1st half '
-                team_part = parts[1]
+                team_part = market.split('half ')[1] # 'Huracán Total'
+                # use team part to split off period part
+                period_part = market.split(team_part)[0] # '1st half '
+                
                 team_name = team_part.split('total')[0] # 'huracan '
 
                 market_title = team_name + period_part + '- total goals'
