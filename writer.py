@@ -191,6 +191,23 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         login_link.click()
         time.sleep(3) 
 
+        usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
+        if re.search('ng-untouched', usr_field_html):
+            print('Enter Username')
+            usr_field = driver.find_element('id', 'userId')
+            usr_field.send_keys(email)
+            time.sleep(1)
+
+        pwd_field = driver.find_element('id', 'password')
+        pwd_field_html = pwd_field.get_attribute('innerHTML')
+        if re.search('ng-untouched', pwd_field_html):
+            print('Enter Password')
+            #pwd_field = driver.find_element('name', 'password')
+            pwd_field.clear()
+            time.sleep(1)
+            pwd_field.send_keys(token)
+            time.sleep(3)
+
         submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
         print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
         submit_btn.click()
@@ -1133,7 +1150,7 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
     print('\n===Find Bet Limit===\n')
     print('Input: bet_dict = {...} = ' + str(bet_dict))
     print('Input: final_outcome = ' + str(final_outcome))
-    print('\nOutput: bet_limit = x\n')
+    print('\nOutput: bet_limit = float\n')
 
     bet_limit = 0
 
@@ -1153,21 +1170,162 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
     # but always over known limit
     max_bet_size = determiner.determine_source_limit(website_name) #determine_limit(bet_dict, website_name, pick_type, test)
 
-    # if website_name == 'betmgm':
+    if website_name == 'betmgm':
 
-    #     logged_in = False
-    #     login_website(website_name, driver, cookies_file, saved_cookies, url)
+        logged_in = False
+        login_website(website_name, driver, cookies_file, saved_cookies, url)
 
-    #     while not logged_in:
-    #         try:
-    #             wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
-    #             logged_in = True
-    #         except:
-    #             print('Not Logged In Yet')
-    #             time.sleep(1)
+        while not logged_in:
+            try:
+                wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
+                logged_in = True
+            except:
+                print('Not Logged In Yet')
+                time.sleep(1)
+
+        # login takes time so check if odds changed
+        place_bet_btn = driver.find_element('class name', 'place-button')
+        # check if enough funds
+        place_btn_text = place_bet_btn.find_element('class name', 'ds-btn-text').get_attribute('innerHTML').lower()
+        print('place_btn_text: ' + str(place_btn_text))
+        # if odds changed, if ev, stop and continue to monitor
+        if re.search('accept', place_btn_text):
+            # accept odds for now until we check other side of arb
+            place_bet_btn.click()
+            time.sleep(1)
+
+            new_odds = '' # driver.find_element()
+        
+        #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+        placeholder = wager_field.get_attribute('placeholder')
+        #print('placeholder: ' + placeholder)
+        if not placeholder == '':
+            wager_field.clear()
+            time.sleep(1)
+        wager_field.send_keys(max_bet_size)
+        time.sleep(1)
+
+        if re.search('deposit', place_btn_text):
+            print('Not Enough Money')
+            # do NOT bet all remaining funds
+            # instead, check if remaining funds > source max bet size
+            # we know funds < max bet size 
+            # bc we entered max bet size into wager field, which alerts deposit
+            # so we cannot risk entering remaining funds
+            # until we know limit on other side
+            # so use remaining funds as limit on this side
+            remaining_funds = reader.read_remaining_funds(driver, website_name)
+            return remaining_funds
+
+
+        place_bet_btn.click()
+        time.sleep(1)
+        print('Placed Bet to Find Limit')
+        time.sleep(3) 
+
+        # wait to finish loading
+        loading = True
+        while loading:
+            try:
+                alert_msg = driver.find_element('class name', 'alert-content__message').get_attribute('innerHTML').lower() # Wager too high
+                print('alert_msg: ' + alert_msg)
+                loading = False
+                print('Done Loading placed bet to find limit')
+
+                if not re.search('limit', alert_msg):
+                    # if not limit problem, then odds changed so close and continue
+                    # if not limit problem, check if locked or odds changed
+                    # if locked, remove bet from slip and close window
+                    btn_msg = driver.find_element('class name', 'place-button-message').get_attribute('innerHTML').lower() # Wager too high
+                    print('btn_msg: ' + btn_msg)
+            except:
+                print('Loading placed bet to find limit...')
+                time.sleep(1)
+
+        bet_limit = wager_field.get_attribute('value') # or getText()
+
+    elif website_name == 'betrivers':
+        
+        clear_betslip(driver)
+
+        # click outcome btn to add to betslip
+        if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
+            try:
+                final_outcome.click()
+            except:
+                coordinates = final_outcome.location_once_scrolled_into_view
+                print('coordinates: ' + str(coordinates))
+                driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
+                #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
+                final_outcome.click()
+            
+            time.sleep(1)
+
+        # remove old bets from slip
+        remove_bet_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+        if len(remove_bet_btns) > 1:
+            # remove old bets
+            print('Remove Old Bets')
+            for btn in remove_bet_btns[:-2]:
+                btn.click()
+                time.sleep(1)
+
+        login_website(website_name, driver, cookies_file, saved_cookies, url)
+
+        # add max bet size to wager field
+        try:   
+            wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+        except:
+            final_outcome.click()
+            time.sleep(1)
+            wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+
+        #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+        wager_field.send_keys(max_bet_size)
+
+        # click Place Bet to find limit
+        place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
+        #print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
+            
+        # Need to click twice for this website
+        place_bet_btn.click()
+        time.sleep(1) # need wait for bet to fully load and submit before moving on
+        place_bet_btn.click()
+        time.sleep(1)
+        print('Clicked bet twice')
+        print('Placed Bet')
+        time.sleep(1) 
+
+        # wait to finish loading
+        loading = True
+        while loading:
+            try:
+                error_title = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__title').get_attribute('innerHTML').lower() # Wager too high
+                print('error_title: ' + error_title)
+
+                loading = False
+                print('Done Loading placed bet to find limit')
+
+                if error_title == 'not enough money':
+                    print('Not enough money')
+                    remaining_funds = reader.read_remaining_funds(driver, website_name)
+                    return remaining_funds
+
+                # Sorry, the maximum allowed wager is $4.01.
+                error_msg = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__paragraph').get_attribute('innerHTML').lower() 
+                print('error_msg: ' + error_msg)
+
+            except:
+                print('Loading placed bet to find limit...')
+                time.sleep(1)
+
+        bet_limit = error_msg.split('$')[1][:-2]
+
+
         
     # Do not close window after finding limit
     
+    bet_limit = float(bet_limit)
     print('bet_limit: ' + str(bet_limit))
     return bet_limit
 
@@ -1195,16 +1353,27 @@ def place_arb_bets(arb, driver, final_outcomes, cookies_file, saved_cookies, pic
 	
     # go up to finding limit
     # and then go to other side to get limit
-    bet1_limit, wager_field1, place_btn1 = find_bet_limit(bet_dict, driver, final_outcomes[0], cookies_file, saved_cookies, pick_type, test)
-    #place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test)
+    # we need to get wager field and place btn to find limit
+    # so save them here and pass them to place bet fcn
+    # so we do not need to get them twice
+    # BUT does driver.find_element actually take more time than retrieving from memory? probably
+    bet_limit_data = find_bet_limit(arb, driver, final_outcomes[0], cookies_file, saved_cookies, pick_type, test, side_num=1)
+    bet1_limit = bet_limit_data[0]
+    wager_field1 = bet_limit_data[1]
+    place_btn1 = bet_limit_data[2]
 
-    # bet2 
-    bet2_limit, wager_field2, place_btn2 = find_bet_limit(bet_dict, driver, final_outcomes[1], cookies_file, saved_cookies, pick_type, test)
+    # at this point we checked actual odds 
+    # but now that we logged in and found limit, odds may have changed
+
+    bet_limit_data = find_bet_limit(arb, driver, final_outcomes[1], cookies_file, saved_cookies, pick_type, test, side_num=2)
+    bet2_limit = bet_limit_data[0]
+    wager_field2 = bet_limit_data[1]
+    place_btn2 = bet_limit_data[2]
 
     bet1_size, bet2_size = determiner.determine_arb_bet_sizes(bet1_limit, bet2_limit)
     
     # write in and place bets
-    #place_bets_simultaneously(driver, bet1_size, bet2_size, wager_field1, wager_field2, place_btn1, place_btn2)
+    place_bets_simultaneously(driver, bet1_size, bet2_size, wager_field1, wager_field2, place_btn1, place_btn2)
 
     print('Done Placing Both Bets Auto Arb, so close windows')
     driver.close()

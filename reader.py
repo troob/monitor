@@ -46,6 +46,22 @@ import determiner # determine matching outcome
 
 
 
+def read_remaining_funds(driver, website_name):
+	print('\n===Read Remaining Funds===\n')
+
+	if website_name == 'betmgm':
+		funds_element = driver.find_element('class name', 'user-balance')
+		# remove $
+		funds = float(funds_element.get_attribute('innerHTML')[1:])
+		
+	elif website_name == 'betrivers':
+		funds_element = driver.find_element('xpath', '//div[@data-target="menu-quick-deposit"]')
+		# remove $
+		funds = float(funds_element.find_element('tag name', 'div').find_element('tag name', 'span').get_attribute('innerHTML')[1:])
+		
+	print('funds: ' + str(funds))
+	return funds
+
 # remove outdated objects
 def read_current_data(todays_date):
 	print('\n===Read Current Data===\n')
@@ -75,10 +91,13 @@ def read_current_data(todays_date):
 		# print('ev_date_str: ' + ev_date_str)
 		# print('todays_date: ' + str(todays_date))
 		# Tue Aug 27 2024
-		ev_date = datetime.strptime(ev_date_str, '%a %b %d %Y').date()
-		#print('ev_date: ' + str(ev_date))
-		if ev_date < todays_date:
-			#print('Remove EV: ' + ev_date_str + ', ' + str(init_ev))
+		try:
+			ev_date = datetime.strptime(ev_date_str, '%a %b %d %Y').date()
+			#print('ev_date: ' + str(ev_date))
+			if ev_date < todays_date:
+				#print('Remove EV: ' + ev_date_str + ', ' + str(init_ev))
+				continue
+		except:
 			continue
 			
 		init_evs[str(idx)] = init_ev
@@ -5390,7 +5409,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 12') 
+	options.add_argument(r'--profile-directory=Profile 13') 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)

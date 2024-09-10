@@ -533,6 +533,10 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				# if auto only, then notify manual picks and continue
 
 				print('Done Half Auto Arb')
+				# give control to main window 
+				# while waiting for user input to continue
+				#driver.switch_to.window(driver.window_handles[0])
+
 				# close window
 				driver.close()
 				# finally, switch back to main window

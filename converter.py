@@ -90,11 +90,12 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif re.search('innings? .+ total', market):
                 # first inning milwaukee brewers total
                 # milwaukee brewers 1st inning runs
-                parts = re.split('innings? ',market)
-                inning_part = parts[0] # 'first inning '
+                #parts = re.split('innings? ',market)
+                team_part = re.split('innings? ',market)[1] # 'milwaukee brewers total'
+                inning_part = market.split(team_part)[0] #parts[0] # 'first inning '
                 if re.search('first', inning_part): # # '1st inning '
-                    re.sub('first', '1st', market)
-                team_part = parts[1] # 'milwaukee brewers total'
+                    inning_part = re.sub('first', '1st', inning_part)
+                #team_part = parts[1] # 'milwaukee brewers total'
                 team_name = team_part.split('total')[0] # 'milwaukee brewers '
                 market_title = team_name + inning_part + 'runs'
 
