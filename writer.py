@@ -33,7 +33,29 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-        
+
+
+# if ev, just close 1 window
+# if arb side 1, just close 1 window
+# if arb side 2, close both windows
+# then relinquish control back to main monitor window
+def close_bet_windows(driver, side_num):
+    print('\n===Close Bet Windows===\n')
+    print('side_num: ' + str(side_num) + '\n')
+
+    # close window 1 or 2
+    driver.close()
+
+    # if side 2, both windows open
+    # so also close side 1 window
+    if side_num == 2:
+        driver.switch_to.window(driver.window_handles[2])
+        driver.close()
+    
+    # send back to main window
+    driver.switch_to.window(driver.window_handles[0])
+
+
 
 # Assume already on webpage
 def login_website(website_name, driver, cookies_file, saved_cookies, url):
@@ -142,8 +164,8 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         # session expired url: 
         # ny url seems to work but sports.ny fails 
         # now both urls fail!!! after a day of working ok
-        login_url = 'https://www.ny.betmgm.com/en/labelhost/login'#'https://sports.ny.betmgm.com/en/labelhost/login' #?rurl=https:%2F%2Fsports.ny.betmgm.com%2Fen%2Fsports%2Fevents%2Farizona-diamondbacks-at-san-francisco-giants-16215229%3Fmarket%3DPlayers:Batting
-        login_url2 = 'https://sports.ny.betmgm.com/en/labelhost/login'
+        # login_url = 'https://www.ny.betmgm.com/en/labelhost/login'#'https://sports.ny.betmgm.com/en/labelhost/login' #?rurl=https:%2F%2Fsports.ny.betmgm.com%2Fen%2Fsports%2Fevents%2Farizona-diamondbacks-at-san-francisco-giants-16215229%3Fmarket%3DPlayers:Batting
+        # login_url2 = 'https://sports.ny.betmgm.com/en/labelhost/login'
         # Check if already logged in
         # Check if need to login
 
@@ -174,47 +196,23 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
             print('\nAlready Logged In\n')
             return
         
-        # Need to click register>login to avoid tech glitch
+        # try to simply login with dialog
+        # even tho expected error
+        # sometimes works
         login_page = False
         while not login_page:
             try:
-                reg_link = driver.find_element('class name', 'registration-link')
+                submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+                print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
                 login_page = True
             except:
-                print('Loading Login Page')
+                print('Loading Login Page...')
                 time.sleep(1)
-            
-        reg_link.click()
-        time.sleep(3)
-
-        login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
-        login_link.click()
-        time.sleep(3) 
-
-        usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
-        if re.search('ng-untouched', usr_field_html):
-            print('Enter Username')
-            usr_field = driver.find_element('id', 'userId')
-            usr_field.send_keys(email)
-            time.sleep(1)
-
-        pwd_field = driver.find_element('id', 'password')
-        pwd_field_html = pwd_field.get_attribute('innerHTML')
-        if re.search('ng-untouched', pwd_field_html):
-            print('Enter Password')
-            #pwd_field = driver.find_element('name', 'password')
-            pwd_field.clear()
-            time.sleep(1)
-            pwd_field.send_keys(token)
-            time.sleep(3)
-
-        submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
-        print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        
         submit_btn.click()
         time.sleep(3) 
 
-
-        # If Error, click sign up > log in again
+        # if error, try backup login method
         pwd_msg = ''
         try:
             pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
@@ -224,13 +222,40 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
 
         # glitch error
         if pwd_msg != '':
-            signup_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="registerbutton"]')
-            signup_btn.click()
+        
+            # Need to click register>login to avoid tech glitch
+            login_page = False
+            while not login_page:
+                try:
+                    reg_link = driver.find_element('class name', 'registration-link')
+                    login_page = True
+                except:
+                    print('Loading Login Page...')
+                    time.sleep(1)
+                
+            reg_link.click()
             time.sleep(3)
 
             login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
             login_link.click()
             time.sleep(3) 
+
+            usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
+            if re.search('ng-untouched', usr_field_html):
+                print('Enter Username')
+                usr_field = driver.find_element('id', 'userId')
+                usr_field.send_keys(email)
+                time.sleep(1)
+
+            pwd_field = driver.find_element('id', 'password')
+            pwd_field_html = pwd_field.get_attribute('innerHTML')
+            if re.search('ng-untouched', pwd_field_html):
+                print('Enter Password')
+                #pwd_field = driver.find_element('name', 'password')
+                pwd_field.clear()
+                time.sleep(1)
+                pwd_field.send_keys(token)
+                time.sleep(3)
 
             submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
             print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
@@ -238,8 +263,39 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
             time.sleep(3) 
 
 
+            # If Error, click sign up > log in again
+            pwd_msg = ''
+            try:
+                pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
+                print('pwd_msg: ' + pwd_msg)
+            except:
+                print('Loading...')
+
+            # glitch error
+            if pwd_msg != '':
+                signup_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="registerbutton"]')
+                signup_btn.click()
+                time.sleep(3)
+
+                login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
+                login_link.click()
+                time.sleep(3) 
+
+                submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+                print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+                submit_btn.click()
+                time.sleep(3) 
 
 
+
+
+         # if still loading, not logged in
+        while not logged_in:
+            try:
+                pwd_field = driver.find_element('name', 'password')
+            except:
+                logged_in = True
+                print('\nLogin Success\n')
 
 
         # login_page = False
@@ -407,13 +463,7 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
 
 
 
-        # if still loading, not logged in
-        while not logged_in:
-            try:
-                pwd_field = driver.find_element('name', 'password')
-            except:
-                logged_in = True
-                print('\nLogin Success\n')
+       
 
         # if not logged_in:
         #     print('Not Logged In Yet, Try Again')
@@ -1146,7 +1196,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 # just like place bet but only up to getting limit
 # remove the final place bet click
 # starts with window already open from reading actual odds
-def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test):
+def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test, side_num):
     print('\n===Find Bet Limit===\n')
     print('Input: bet_dict = {...} = ' + str(bet_dict))
     print('Input: final_outcome = ' + str(final_outcome))
@@ -1157,6 +1207,22 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
     website_name = bet_dict['source']
     print('website_name = ' + website_name)
     url = bet_dict['link']
+
+    # if bet dict has bet1/bet2 then we know arb
+    # so set single bet vals in dict
+    if 'bet1' in bet_dict.keys():
+        bet_key = 'bet' + str(side_num)
+        source_key = 'source' + str(side_num)
+        odds_key = 'odds' + str(side_num)
+        link_key = 'link' + str(side_num)
+        size_key = 'size' + str(side_num)
+
+        bet_dict['bet'] = bet_dict[bet_key]
+        bet_dict['source'] = bet_dict[source_key]
+        bet_dict['odds'] = bet_dict[odds_key]
+        bet_dict['link'] = bet_dict[link_key]
+        bet_dict['size'] = bet_dict[size_key]
+
 
     # continue if no bet
     # should not reach this point bc actual odds would also be none
@@ -1358,28 +1424,32 @@ def place_arb_bets(arb, driver, final_outcomes, cookies_file, saved_cookies, pic
     # so we do not need to get them twice
     # BUT does driver.find_element actually take more time than retrieving from memory? probably
     bet_limit_data = find_bet_limit(arb, driver, final_outcomes[0], cookies_file, saved_cookies, pick_type, test, side_num=1)
-    bet1_limit = bet_limit_data[0]
-    wager_field1 = bet_limit_data[1]
-    place_btn1 = bet_limit_data[2]
+    arb['limit1'] = bet_limit_data[0]
+    arb['payout1'] = bet_limit_data[1]
+    arb['wager field1'] = bet_limit_data[2]
+    arb['place btn1'] = bet_limit_data[3]
 
     # at this point we checked actual odds 
     # but now that we logged in and found limit, odds may have changed
 
     bet_limit_data = find_bet_limit(arb, driver, final_outcomes[1], cookies_file, saved_cookies, pick_type, test, side_num=2)
-    bet2_limit = bet_limit_data[0]
-    wager_field2 = bet_limit_data[1]
-    place_btn2 = bet_limit_data[2]
+    arb['limit2'] = bet_limit_data[0]
+    arb['payout2'] = bet_limit_data[1]
+    arb['wager field2'] = bet_limit_data[2]
+    arb['place btn2'] = bet_limit_data[3]
 
-    bet1_size, bet2_size = determiner.determine_arb_bet_sizes(bet1_limit, bet2_limit)
+    bet1_size, bet2_size = determiner.determine_arb_bet_sizes(arb)
     
+    arb['size1'] = bet1_size
+    arb['size2'] = bet2_size
+
     # write in and place bets
-    place_bets_simultaneously(driver, bet1_size, bet2_size, wager_field1, wager_field2, place_btn1, place_btn2)
+    place_bets_simultaneously(driver, arb)
+
+
 
     print('Done Placing Both Bets Auto Arb, so close windows')
-    driver.close()
-    driver.switch_to.window(driver.window_handles[2])
-    driver.close()
-    driver.switch_to.window(driver.window_handles[0])
+    close_bet_windows(driver, side_num=2)
     
 
 # write 1 arb in post

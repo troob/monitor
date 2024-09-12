@@ -306,7 +306,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, test, pick_time_group='prematch', pick_type='arb'):
+def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, manual_arbs=False, test=False, pick_time_group='prematch', pick_type='arb'):
 	# print('\n===Monitor New Arbs===\n')
 	# print('Input: arb_data = [{...},...]')# + str(arb_data))
 	# print('Input: init_arbs = {0:{...},...}')
@@ -522,7 +522,9 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# but other side auto read confirmed
 			# then find limit on auto side
 			# then keep auto window open but switch control to monitor window
-			elif determiner.determine_half_auto(actual_odds1, actual_odds2):
+			# if absent, we cannot handle manual part of half auto
+			# so no need to find limit
+			elif determiner.determine_half_auto(actual_odds1, actual_odds2) and manual_arbs:
 				# find limit
 				print('Find Auto Side Limit')
 				
@@ -696,7 +698,7 @@ def monitor_arb_type(first_live_time, last_pre_time):
 # open website once 
 # and then loop over it 
 # simulate human behavior to avoid getting blocked
-def monitor_website(url, test, test_ev, max_retries=3):
+def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 	print('\n===Monitor Website===\n')
 
 	cur_yr = str(todays_date.year)
@@ -863,7 +865,7 @@ def monitor_website(url, test, test_ev, max_retries=3):
 					if arb_data is not None:
 					
 						# monitor either live or pre, not both
-						new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, test)
+						new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, manual_arbs, test)
 						
 						# new_live_arbs = new_arbs[0]
 						# new_prematch_arbs = new_arbs[1]
@@ -1064,4 +1066,14 @@ if __name__ == "__main__":
 	# So instead scrape sites directly
 	url = 'https://www.oddsview.com/odds'
 	#url = 'https://sportsbook.draftkings.com'
-	monitor_website(url, test, test_ev)
+	# cannot do arbs fast enough if absent 
+	# bc phone too slow and cannot see both sides at same time
+	# so if absent, arbs with fully auto enabled get placed
+	# but still notify? not needed 
+	# but still log arb missed!!!
+	# we can still handle manual ev bc one side is doable on mobile interface
+	# best way is to assume manual arbs true
+	# but as soon as i miss entering continue within 60s timer
+	# then it switches to manual false (auto only)
+	manual_arbs = True # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
+	monitor_website(url, test, test_ev, manual_arbs)

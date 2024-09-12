@@ -12,6 +12,7 @@ def convert_name_to_standard_format(name):
 
     name = re.sub(' jr\.?| ii+', '', name)
     name = re.sub('á', 'a', name)
+    name = re.sub('é', 'e', name)
 
     return name
 
@@ -676,7 +677,11 @@ def convert_american_to_decimal_odds(american_odds):
     #print('american_odds: ' + str(american_odds))
     decimal_odds = 0.0
 
-    if re.search('-',american_odds):
+    #determine if input str or int
+    #if re.search('-|\+',str(american_odds)):
+        
+    #if re.search('-',american_odds):
+    if int(american_odds) < 0:
         decimal_odds = "%.2f" % ((100 / -int(american_odds)) + 1)
     else:
         decimal_odds = "%.2f" % ((int(american_odds) / 100) + 1)
