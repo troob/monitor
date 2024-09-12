@@ -417,6 +417,9 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				actual_odds1 = actual_odds_data[0]
 				final_outcome1 = actual_odds_data[1]
 
+				arb_row['actual odds1'] = actual_odds1
+				arb_row['final outcome1'] = final_outcome1
+
 				# if actual odds 1 = none then no need to check side 2
 				if actual_odds1 is None:
 					continue
@@ -449,6 +452,11 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# if + side 2 abs val <= - side 1 abs val, then invlaid
 			# if - side 1 abs val >= + side 2 abs val, then invalid
 			#if abs(bet2_odds) <= bet1_odds:
+			# if only 1 side auto able to read odds
+			# still use assumed odds for manual side
+			# bc if actual odds on auto side changed to be invalid with assumed odds other side
+			# then usually confirms invalid arb
+			# bc manual assumed side is unlikely to change in favor
 			if not determiner.determine_valid_arb_odds(actual_odds1, actual_odds2):
 				print('Arb Odds Changed to Invalid: ' + actual_odds1 + ', ' + actual_odds2)
 				print('\nClose Both Arb Windows\n')

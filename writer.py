@@ -1204,10 +1204,6 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
 
     bet_limit = 0
 
-    website_name = bet_dict['source']
-    print('website_name = ' + website_name)
-    url = bet_dict['link']
-
     # if bet dict has bet1/bet2 then we know arb
     # so set single bet vals in dict
     if 'bet1' in bet_dict.keys():
@@ -1223,6 +1219,9 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
         bet_dict['link'] = bet_dict[link_key]
         bet_dict['size'] = bet_dict[size_key]
 
+    website_name = bet_dict['source']
+    print('website_name = ' + website_name)
+    url = bet_dict['link']
 
     # continue if no bet
     # should not reach this point bc actual odds would also be none
