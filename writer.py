@@ -1423,28 +1423,28 @@ def place_arb_bets(arb, driver, final_outcomes, cookies_file, saved_cookies, pic
     # so save them here and pass them to place bet fcn
     # so we do not need to get them twice
     # BUT does driver.find_element actually take more time than retrieving from memory? probably
-    bet_limit_data = find_bet_limit(arb, driver, final_outcomes[0], cookies_file, saved_cookies, pick_type, test, side_num=1)
-    arb['limit1'] = bet_limit_data[0]
-    arb['payout1'] = bet_limit_data[1]
-    arb['wager field1'] = bet_limit_data[2]
-    arb['place btn1'] = bet_limit_data[3]
+    # bet_limit_data = find_bet_limit(arb, driver, final_outcomes[0], cookies_file, saved_cookies, pick_type, test, side_num=1)
+    # arb['limit1'] = bet_limit_data[0]
+    # arb['payout1'] = bet_limit_data[1]
+    # arb['wager field1'] = bet_limit_data[2]
+    # arb['place btn1'] = bet_limit_data[3]
 
-    # at this point we checked actual odds 
-    # but now that we logged in and found limit, odds may have changed
+    # # at this point we checked actual odds 
+    # # but now that we logged in and found limit, odds may have changed
 
-    bet_limit_data = find_bet_limit(arb, driver, final_outcomes[1], cookies_file, saved_cookies, pick_type, test, side_num=2)
-    arb['limit2'] = bet_limit_data[0]
-    arb['payout2'] = bet_limit_data[1]
-    arb['wager field2'] = bet_limit_data[2]
-    arb['place btn2'] = bet_limit_data[3]
+    # bet_limit_data = find_bet_limit(arb, driver, final_outcomes[1], cookies_file, saved_cookies, pick_type, test, side_num=2)
+    # arb['limit2'] = bet_limit_data[0]
+    # arb['payout2'] = bet_limit_data[1]
+    # arb['wager field2'] = bet_limit_data[2]
+    # arb['place btn2'] = bet_limit_data[3]
 
-    bet1_size, bet2_size = determiner.determine_arb_bet_sizes(arb)
+    # bet1_size, bet2_size = determiner.determine_arb_bet_sizes(arb)
     
-    arb['size1'] = bet1_size
-    arb['size2'] = bet2_size
+    # arb['size1'] = bet1_size
+    # arb['size2'] = bet2_size
 
-    # write in and place bets
-    place_bets_simultaneously(driver, arb)
+    # # write in and place bets
+    # place_bets_simultaneously(driver, arb)
 
 
 

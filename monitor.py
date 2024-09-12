@@ -71,12 +71,11 @@ new_pick_rules = {'normal max': normal_max_val,
 
 
 valid_sports = ['baseball', 'football']#,'hockey', 'basketball] # big markets to stay subtle
-valid_leagues = ['mlb']#, 'nfl'] 9/5, 10/8, 10/22
+valid_leagues = ['mlb', 'nfl', 'ncaaf'] # 10/8, 10/22
+
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
+
 monitor_ev = True
-
-stop_record = False
-
 
 
 # def record_screen():
