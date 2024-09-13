@@ -16,7 +16,19 @@ def convert_name_to_standard_format(name):
 
     return name
 
+# remove extra letters from name, such as the 'u' in 'pittsburgh u'
+def convert_bet_line_to_standard_format(listed_line):
+
+    # universal rule for university sports
+    bet_line = re.sub(' u$', '', listed_line)
+    bet_line = re.sub(' u ', ' ', listed_line)
+
+    return bet_line
+
 def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
+
+    # universal rule for university sports
+    bet_line = re.sub('university of | university', '', bet_line)
 
     # abbrev player name
     solo_sports = ['boxing', 'mma', 'tennis']

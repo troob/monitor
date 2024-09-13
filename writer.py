@@ -34,7 +34,6 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 
-
 # if ev, just close 1 window
 # if arb side 1, just close 1 window
 # if arb side 2, close both windows
@@ -716,7 +715,9 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 #     print('Error: No Place Bet Button!')
 
                 # wait to finish loading
+                # either close receipt btn or alert msg
                 loading = True
+                placed_bet = False
                 while loading:
 
                     # close receipt
@@ -735,11 +736,6 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                         print('Closed Receipt')
                         time.sleep(3)
 
-                        # test wait
-                        #time.sleep(100)
-
-                        
-
                         # Go to my bets to confirm
                         my_bets_btn = driver.find_element('class name', 'myBetsTab')
                         my_bets_btn.click()
@@ -751,8 +747,15 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                         print('Clicked Open Bets')
                         time.sleep(3)
 
+                        placed_bet = True
+                        print('Placed Bet')
+
                     except:
-                        print('\nBet Error\n')
+                        print('Loading placed bet to find limit...')
+
+
+                    try:
+                        #print('\nBet Error\n')
                         #place_bet = False
 
                         # if test:
@@ -774,40 +777,40 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             #try:
                             # class name: place-button-message
                             btn_msg = driver.find_element('class name', 'place-button-message').get_attribute('innerHTML').lower() # Wager too high
-                            print('btn_msg: ' + btn_msg)
+                            print('\nUNKNOWN ERROR: btn_msg: ' + btn_msg + '\n')
 
-                    # except:
-                    #     print('Unknown Error while placing bet')
+                        loading = False
+                        print('Done Loading')
+
+                    except:
+                        print('Loading placed bet to find limit...')
 
 
-                        # For EV, place at limit
-                        if not test and place_bet:
-                            place_bet_btn = driver.find_element('class name', 'place-button')
-                            print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
-                            place_bet_btn.click()
-                            time.sleep(3)
-                            print('Placed Bet')
+            if not placed_bet:
 
-                            # NEED to Handle Odds Change on subsequent attempts
-                            # loop while odds in range and not yet placed
-                            # but for EV if odds change then skip
-                            try:
-                                close_receipt_btn = driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-                                print('Done Loading')
-                                close_receipt_btn.click()
-                                # DEMO:
-                                time.sleep(1)
-                                #time.sleep(1) # Wait for bet to fully load and submit before moving on
-                                print('Closed Receipt')
-                            except:
-                                print('\nBet Failed\n')
-                                print('Odds Change or Other Error???')
+                # For EV, place at limit
+                if not test and place_bet:
+                    place_bet_btn = driver.find_element('class name', 'place-button')
+                    print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
+                    place_bet_btn.click()
+                    time.sleep(3)
+                    print('Placed Bet')
 
-                                # handle session timeout
-                                # read bottom msg below button or wager field???
-                                print('\nHandle Session Timeout\n')
-                                time.sleep(100)
-
+                    # NEED to Handle Odds Change on subsequent attempts
+                    # loop while odds in range and not yet placed
+                    # but for EV if odds change then skip
+                    loading = True
+                    while loading:
+                        # if done loading, will find either receipt or alert
+                        try:
+                            close_receipt_btn = driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
+                            loading = False
+                            print('Done Loading')
+                            close_receipt_btn.click()
+                            # DEMO:
+                            time.sleep(1)
+                            #time.sleep(1) # Wait for bet to fully load and submit before moving on
+                            print('Closed Receipt')
 
                             my_bets_btn = driver.find_element('class name', 'myBetsTab')
                             my_bets_btn.click()
@@ -819,9 +822,36 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             print('Clicked Open Bets')
                             time.sleep(3)
 
-                            # break loading loop even if bet failed
+                        except:
+                            print('Loading final placed bet...')
+                            # print('\nBet Failed\n')
+                            # print('Odds Change or Other Error???')
+
+                            # # handle session timeout
+                            # # read bottom msg below button or wager field???
+                            # print('\nHandle Session Timeout\n')
+                            # time.sleep(100)
+
+                        # if no receipt yet, check if alert msg
+                        try:
+                            alert_msg = driver.find_element('class name', 'alert-content__message').get_attribute('innerHTML').lower() # Wager too high
+                            print('alert_msg: ' + alert_msg)
                             loading = False
                             print('Done Loading')
+
+                            print('\nBet Failed\n')
+                            print('Odds Change or Other Error???')
+
+                            # handle session timeout
+                            # read bottom msg below button or wager field???
+                            print('\nHandle Session Timeout\n')
+                            time.sleep(100)
+                        except:
+                            print('Loading final placed bet...')
+
+
+                    
+                
 
 
                 
@@ -1196,10 +1226,9 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 # just like place bet but only up to getting limit
 # remove the final place bet click
 # starts with window already open from reading actual odds
-def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type, test, side_num):
+def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, test, side_num):
     print('\n===Find Bet Limit===\n')
     print('Input: bet_dict = {...} = ' + str(bet_dict))
-    print('Input: final_outcome = ' + str(final_outcome))
     print('\nOutput: bet_limit = float\n')
 
     bet_limit = 0
@@ -1212,12 +1241,14 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
         odds_key = 'odds' + str(side_num)
         link_key = 'link' + str(side_num)
         size_key = 'size' + str(side_num)
+        outcome_key = 'outcome' + str(side_num)
 
         bet_dict['bet'] = bet_dict[bet_key]
         bet_dict['source'] = bet_dict[source_key]
         bet_dict['odds'] = bet_dict[odds_key]
         bet_dict['link'] = bet_dict[link_key]
         bet_dict['size'] = bet_dict[size_key]
+        bet_dict['outcome'] = bet_dict[outcome_key]
 
     website_name = bet_dict['source']
     print('website_name = ' + website_name)
@@ -1225,7 +1256,7 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
 
     # continue if no bet
     # should not reach this point bc actual odds would also be none
-    if final_outcome is None:
+    if bet_dict['outcome'] is None:
         print('final_outcome none, Close Bet Window\n')
         driver.close()
         driver.switch_to.window(driver.window_handles[0])
@@ -1395,13 +1426,26 @@ def find_bet_limit(bet_dict, driver, final_outcome, cookies_file, saved_cookies,
     return bet_limit
 
 
-def place_bets_simultaneously(driver, bet1_size, bet2_size, wager_field1, wager_field2, place_btn1, place_btn2):
+def place_bets_simultaneously(driver, arb):
     print('\n===Place Bets Simultaneously===\n')
+    print('Input: arb = {...} = ' + str(arb) + '\n')
 
-def place_arb_bets(arb, driver, final_outcomes, cookies_file, saved_cookies, pick_type, test):
+    # enter bet 1
+    # click bet 1
+    # confirm placed bet 1
+
+    # enter bet 2
+    # click bet 2
+    # confirm placed bet 2 
+
+    print('\nPlaced Bets Simultaneously\n')
+
+
+# input adjustable arb deepcopy of init arb
+# so it can be updated without affecting init log
+def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     print('\n===Place Arb Bets===\n')
-    print('Input: arb = {...} = ' + str(arb))
-    print('Input: final_outcomes = ' + str(final_outcomes))
+    print('Input: arb = {...} = ' + str(arb) + '\n')
 
     # bet1
     # bet_dict = {'market':arb['market'], 
@@ -1416,39 +1460,49 @@ def place_arb_bets(arb, driver, final_outcomes, cookies_file, saved_cookies, pic
 	# 			'game date':'Sat Sep 21 2024',
 	# 			'link':'https://sports.ny.betmgm.com/en/sports/events/16058791?options=16058791-1139065602--1022063921'}
 	
+    # does dict need deepcopy? Yes
+    # update new arb with new data 
+    # but keep init arb raw to compare to new arbs
+    # to make sure no duplicates
+    # already saved in monitor after read actual odds
+    # bc added actual odds
+    #arb_bets = copy.deepcopy(arb)
+
     # go up to finding limit
     # and then go to other side to get limit
     # we need to get wager field and place btn to find limit
     # so save them here and pass them to place bet fcn
     # so we do not need to get them twice
     # BUT does driver.find_element actually take more time than retrieving from memory? probably
-    # bet_limit_data = find_bet_limit(arb, driver, final_outcomes[0], cookies_file, saved_cookies, pick_type, test, side_num=1)
-    # arb['limit1'] = bet_limit_data[0]
-    # arb['payout1'] = bet_limit_data[1]
-    # arb['wager field1'] = bet_limit_data[2]
-    # arb['place btn1'] = bet_limit_data[3]
+    bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num=1)
+    arb['limit1'] = bet_limit_data[0]
+    arb['payout1'] = bet_limit_data[1]
+    arb['wager field1'] = bet_limit_data[2]
+    arb['place btn1'] = bet_limit_data[3]
 
-    # # at this point we checked actual odds 
-    # # but now that we logged in and found limit, odds may have changed
+    # at this point we checked actual odds 
+    # but now that we logged in and found limit, odds may have changed
 
-    # bet_limit_data = find_bet_limit(arb, driver, final_outcomes[1], cookies_file, saved_cookies, pick_type, test, side_num=2)
-    # arb['limit2'] = bet_limit_data[0]
-    # arb['payout2'] = bet_limit_data[1]
-    # arb['wager field2'] = bet_limit_data[2]
-    # arb['place btn2'] = bet_limit_data[3]
+    bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num=2)
+    arb['limit2'] = bet_limit_data[0]
+    arb['payout2'] = bet_limit_data[1]
+    arb['wager field2'] = bet_limit_data[2]
+    arb['place btn2'] = bet_limit_data[3]
 
-    # bet1_size, bet2_size = determiner.determine_arb_bet_sizes(arb)
+    bet1_size, bet2_size = determiner.determine_arb_bet_sizes(arb)
     
-    # arb['size1'] = bet1_size
-    # arb['size2'] = bet2_size
+    arb['size1'] = bet1_size
+    arb['size2'] = bet2_size
 
-    # # write in and place bets
-    # place_bets_simultaneously(driver, arb)
+    # write in and place bets
+    place_bets_simultaneously(driver, arb)
 
 
 
     print('Done Placing Both Bets Auto Arb, so close windows')
     close_bet_windows(driver, side_num=2)
+
+    #print('arb: ' + str(arb))
     
 
 # write 1 arb in post

@@ -13,6 +13,9 @@ import cv2 # computer vision, screen record
 from multiprocessing import Process # run while recording
 import numpy as np # convert img to array
 
+import copy # need to save init raw dict so no duplicates
+
+
 # TEST
 test = False
 
@@ -331,6 +334,10 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		# 2. diff game and market
 		# if no init arb data, then first loop so we eval all arbs
 		# init_arb_data is None or ()
+		# may update arb dict with found limit and related data
+		# after init read so make new var so we can easily check if repeat
+		# raw arb row must match init arb
+		# so make copy to add limit and related data
 		if arb_row in init_arbs.values():# and arb_row not in prev_arb_data:
 			continue
 
@@ -365,6 +372,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		bet1_dict = {}
 		bet2_dict = {}
 
+		arb = copy.deepcopy(arb_row)
+
 		# === If Treat As EV ===
 		treat_ev = False
 		# if valid home run ev arb
@@ -376,11 +385,11 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 			# final outcome is bet btn if not already in betslip
 			# bc no need to click if mismatched odds
-			bet1_dict = arb_row
-			bet1_dict['bet'] = arb_row['bet1']
-			bet1_dict['odds'] = arb_row['odds1']
-			bet1_dict['source'] = arb_row['source1']
-			bet1_dict['link'] = arb_row['link1']
+			bet1_dict = arb
+			bet1_dict['bet'] = arb['bet1']
+			bet1_dict['odds'] = arb['odds1']
+			bet1_dict['source'] = arb['source1']
+			bet1_dict['link'] = arb['link1']
 			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
 			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type='ev')
@@ -404,11 +413,11 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# check first side to make sure odds still valid arb
 			if arb_source1 in enabled_sources:
 				print('\nAuto Check Side 1 Odds\n')
-				bet1_dict = arb_row
-				bet1_dict['bet'] = arb_row['bet1']
-				bet1_dict['odds'] = arb_row['odds1']
-				bet1_dict['source'] = arb_row['source1']
-				bet1_dict['link'] = arb_row['link1']
+				bet1_dict = arb
+				bet1_dict['bet'] = arb['bet1']
+				bet1_dict['odds'] = arb['odds1']
+				bet1_dict['source'] = arb['source1']
+				bet1_dict['link'] = arb['link1']
 				bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
 
 				# side num defines placement of window
@@ -417,8 +426,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				actual_odds1 = actual_odds_data[0]
 				final_outcome1 = actual_odds_data[1]
 
-				arb_row['actual odds1'] = actual_odds1
-				arb_row['final outcome1'] = final_outcome1
+				arb['actual odds1'] = actual_odds1
+				arb['outcome1'] = final_outcome1
 
 				# if actual odds 1 = none then no need to check side 2
 				if actual_odds1 is None:
@@ -428,17 +437,20 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# need to check second side to make sure invalid
 			if arb_source2 in enabled_sources:
 				print('\nAuto Check Side 2 Odds\n')
-				bet2_dict = arb_row
-				bet2_dict['bet'] = arb_row['bet2']
-				bet2_dict['odds'] = arb_row['odds2']
-				bet2_dict['source'] = arb_row['source2']
-				bet2_dict['link'] = arb_row['link2']
+				bet2_dict = arb
+				bet2_dict['bet'] = arb['bet2']
+				bet2_dict['odds'] = arb['odds2']
+				bet2_dict['source'] = arb['source2']
+				bet2_dict['link'] = arb['link2']
 				bet2_dict['size'] = determiner.determine_source_limit(bet2_dict['source'])
 
 				# actual_odds2, final_outcome2, cookies_file, saved_cookies
 				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type, side_num=2)
 				actual_odds2 = actual_odds_data[0]
 				final_outcome2 = actual_odds_data[1]
+
+				arb['actual odds2'] = actual_odds2
+				arb['outcome2'] = final_outcome2
 
 				# if actual odds 2 = none then invalid so continue
 				if actual_odds2 is None:
@@ -499,7 +511,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 		# notify before placing bet so other devices can start placing bets
 		# format string to post
-		writer.write_arb_to_post(arb_row, client, True)
+		# pass updated arb to post all data
+		writer.write_arb_to_post(arb, client, True)
 
 
 		# === Place Bet === 
@@ -519,7 +532,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 			# 1. both sides auto
 			if actual_odds1 != '' and actual_odds2 != '':
-				writer.place_arb_bets(arb_row, driver, final_outcomes, cookies_file, saved_cookies, pick_type, test)
+				writer.place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test)
 
 			# 2. neither side auto, pass
 
@@ -889,6 +902,8 @@ def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 						arb_idx = len(all_arbs)
 
 						for arb in arb_data:
+							# if determine new arb matches old arb
+							# no need to rewrite
 							if arb in all_arbs.values():
 								#sprint('Found saved arb')
 								continue

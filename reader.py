@@ -1234,7 +1234,14 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 			for listed_bet in listed_bets:
 				# Under 1.5
 				listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container').find_element('tag name', 'span').get_attribute('innerHTML').lower()
-				print('\nlisted_line: ' + listed_line)
+				print('\ninit listed_line: ' + listed_line)
+
+				# convert listed line to standard format 
+				# bc cannot always convert standard input to source format
+				# if extra letters such as
+				# pittsburgh u +0.5 -> pittsburgh +0.5
+				listed_line = converter.convert_bet_line_to_standard_format(listed_line)
+				print('listed_line: ' + listed_line)
 
 				#  Masyn Winn (STL): Hits 
 				listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
@@ -1601,7 +1608,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 					actual_odds = None # invalid indicator
 
 				writer.close_bet_windows(driver, side_num)
-				
+
 			else:
 				# continue to place bet
 				# First notify users before placing bet
