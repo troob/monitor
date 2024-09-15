@@ -426,12 +426,14 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				actual_odds1 = actual_odds_data[0]
 				final_outcome1 = actual_odds_data[1]
 
-				arb['actual odds1'] = actual_odds1
-				arb['outcome1'] = final_outcome1
+				
 
 				# if actual odds 1 = none then no need to check side 2
 				if actual_odds1 is None:
 					continue
+
+			arb['actual odds1'] = actual_odds1
+			arb['outcome1'] = final_outcome1
 
 			# even if first side changed, 
 			# need to check second side to make sure invalid
@@ -449,12 +451,14 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				actual_odds2 = actual_odds_data[0]
 				final_outcome2 = actual_odds_data[1]
 
-				arb['actual odds2'] = actual_odds2
-				arb['outcome2'] = final_outcome2
+				
 
 				# if actual odds 2 = none then invalid so continue
 				if actual_odds2 is None:
 					continue
+
+			arb['actual odds2'] = actual_odds2
+			arb['outcome2'] = final_outcome2
 
 			final_outcomes = (final_outcome1, final_outcome2)
 			print('final_outcomes: ' + str(final_outcomes))
@@ -469,7 +473,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# bc if actual odds on auto side changed to be invalid with assumed odds other side
 			# then usually confirms invalid arb
 			# bc manual assumed side is unlikely to change in favor
-			if not determiner.determine_valid_arb_odds(actual_odds1, actual_odds2):
+			if not determiner.determine_valid_arb_odds(arb):
 				print('Arb Odds Changed to Invalid: ' + actual_odds1 + ', ' + actual_odds2)
 				print('\nClose Both Arb Windows\n')
 				# close last window, either idx 2 or 3

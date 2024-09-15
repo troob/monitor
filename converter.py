@@ -10,9 +10,12 @@ import math
 
 def convert_name_to_standard_format(name):
 
-    name = re.sub(' jr\.?| ii+', '', name)
+    name = re.sub(' jr\.?| ii+| \(.+\)|amp;', '', name)
     name = re.sub('á', 'a', name)
-    name = re.sub('é', 'e', name)
+    name = re.sub('é|ê', 'e', name)
+    name = re.sub('ó', 'o', name)
+    name = re.sub('ú', 'u', name)
+    
 
     return name
 
@@ -20,8 +23,11 @@ def convert_name_to_standard_format(name):
 def convert_bet_line_to_standard_format(listed_line):
 
     # universal rule for university sports
+    # either university of x or x university
     bet_line = re.sub(' u$', '', listed_line)
-    bet_line = re.sub(' u ', ' ', listed_line)
+    bet_line = re.sub(' u ', ' ', bet_line)
+
+    bet_line = convert_name_to_standard_format(bet_line)
 
     return bet_line
 
@@ -391,6 +397,7 @@ def convert_market_to_team_name(market, league, sport):
 
     # only convert team name format if usa league
     source_team_name = re.sub('\stotal', '', market)
+    source_team_name = convert_name_to_standard_format(source_team_name)
 
     usa_leagues = ['mlb', 'nba', 'nfl', 'wnba', 'nhl']
 
