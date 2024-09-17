@@ -534,6 +534,10 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# -If present, then wait for cmd to continue
 			# -If absent, then continue
 
+			# if able to manually place other side
+			# keep open until manual cmd given
+			# if auto only, then notify manual picks and continue
+
 			# 1. both sides auto
 			if actual_odds1 != '' and actual_odds2 != '':
 				writer.place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test)
@@ -550,15 +554,46 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# so no need to find limit
 			elif determiner.determine_half_auto(actual_odds1, actual_odds2) and manual_arbs:
 				# find limit
-				print('Find Auto Side Limit')
+				print('\nHalf Auto. Find Auto Side Limit\n')
+				
+				# side num is always 1? 
+				# no bc we can tell num windows separately
+				# how to tell which side to put in arb dict here?
+				# based on actual odds
+				side_num = 1
+				if actual_odds1 == '':
+					side_num = 2
+				print('side_num: ' + str(side_num))
+				bet_limit_data = writer.find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num)
+				# limit = bet_limit_data[0]
+				# payout = bet_limit_data[1]
+				# print('limit: ' + str(limit))
+				# print('payout: ' + str(payout))
+
+				# do not need to update arb bc the rest is manual?
+				# still need to calc bet sizes and print
+				limit_key = 'limit' + str(side_num)
+				payout_key = 'payout' + str(side_num)
+				# wager_field_key = 'wager field' + str(side_num)
+				# place_btn_key = 'place btn' + str(side_num)
+				arb[limit_key] = bet_limit_data[0]
+				arb[payout_key] = bet_limit_data[1]
+				# arb[wager_field_key] = bet_limit_data[2]
+				# arb[place_btn_key] = bet_limit_data[3]
+
+				# Just print so we can enter manually
+				determiner.determine_arb_bet_sizes(arb)
 				
 
-				# if able to manually place other side
-				# keep open until manual cmd given
+				# wait for user input to continue
+				# before closing window and moving on
+				# if i switched driver control to main window
+				# can i manually close bet window without program crashing?
+				# maybe but problem is we cannot have multiple windows of same source open at same time
+				# so until queue made, need to wait
+				input("\nPress Enter to continue...\n")
 
-				# if auto only, then notify manual picks and continue
-
-				print('Done Half Auto Arb')
+				print('\nDone Half Auto Arb\n')
 				# give control to main window 
 				# while waiting for user input to continue
 				#driver.switch_to.window(driver.window_handles[0])
@@ -1036,6 +1071,42 @@ def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 if __name__ == "__main__":
 	# === TEST ===
 	test = False
+	# Fully Auto
+	test_arb = {'market':'Moneyline', 
+				'bet1':'Yoelvis Gomez', 
+				'bet2':'Yoelvis Gomez', 
+				'odds1':'-2000', 
+				'odds2':'+2222', 
+				'game':'Yoelvis Gomez',
+				'sport':'football',
+				'source1':'betmgm',
+				'source2':'betrivers',
+				'league':'nfl',
+				'value':'5.0',
+				'size1':'$3.00',
+				'size2':'$3.00',
+				'game date':'Thu Sep 16 2024',
+				'link1':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417',
+				'link2':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417'}
+	
+	# Half Auto
+	# test_arb = {'market':'Moneyline', 
+	# 			'bet1':'Yoelvis Gomez', 
+	# 			'bet2':'Yoelvis Gomez', 
+	# 			'odds1':'-2000', 
+	# 			'odds2':'+2222', 
+	# 			'game':'Yoelvis Gomez',
+	# 			'sport':'football',
+	# 			'source1':'betmgm',
+	# 			'source2':'draftkings',
+	# 			'league':'nfl',
+	# 			'value':'5.0',
+	# 			'size1':'$3.00',
+	# 			'size2':'$3.00',
+	# 			'game date':'Thu Sep 16 2024',
+	# 			'link1':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417',
+	# 			'link2':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417'}
+	
 	test_ev = {'market':'Moneyline', 
 				'bet':'Yoelvis Gomez', 
 				'odds':'-2000', 

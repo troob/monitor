@@ -42,17 +42,20 @@ def close_bet_windows(driver, side_num=1):
     print('\n===Close Bet Windows===\n')
     print('side_num: ' + str(side_num) + '\n')
 
+    windows = driver.window_handles
+    num_windows = len(windows)
+
     # close window 1 or 2
     driver.close()
 
     # if side 2, both windows open
     # so also close side 1 window
-    if side_num == 2 and len(driver.window_handles) > 2:
-        driver.switch_to.window(driver.window_handles[2])
+    if side_num == 2 and num_windows > 2:
+        driver.switch_to.window(windows[2])
         driver.close()
     
     # send back to main window
-    driver.switch_to.window(driver.window_handles[0])
+    driver.switch_to.window(windows[0])
 
 
 
@@ -812,28 +815,30 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                                         print('\nUNKNOWN ERROR: btn_msg: ' + btn_msg + '\n')
                                     except:
                                         print('No Button Message')
+
+                                        # check for error alert dialog popup
+                                        # class geo-comply-error-validation-container
+                                        # class ds-button
+                                        try:
+                                            error_dialog = driver.find_element('class name', 'geo-comply-error-validation-container').get_attribute('innerHTML')
+                                            print('error_dialog: ' + error_dialog)
+                                            close_dialog_btn = driver.find_element('class name', 'ds-button')
+                                            loading = False
+                                            print('Done Loading')
+                                            close_dialog_btn.click()
+                                            time.sleep(1)
+                                            print('Closed Error Dialog')
+                                            # replace bet to find limit
+                                            # loops back around bc attempted bet still false
+                                        except:
+                                            print('No Error Yet. Loading placed bet to find limit...')
                                 
                             except KeyboardInterrupt:
                                 loading = False
                             except:
                                 print('No Alert Yet. Loading placed bet to find limit...')
 
-                                # check for error alert dialog popup
-                                # class geo-comply-error-validation-container
-                                # class ds-button
-                                try:
-                                    error_dialog = driver.find_element('class name', 'geo-comply-error-validation-container').get_attribute('innerHTML')
-                                    print('error_dialog: ' + error_dialog)
-                                    close_dialog_btn = driver.find_element('class name', 'ds-button')
-                                    loading = False
-                                    print('Done Loading')
-                                    close_dialog_btn.click()
-                                    time.sleep(1)
-                                    print('Closed Error Dialog')
-                                    # replace bet to find limit
-                                    # loops back around bc attempted bet still false
-                                except:
-                                    print('No Error Yet. Loading placed bet to find limit...')
+                                
                         
             # intended bet size may be below limit
             # so returned placed bet without finding limit
@@ -1022,7 +1027,9 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             # === Find Limit === 
             # If EV, start with given wager size
             # If Arb, find limits on both sides
-            bet_size = 0
+            
+            # Determine Pick Type Limit
+            #bet_size = determiner.determine_pick_type_limit(bet_dict, test)
             if not test and pick_type == 'ev':
                 bet_size = converter.round_half_up(float(re.sub('\$','',bet_dict['size'])))
             else: # if test or arb
@@ -1031,11 +1038,11 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 # depends on source and market
                 # for betrivers, $300 is max 
                 # so if less than 300 available then need to set limits diff by market
-                max_bet = 0
-                if website_name == 'betrivers':
-                    max_bet = 400
+                bet_size = determiner.determine_source_limit(website_name)
+                # if website_name == 'betrivers':
+                #     max_bet = 400
 
-                bet_size = max_bet #bet_dict['size']
+                # bet_size = max_bet #bet_dict['size']
 
             #submit_wager(bet_size, website_name)
             # the field uses a changing id so get container 
@@ -1061,13 +1068,20 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             #try:
             #if not test:
             # Need to click twice or just wait longer???
-            place_bet_btn.click()
-            time.sleep(1) # need wait for bet to fully load and submit before moving on
-            place_bet_btn.click()
-            time.sleep(1)
-            print('Clicked bet twice')
-            print('Placed Bet')
-            time.sleep(1) 
+            #place_btn_clicked = False
+            while True: #not place_btn_clicked:
+                try:
+                    place_bet_btn.click()
+                    time.sleep(1) # need wait for bet to fully load and submit before moving on
+                    place_bet_btn.click()
+                    time.sleep(1)
+                    print('Clicked bet twice')
+                    print('Placed Bet')
+                    time.sleep(1) 
+                    break
+                except:
+                    print('Failed to click Place Bet Button. Retry.')
+                    time.sleep(1)
 
             # If no receipt
             # Wager too higher, OR
@@ -1300,12 +1314,25 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 # just like place bet but only up to getting limit
 # remove the final place bet click
 # starts with window already open from reading actual odds
+# side num and num windows tells us which window to go to
+# side num refers to side of arb 1 or 2
 def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, test, side_num):
     print('\n===Find Bet Limit===\n')
     print('Input: bet_dict = {...} = ' + str(bet_dict))
+    print('Input: side_num: ' + str(side_num))
     print('\nOutput: bet_limit = float\n')
 
-    bet_limit = 0
+    bet_limit = payout = 0
+
+    num_windows = len(driver.window_handles)
+    print('num_windows: ' + str(num_windows))
+
+    # change to side window
+    if side_num == 2 and num_windows > 3:
+        driver.switch_to.window(driver.window_handles[3])
+    else:
+        driver.switch_to.window(driver.window_handles[2])
+
 
     # if bet dict has bet1/bet2 then we know arb
     # so set single bet vals in dict
@@ -1329,6 +1356,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     url = bet_dict['link']
 
     final_outcome = bet_dict['outcome']
+    print('final_outcome = ' + str(final_outcome.get_attribute('outerHTML')))
 
     # continue if no bet
     # should not reach this point bc actual odds would also be none
@@ -1387,7 +1415,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             # until we know limit on other side
             # so use remaining funds as limit on this side
             remaining_funds = reader.read_remaining_funds(driver, website_name)
-            return remaining_funds
+            return remaining_funds, payout, wager_field, place_bet_btn
 
 
         place_bet_btn.click()
@@ -1414,7 +1442,13 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                 print('Loading placed bet to find limit...')
                 time.sleep(1)
 
-        bet_limit = wager_field.get_attribute('value') # or getText()
+        bet_limit = wager_field.get_attribute('value').split('$')[1] # or getText()
+        print('bet_limit: ' + bet_limit)
+
+        # $100.00 -> 100.00
+        # class betslip-summary-row--winnings
+        payout = driver.find_element('class name', 'betslip-summary-row--winnings').find_element('class name', 'betslip-summary-value').get_attribute('innerHTML').split('$')[1]
+        print('payout: ' + payout)
 
     elif website_name == 'betrivers':
         
@@ -1459,14 +1493,18 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
         #print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
             
-        # Need to click twice for this website
-        place_bet_btn.click()
-        time.sleep(1) # need wait for bet to fully load and submit before moving on
-        place_bet_btn.click()
-        time.sleep(1)
-        print('Clicked bet twice')
-        print('Placed Bet')
-        time.sleep(1) 
+        while True: #not place_btn_clicked:
+            try:
+                # Need to click twice for this website
+                place_bet_btn.click()
+                time.sleep(1) # need wait for bet to fully load and submit before moving on
+                place_bet_btn.click()
+                time.sleep(1)
+                print('Placed Bet to find limit')
+                break
+            except:
+                print('Failed to click Place Bet Button. Retry.')
+                time.sleep(1)
 
         # wait to finish loading
         loading = True
@@ -1481,25 +1519,56 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                 if error_title == 'not enough money':
                     print('Not enough money')
                     remaining_funds = reader.read_remaining_funds(driver, website_name)
-                    return remaining_funds
+                    return remaining_funds, payout, wager_field, place_bet_btn
+                elif error_title == 'bet offer suspended':
+                    # close window and move on
+                    close_bet_windows(driver, side_num)
+                    return bet_limit, payout, wager_field, place_bet_btn
 
                 # Sorry, the maximum allowed wager is $4.01.
-                error_msg = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__paragraph').get_attribute('innerHTML').lower() 
+                # sorry, the maximum allowed wager is <span data-prop="0"><span class="mod-kambibc-betslip-feedback__currency">$25.87</span></span>.
+                error_element = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__paragraph')
+                error_msg = error_element.get_attribute('innerHTML').lower() 
                 print('error_msg: ' + error_msg)
 
             except:
                 print('Loading placed bet to find limit...')
                 time.sleep(1)
 
-        bet_limit = error_msg.split('$')[1][:-2]
+        # $100.00 -> 100.00
+        # mod-kambibc-betslip-feedback__currency
+        # error finding element so reinspect or just split from error msg
+        #feedback_currency = driver.find_element('class name', 'mod-kambibc-betslip-feedback__currency').get_attribute('innerHTML')
+        #feedback_currency = error_msg.split('</span></span>')[0]
+        #print('feedback_currency: ' + feedback_currency)
+        #[:-1] # remove final period not needed bc span has only money
+        bet_limit = error_msg.split('$')[1].split('<')[0]
+        print('bet_limit: ' + bet_limit)
+        
+        # click back btn to see payout
+        back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
+        print('back_btn: ' + back_btn.get_attribute('innerHTML'))
+        back_btn.click()
+        time.sleep(1)
+        print('Clicked Back Btn to see payout')
 
+        payout = driver.find_element('class name', 'mod-KambiBC-js-betslip-summary__potential-payout-value').get_attribute('innerHTML').split('$')[1]
+        print('payout: ' + str(payout))
 
         
     # Do not close window after finding limit
     
     bet_limit = float(bet_limit)
+    payout = float(payout)
     print('bet_limit: ' + str(bet_limit))
-    return bet_limit
+    print('payout: ' + str(payout))
+
+    # if bet limit 0, close and move on bc no use
+    if bet_limit == 0:
+        print('\nWarning: Bet Limit 0\n')
+        close_bet_windows(driver, side_num)
+
+    return bet_limit, payout, wager_field, place_bet_btn
 
 
 def place_bets_simultaneously(driver, arb):
@@ -1596,14 +1665,32 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     # so save them here and pass them to place bet fcn
     # so we do not need to get them twice
     # BUT does driver.find_element actually take more time than retrieving from memory? probably
-    bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num=1)
-    arb['limit1'] = bet_limit_data[0]
+    side_num = 1
+    bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num)
+    bet_limit1 = bet_limit_data[0]
+    arb['limit1'] = bet_limit1
     arb['payout1'] = bet_limit_data[1]
     arb['wager field1'] = bet_limit_data[2]
     arb['place btn1'] = bet_limit_data[3]
 
     # at this point we checked actual odds 
     # but now that we logged in and found limit, odds may have changed
+    # so do we want to immediately close or leave open in case it changes back???
+    
+    # if bet still available, but odds changed
+    # need to compare with other side recently read odds
+    # before determining if we want to find bet 2 limit
+    #updated_odds1, arb['actual odds2']
+    #arb['updated odds1'] = bet_limit_data[4]
+    # determine_valid_arb_odds(arb)
+
+
+    # if bet suspended, will return 0
+    # for now just close and move on
+    # window already closed in find bet limit fcn
+    if bet_limit1 == 0:
+        return 
+    
 
     bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num=2)
     arb['limit2'] = bet_limit_data[0]
@@ -1717,7 +1804,7 @@ def write_arb_to_post(arb, client, post=False):
     # so we can see market at the top and decide if we can take the bet or if limited or suspicious
     player = ''
     if re.search('-', market):
-        market_data = market.split('-')
+        market_data = market.split(' - ')
         player = market_data[0].strip()
         market = market_data[1].strip()
     #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
@@ -2060,7 +2147,7 @@ def write_ev_to_post(ev, client, post=False):
     player = ''
     # need space bt dash so not compound name
     if re.search(' - ', market):
-        market_data = market.split('-')
+        market_data = market.split(' - ')
         player = market_data[0].strip()
         market = market_data[1].strip()
     #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
@@ -2205,7 +2292,7 @@ def write_evs_to_post(evs, client, post=False):
         player = ''
         # need space bt dash so not compound name
         if re.search(' - ', market):
-            market_data = market.split('-')
+            market_data = market.split(' - ')
             player = market_data[0].strip()
             market = market_data[1].strip()
         #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'
@@ -2370,7 +2457,7 @@ def write_arbs_to_post(arbs, client, post=False):
         # so we can see market at the top and decide if we can take the bet or if limited or suspicious
         player = ''
         if re.search('-', market):
-            market_data = market.split('-')
+            market_data = market.split(' - ')
             player = market_data[0].strip()
             market = market_data[1].strip()
         #props_str += '\nBETS: ' + bet1 + ' ' + odds1 + ', ' + bet2 + ' ' + odds2 +'. \n\n'

@@ -1222,6 +1222,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 		straights_section = None
 		loading = True
+		load_retries = 0
 		while loading:
 			try:
 				# straight bet section
@@ -1235,9 +1236,19 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 					listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container')
 				loading = False
 				print('Done Loading listed bets')
+			except KeyboardInterrupt:
+				loading = False
 			except:
+				# if more than 3 times than close window and reopen
+				# bc refresh does not work
+				# closing and reopen does not always work either
+				# so give up and move on after 3 tries
 				print('Loading listed bets...')
 				time.sleep(1)
+				if load_retries == max_retries:
+					loading = False
+					print('Error: Failed to Load listed bets during read actual odds, BetMGM!')
+				load_retries += 1
 
 		
 		# after finding bet in list and reading actual odds
@@ -1466,9 +1477,12 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 						print('Reload Sections')
 						sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
 						print('num sections: ' + str(len(sections)))
+						market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
 						section = sections[section_idx]
 						print('Get Markets in Section')
 						markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+						print('num markets: ' + str(len(markets)))
+						
 
 				# if markets=None, reload sections
 
@@ -1484,8 +1498,9 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 					# moneyline always first if available
 					# but others might shift depending if moneyline or others are NA
 					# so need to search for given offer in subcategory label
-					offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower()
-					offer_label = re.sub('amp;','',offer_label)
+					offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower().strip()
+					#offer_label = re.sub('amp;','',offer_label)
+					offer_label = converter.convert_name_to_standard_format(offer_label)
 					print('\noffer_label: ' + offer_label)
 					print('market_keyword: ' + market_keyword)
 
@@ -5463,7 +5478,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 13') 
+	options.add_argument(r'--profile-directory=Profile 14') 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)
