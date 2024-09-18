@@ -44,7 +44,20 @@ import determiner # determine matching outcome
 # import isolator # isolate_player_game_data to read data from file
 # import writer # write to file so we can check if data exists in local file so we can read from file
 
+import sys, select # user input with timeout
 
+
+# read input with timeout
+# so infinite loop monitor program continues without input
+def input_with_timeout(prompt, timeout):
+	print(prompt, end='', flush=True)
+
+	rlist, _, _ = select.select([sys.stdin], [], [], timeout)
+
+	if rlist:
+		return sys.stdin.readline().strip()
+	else:
+		raise TimeoutError('Timeout reached. No input received.')
 
 def read_remaining_funds(driver, website_name):
 	print('\n===Read Remaining Funds===\n')
@@ -1031,10 +1044,38 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			elif market == 'total':
 				market_title = 'total goals'
 
+			elif re.search('half total', market):
+				section_idx = 1
+
+				# 1st half total -> total goals - 1st half
+				time_part = market.split(' total')[0] # '1st half'
+				market_title = 'total goals - ' + time_part
+
+			elif re.search('half .+ total', market):
+				section_idx = 1
+
+				# 1st half atlas total -> total goals by atlas - 1st half
+				team_name = converter.convert_market_to_team_name(market, league, sport)
+				time_part = market.split(' ' + team_name)[0] # '1st half'
+				market_title = 'total goals by ' + team_name + ' - ' + time_part
+
+			elif re.search('half .+ moneyline', market):
+				section_idx = 1
+
+				# 1st half moneyline 3 way -> half time
+				if re.search('1st', market):
+					market_title = 'half time'
+
+				# 2nd half moneyline 3 way -> 2nd half
+				else:
+					market_title = '2nd half'
+
 			# Team Total
 			elif re.search('\stotal', market):
 				team_name = re.sub('\stotal', '', market)
 				market_title = 'total goals by ' + team_name
+
+			
 
 			
 		else:
@@ -1109,7 +1150,7 @@ def save_cookies(driver, website_name, cookies_file, saved_cookies):
 # -Races
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3):
+def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
 	print('\n===Read Actual Odds===\n')
 	print('Input: bet_dict = ' + str(bet_dict))
 	print('\nOutput: actual_odds = x\n')
@@ -1133,6 +1174,8 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 	#time.sleep(2) # wait to load. sometimes fails at 1 sec
 	#save_cookies(driver, website_name, cookies_file, saved_cookies)
 
+	num_windows = len(driver.window_handles)
+	print('num_windows: ' + str(num_windows))
 	
 	section_idx = 0
 
@@ -1172,6 +1215,9 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 		try:
 			driver.find_element('class name', 'modal-body')#.find_element('tag name', 'button')
 			print('No')
+		except KeyboardInterrupt:
+			print('Exit')
+			exit()
 		except:
 			bet_available = True
 			print('Yes')
@@ -1179,7 +1225,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 		# if bet na, close window
 		if bet_available == False:
 			print('Bet NA')
-			writer.close_bet_windows(driver, side_num)
+			writer.close_bet_windows(driver, side_num, test)
 			return actual_odds, final_outcome, cookies_file, saved_cookies
 		
 		print('\nCheck Betslip')
@@ -1238,6 +1284,8 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 				print('Done Loading listed bets')
 			except KeyboardInterrupt:
 				loading = False
+				print('Exit')
+				exit()
 			except:
 				# if more than 3 times than close window and reopen
 				# bc refresh does not work
@@ -1651,7 +1699,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 				print('actual_odds: ' + str(actual_odds) + '\n')
 				actual_odds = None # invalid indicator
 
-			writer.close_bet_windows(driver, side_num)
+			writer.close_bet_windows(driver, side_num, test)
 
 		else:
 			# continue to place bet
@@ -1665,7 +1713,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 		if actual_odds == None:
 			print('\nNo Bet')
 
-			writer.close_bet_windows(driver, side_num)
+			writer.close_bet_windows(driver, side_num, test)
 
 		else:
 			# continue to place bet

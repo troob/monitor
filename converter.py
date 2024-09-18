@@ -395,8 +395,13 @@ def convert_market_to_team_name(market, league, sport):
     print('\n===Convert Market to Team Name===\n')
     print('Input: market = ' + market)
 
+    # 1st half atlas total
+    if re.search('innings?|halfs?|quarters?', market):
+        market = re.split('innings? |halfs? |quarters? ', market)[1]
+
     # only convert team name format if usa league
-    source_team_name = re.sub('\stotal', '', market)
+    # atlas total
+    source_team_name = re.sub(' total', '', market)
     source_team_name = convert_name_to_standard_format(source_team_name)
 
     usa_leagues = ['mlb', 'nba', 'nfl', 'wnba', 'nhl']
@@ -406,9 +411,9 @@ def convert_market_to_team_name(market, league, sport):
 
     # first x innings kansas city royals total -> kansas city royals
     # first inning kansas city royals total -> kansas city royals
-    if re.search('innings?|halfs?|quarters?', market):
-        #market = market.split('innings ')[1]
-        market = re.split('innings? |halfs? |quarters? ', market)[1]
+    # if re.search('innings?|halfs?|quarters?', market):
+    #     #market = market.split('innings ')[1]
+    #     market = re.split('innings? |halfs? |quarters? ', market)[1]
     # elif re.search('inning|half|quarter', market):
     #     #market = market.split('inning ')[1]
     #     market = re.split('inning |half |quarter ', market)[1]

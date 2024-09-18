@@ -199,7 +199,7 @@ monitor_ev = True
 # input all EVs read this scan
 # output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, test, pick_time_group='prematch', pick_type='ev'):
+def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, manual_picks, test, pick_time_group='prematch', pick_type='ev'):
 	# print('\n===Monitor New EVs===\n')
 	# print('Input: ev_data = [[...],...]')# + str(ev_data))
 	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
@@ -266,7 +266,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 		if ev_source in enabled_sources:
 
 			#actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
+			actual_odds_data = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type, test=test)
 			actual_odds = actual_odds_data[0]
 			final_outcome = actual_odds_data[1]
 
@@ -278,7 +278,8 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 		# only beep once on desktop after first arb so I can respond fast as possible
 		# but send notification after each arb
 		if valid_ev_idx == 0:
-			os.system(say_str)
+			if manual_picks:
+				os.system(say_str)
 			# Also say if still need to check mobile only sources
 			#os.system(say_mobile)
 			print('\n' + str(monitor_idx) + ': Found New EVs')
@@ -308,7 +309,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, manual_arbs=False, test=False, pick_time_group='prematch', pick_type='arb'):
+def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, manual_picks=False, test=False, pick_time_group='prematch', pick_type='arb'):
 	# print('\n===Monitor New Arbs===\n')
 	# print('Input: arb_data = [{...},...]')# + str(arb_data))
 	# print('Input: init_arbs = {0:{...},...}')
@@ -342,6 +343,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			continue
 
 		# all criteria
+		# not test and 
 		if not determiner.determine_valid_pick(arb_row, valid_sports, valid_leagues, limited_sources, new_arb_rules, init_arbs, todays_date, pick_type='arb'):
 			continue
 
@@ -392,7 +394,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			bet1_dict['link'] = arb['link1']
 			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type='ev')
+			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type='ev', test=test)
 			actual_odds1 = actual_odds_data[0]
 			final_outcome1 = actual_odds_data[1]
 
@@ -422,7 +424,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# side num defines placement of window
 				# actual_odds1, final_outcome1, cookies_file, saved_cookies = 
-				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type, side_num=1)
+				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type, side_num=1, test=test)
 				actual_odds1 = actual_odds_data[0]
 				final_outcome1 = actual_odds_data[1]
 
@@ -447,7 +449,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				bet2_dict['size'] = determiner.determine_source_limit(bet2_dict['source'])
 
 				# actual_odds2, final_outcome2, cookies_file, saved_cookies
-				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type, side_num=2)
+				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type, side_num=2, test=test)
 				actual_odds2 = actual_odds_data[0]
 				final_outcome2 = actual_odds_data[1]
 
@@ -473,15 +475,16 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# bc if actual odds on auto side changed to be invalid with assumed odds other side
 			# then usually confirms invalid arb
 			# bc manual assumed side is unlikely to change in favor
-			if not determiner.determine_valid_arb_odds(arb):
+			# allow test arb to test auto fcn
+			if not test and not determiner.determine_valid_arb_odds(arb):
 				print('Arb Odds Changed to Invalid: ' + actual_odds1 + ', ' + actual_odds2)
-				print('\nClose Both Arb Windows\n')
+				print('\nClose Arb Windows\n')
 				# close last window, either idx 2 or 3
 				driver.close()
 				# if both odds auto read, 
 				# also close third window, idx 2
 				if actual_odds1 != '' and actual_odds2 != '':
-					driver.switch_to.window(driver.window_handles[2])
+					driver.switch_to.window(driver.window_handles[-1]) # idx 2 last window
 					driver.close()
 				# relinquish control to monitor window
 				driver.switch_to.window(driver.window_handles[0])
@@ -489,7 +492,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 			
 
-
+		num_windows = len(driver.window_handles)
+		print('num_windows: ' + str(num_windows))
 
 		# if actual odds is set none then we know not valid to place bet
 		if treat_ev and actual_odds1 is None:
@@ -504,7 +508,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		# only beep once on desktop after first arb so I can respond fast as possible
 		# but send notification after each arb
 		if valid_arb_idx == 0:
-			os.system(say_str)
+			if manual_picks:
+				os.system(say_str)
 			print('\n' + str(monitor_idx) + ': Found New Arbs')
 			
 			
@@ -552,52 +557,63 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			# then keep auto window open but switch control to monitor window
 			# if absent, we cannot handle manual part of half auto
 			# so no need to find limit
-			elif determiner.determine_half_auto(actual_odds1, actual_odds2) and manual_arbs:
+			elif determiner.determine_half_auto(actual_odds1, actual_odds2):
 				# find limit
-				print('\nHalf Auto. Find Auto Side Limit\n')
+				print('\nHalf Auto Arb\n')
+
+				if manual_picks:
+
+					print('\nManual Enabled, so Find Auto Side Limit\n')
 				
-				# side num is always 1? 
-				# no bc we can tell num windows separately
-				# how to tell which side to put in arb dict here?
-				# based on actual odds
-				side_num = 1
-				if actual_odds1 == '':
-					side_num = 2
-				print('side_num: ' + str(side_num))
-				bet_limit_data = writer.find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num)
-				# limit = bet_limit_data[0]
-				# payout = bet_limit_data[1]
-				# print('limit: ' + str(limit))
-				# print('payout: ' + str(payout))
+					# side num is always 1? 
+					# no bc we can tell num windows separately
+					# how to tell which side to put in arb dict here?
+					# based on actual odds
+					side_num = 1
+					if actual_odds1 == '':
+						side_num = 2
+					print('side_num: ' + str(side_num))
+					bet_limit_data = writer.find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num)
+					# limit = bet_limit_data[0]
+					# payout = bet_limit_data[1]
+					# print('limit: ' + str(limit))
+					# print('payout: ' + str(payout))
 
-				# do not need to update arb bc the rest is manual?
-				# still need to calc bet sizes and print
-				limit_key = 'limit' + str(side_num)
-				payout_key = 'payout' + str(side_num)
-				# wager_field_key = 'wager field' + str(side_num)
-				# place_btn_key = 'place btn' + str(side_num)
-				arb[limit_key] = bet_limit_data[0]
-				arb[payout_key] = bet_limit_data[1]
-				# arb[wager_field_key] = bet_limit_data[2]
-				# arb[place_btn_key] = bet_limit_data[3]
+					# do not need to update arb bc the rest is manual?
+					# still need to calc bet sizes and print
+					limit_key = 'limit' + str(side_num)
+					payout_key = 'payout' + str(side_num)
+					# wager_field_key = 'wager field' + str(side_num)
+					# place_btn_key = 'place btn' + str(side_num)
+					arb[limit_key] = bet_limit_data[0]
+					arb[payout_key] = bet_limit_data[1]
+					# arb[wager_field_key] = bet_limit_data[2]
+					# arb[place_btn_key] = bet_limit_data[3]
 
-				# Just print so we can enter manually
-				determiner.determine_arb_bet_sizes(arb)
-				
+					# Just print so we can enter manually
+					determiner.determine_arb_bet_sizes(arb)
+					
 
-				# wait for user input to continue
-				# before closing window and moving on
-				# if i switched driver control to main window
-				# can i manually close bet window without program crashing?
-				# maybe but problem is we cannot have multiple windows of same source open at same time
-				# so until queue made, need to wait
-				input("\nPress Enter to continue...\n")
+					# wait for user input to continue
+					# before closing window and moving on
+					# if i switched driver control to main window
+					# can i manually close bet window without program crashing?
+					# maybe but problem is we cannot have multiple windows of same source open at same time
+					# so until queue made, need to wait
+					#input("\nPress Enter to continue...\n")
+					try:
+						reader.input_with_timeout("\nPress Enter to continue...\n", 90)
+						print('You Pressed Enter, so continue')
+					except TimeoutError as e:
+						print('Input Timeout, so turn off manual mode')
+						manual_picks = False
 
 				print('\nDone Half Auto Arb\n')
+				# window still open from reading odds to verify valid
+				# so close window if manual or not bc still want to log valid arb
+				# even tho not able to hit bc not yet fully auto and not able to manually place
 				# give control to main window 
 				# while waiting for user input to continue
-				#driver.switch_to.window(driver.window_handles[0])
-
 				# close window
 				driver.close()
 				# finally, switch back to main window
@@ -757,7 +773,7 @@ def monitor_arb_type(first_live_time, last_pre_time):
 # open website once 
 # and then loop over it 
 # simulate human behavior to avoid getting blocked
-def monitor_website(url, test, test_ev, absent=True, max_retries=3):
+def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}, max_retries=3):
 	print('\n===Monitor Website===\n')
 
 	cur_yr = str(todays_date.year)
@@ -911,6 +927,10 @@ def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 						driver.quit()
 						break
 
+					# === START TEST ===
+					if test:
+						arb_data = [test_arb]
+
 					# if arb_data is None:
 					# 	# exit
 					# 	print('Arb Data None')
@@ -924,7 +944,7 @@ def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 					if arb_data is not None:
 					
 						# monitor either live or pre, not both
-						new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, manual_arbs, test)
+						new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
 						
 						# new_live_arbs = new_arbs[0]
 						# new_prematch_arbs = new_arbs[1]
@@ -954,7 +974,8 @@ def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 						# 	all_arbs[arb_idx] = new_arb
 						# 	arb_idx += 1
 						# save new arbs as json and remove if past
-						writer.write_json_to_file(all_arbs, arbs_file)
+						if not test:
+							writer.write_json_to_file(all_arbs, arbs_file)
 					
 
 					#open_all_arbs_bets(new_arbs)
@@ -990,7 +1011,7 @@ def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 						break
 					if ev_data is not None:
 						#try:
-						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, test)
+						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
 						# except KeyboardInterrupt:
 						# 	print('Stop Monitor EVs')
 						# prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
@@ -1066,29 +1087,36 @@ def monitor_website(url, test, test_ev, absent=True, max_retries=3):
 		# 	retries += 1
 
 
-
-
+# test arbs betmgm-betrivers
+# https://sports.ny.betmgm.com/en/sports/events/16300416?options=16300416-1169780634--941884641
+# https://sports.ny.betmgm.com/en/sports/events/2:6544265?options=2:6544265-167119575-568463757
 if __name__ == "__main__":
 	# === TEST ===
-	test = False
+	
 	# Fully Auto
-	test_arb = {'market':'Moneyline', 
-				'bet1':'Yoelvis Gomez', 
-				'bet2':'Yoelvis Gomez', 
-				'odds1':'-2000', 
-				'odds2':'+2222', 
-				'game':'Yoelvis Gomez',
+	test_arb = {'market':'Total', 
+				'bet1':'U 56.5', 
+				'bet2':'O 56.5', 
+				'odds1':'-350', 
+				'odds2':'+360', 
+				'game':'Houston Texans vs Minnesota Vikings',
 				'sport':'football',
 				'source1':'betmgm',
 				'source2':'betrivers',
 				'league':'nfl',
 				'value':'5.0',
-				'size1':'$3.00',
-				'size2':'$3.00',
-				'game date':'Thu Sep 16 2024',
-				'link1':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417',
-				'link2':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417'}
+				'size1':'$1.00',
+				'size2':'$1.00',
+				'game date':'Thu Sep 17 2024',
+				'link1':'https://sports.ny.betmgm.com/en/sports/events/16300416?options=16300416-1169780634--941884641',
+				'link2':'https://ny.betrivers.com/?page=sportsbook#event/1020832141'}
 	
+	# https://sports.ny.betmgm.com/en/sports/events/2:6539594?options=2:6539594-166576979-566138501
+	# https://ny.betrivers.com/?page=sportsbook#event/1021042593
+
+
+	# https://sports.ny.betmgm.com/en/sports/events/16330200?options=16330200-1169759731--941940777
+
 	# Half Auto
 	# test_arb = {'market':'Moneyline', 
 	# 			'bet1':'Yoelvis Gomez', 
@@ -1172,5 +1200,9 @@ if __name__ == "__main__":
 	# best way is to assume manual arbs true
 	# but as soon as i miss entering continue within 60s timer
 	# then it switches to manual false (auto only)
-	manual_arbs = True # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
-	monitor_website(url, test, test_ev, manual_arbs)
+	# if manual not enabled, then turn off audio notification bc nobody there to hear it
+	# and sometimes want sound off while still running
+	test = True
+	manual_picks = True
+	#manual_arbs = False # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
+	monitor_website(url, manual_picks, test, test_ev, test_arb)

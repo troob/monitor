@@ -38,21 +38,39 @@ from selenium.webdriver.support import expected_conditions as EC
 # if arb side 1, just close 1 window
 # if arb side 2, close both windows
 # then relinquish control back to main monitor window
-def close_bet_windows(driver, side_num=1):
+# test has only 1 monitor window
+def close_bet_windows(driver, side_num=1, test=False):
     print('\n===Close Bet Windows===\n')
     print('side_num: ' + str(side_num) + '\n')
 
+    # get total num windows before closing first window
+    # need to know how many monitor windows to know how many arb windows
+    # so assume 2 monitor windows: 1 auto, 1 manual
     windows = driver.window_handles
     num_windows = len(windows)
+    print('init num_windows: ' + str(num_windows))
 
     # close window 1 or 2
     driver.close()
 
+    print('Closed Last Window')
+    updated_windows = driver.window_handles
+    print('updated num_windows: ' + str(len(updated_windows)))
+
+    num_monitor_windows = 2
+    if test:
+        num_monitor_windows = 1
+    num_full_auto_windows = num_monitor_windows + 2
+    print('num_full_auto_windows: ' + str(num_full_auto_windows))
+    print('init num_windows: ' + str(num_windows))
+
     # if side 2, both windows open
     # so also close side 1 window
-    if side_num == 2 and num_windows > 2:
-        driver.switch_to.window(windows[2])
+    if side_num == 2 and num_windows >= num_full_auto_windows:
+        print('Close Side 1 Window')
+        driver.switch_to.window(updated_windows[-1]) # idx 2 usually but depends on other windows
         driver.close()
+        print('Closed Side 1 Window')
     
     # send back to main window
     driver.switch_to.window(windows[0])
@@ -251,12 +269,30 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
                     print('Loading Login Page...')
                     time.sleep(1)
                 
-            reg_link.click()
-            time.sleep(3)
+            reg_link.click() # goes to signup page
+            time.sleep(1)
 
-            login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
-            login_link.click()
-            time.sleep(3) 
+            # error not found sometimes???
+            # loop until found, but timeout after 60 seconds
+            loading = True
+            while loading:
+                try:
+                    login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
+                    print('Done loading signup page')
+                    loading = False
+                    login_link.click() # goes to login page
+                    time.sleep(1) 
+                except KeyboardInterrupt:
+                    #loading = False
+                    print('Exit')
+                    exit()
+                except:
+                    print('Loading signup page...')
+                    time.sleep(1)
+
+            # path_to_btn = [('class','conversation-textalign'), ('tag','a')]
+            # click_after_load(driver, path_to_btn)
+
 
             usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
             if re.search('ng-untouched', usr_field_html):
@@ -1015,8 +1051,8 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
             # Login after adding to betslip bc then keeps in betslip
             # login first detects if already logged in
-            if not test:
-                login_website(website_name, driver, cookies_file, saved_cookies, url)
+            #if not test:
+            login_website(website_name, driver, cookies_file, saved_cookies, url)
 
             # For Arbs, find limit by placing large bet we know above limit
             # find_bet_limit(website_name, driver)
@@ -1195,7 +1231,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             bet_limit = wager_field.get_attribute('value')
                             if bet_limit == '':
                                 print('Reached Bet Limit')#: ' + str(bet_limit))
-                                close_bet_windows(driver)#, side_num)
+                                close_bet_windows(driver, test=test)#, side_num)
                                 return
 
                     place_bet_btn.click()
@@ -1309,7 +1345,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
     # # always switch bot back to main window so it can click btns  
     # driver.switch_to.window(driver.window_handles[0])
 
-    close_bet_windows(driver)
+    close_bet_windows(driver, test=test)
 
 # just like place bet but only up to getting limit
 # remove the final place bet click
@@ -1318,20 +1354,51 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 # side num refers to side of arb 1 or 2
 def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, test, side_num):
     print('\n===Find Bet Limit===\n')
-    print('Input: bet_dict = {...} = ' + str(bet_dict))
     print('Input: side_num: ' + str(side_num))
+    print('Input: bet_dict = {...} = ' + str(bet_dict))
     print('\nOutput: bet_limit = float\n')
 
     bet_limit = payout = 0
 
+    # why does num windows return 3 when actuall 4 windows???
     num_windows = len(driver.window_handles)
     print('num_windows: ' + str(num_windows))
 
     # change to side window
-    if side_num == 2 and num_windows > 3:
-        driver.switch_to.window(driver.window_handles[3])
-    else:
-        driver.switch_to.window(driver.window_handles[2])
+    # if side_num == 2 and num_windows > 3:
+    #     driver.switch_to.window(driver.window_handles[3])
+    #     print('Changed to Window 4')
+    # else:
+    #     driver.switch_to.window(driver.window_handles[2])
+    #     print('Changed to Window 3')
+
+    if side_num == 2:
+        # always last window? or does it depend if manual windows open???
+        # change to 1 or 2 more than monitor windows
+        # depends if both arb sides open
+        driver.switch_to.window(driver.window_handles[-1])
+        print('Changed to Last Window')
+    else: # side 1
+        # either last or 2nd to last window
+        num_monitor_windows = 2
+        if test:
+            num_monitor_windows = 1
+        num_full_auto_windows = num_monitor_windows + 2
+        print('num_full_auto_windows: ' + str(num_full_auto_windows))
+
+        # when manual windows open it counts those at end
+        # so not always last, but always 1 more than monitor windows?
+        # last window if only 1 side open
+        if len(driver.window_handles) < num_full_auto_windows:
+            driver.switch_to.window(driver.window_handles[-1])
+            print('Changed to Last Window')
+
+        # second to last window if both sides open
+        else:
+            driver.switch_to.window(driver.window_handles[-2])
+            print('Changed to 2nd to Last Window')
+
+
 
 
     # if bet dict has bet1/bet2 then we know arb
@@ -1522,7 +1589,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                     return remaining_funds, payout, wager_field, place_bet_btn
                 elif error_title == 'bet offer suspended':
                     # close window and move on
-                    close_bet_windows(driver, side_num)
+                    close_bet_windows(driver, side_num, test)
                     return bet_limit, payout, wager_field, place_bet_btn
 
                 # Sorry, the maximum allowed wager is $4.01.
@@ -1566,68 +1633,153 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     # if bet limit 0, close and move on bc no use
     if bet_limit == 0:
         print('\nWarning: Bet Limit 0\n')
-        close_bet_windows(driver, side_num)
+        close_bet_windows(driver, side_num, test)
 
     return bet_limit, payout, wager_field, place_bet_btn
 
 
-def place_bets_simultaneously(driver, arb):
+def place_arb_bet(driver, arb, side_num, test):
+    print('\n===Place Arb Bet: ' + str(side_num) + '===\n')
+
+    # === Place Arb Bet 1 ===
+    window_idx = -2
+    if side_num == 2:
+        window_idx = -1
+    
+    # change to bet 1 window
+    # second to last window
+    driver.switch_to.window(driver.window_handles[window_idx])
+    print('Changed to Bet ' + str(side_num) + ': Window ' + str(window_idx))
+    # enter bet 1
+    wager_field_key = 'wager field' + str(side_num)
+    source_key = 'source' + str(side_num)
+    outcome_key = 'outcome' + str(side_num)
+    wager_field = arb[wager_field_key]
+    # problem sending keys in betrivers after leaving window
+    source = arb[source_key]
+    outcome = arb[outcome_key]
+    if source == 'betrivers':
+        outcome.click() # close betslip
+        time.sleep(0.5)
+        outcome.click() # reopen betslip
+        wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+    
+    # bet_size1 = arb['size1']
+    # if re.search('\$', str(bet_size1)):
+    size_key = 'size' + str(side_num)
+    bet_size = arb[size_key].split('$')[1]
+    print('bet_size: ' + bet_size)
+    if test:
+        bet_size = '1'
+    
+    wager_field.clear()
+    wager_field.send_keys(bet_size)
+    print('Entered Bet ' + str(side_num) + ': ' + bet_size)
+    time.sleep(1)
+    # click bet 1
+    if not test:
+        place_btn_key = 'place btn' + str(side_num)
+        place_btn = arb[place_btn_key]
+        place_btn.click()
+        #time.sleep(3)
+        # confirm placed bet 1
+        
+        start_time = datetime.datetime.now().time()
+        print('start_time: ' + str(start_time))
+        loading = True
+        while loading:
+            try:
+                # look for loading bar or spinner
+                # or close receipt btn
+                if source == 'betmgm':
+                    driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
+                elif source == 'betrivers':
+                    driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                
+                loading = False
+                print('Done Loading')
+            except:
+                print('Loading bet receipt...')
+                time.sleep(0.5)
+        end_time = datetime.datetime.now().time()
+        print('end_time: ' + str(end_time))
+        duration = end_time - start_time
+        print('duration: ' + str(duration))
+
+
+
+
+
+    # change to bet 2 window
+    # last window
+    # driver.switch_to.window(driver.window_handles[-1])
+    # print('Changed to Bet 2: Last Window')
+    # # enter bet 2
+    # wager_field2 = arb['wager field2']
+    # # problem sending keys in betrivers after leaving window
+    # # so try to refind wager element in driver
+    # # simply refinding element does not work
+    # # need to close and reopen betslip
+    # source2 = arb['source2']
+    # outcome2 = arb['outcome2']
+    # if source2 == 'betrivers':
+    #     outcome2.click() # close betslip
+    #     time.sleep(0.5)
+    #     outcome2.click() # reopen betslip
+    #     wager_field2 = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+    
+    # bet_size2 = arb['size2'].split('$')[1]
+    # print('bet_size2: ' + bet_size2)
+    # if test:
+    #     bet_size2 = '1'
+    
+    # wager_field2.clear()
+    # wager_field2.send_keys(bet_size2)
+    # print('Entered Bet 2: ' + bet_size2)
+    # if test:
+    #     time.sleep(10) # test
+    
+    # time.sleep(1)
+    # # click bet 2
+    # if not test:
+    #     place_btn2 = arb['place btn2']
+    #     place_btn2.click()
+    #     #time.sleep(3)
+    #     # confirm placed bet 2
+    #     start_time = datetime.datetime.now().time()
+    #     print('start_time: ' + str(start_time))
+    #     loading = True
+    #     while loading:
+    #         try:
+    #             # look for loading bar or spinner
+    #             # or close receipt btn
+    #             if source2 == 'betmgm':
+    #                 driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
+    #             elif source2 == 'betrivers':
+    #                 driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                
+    #             loading = False
+    #             print('Done Loading')
+    #         except:
+    #             print('Loading bet receipt...')
+    #             time.sleep(0.5)
+
+    #     end_time = datetime.datetime.now().time()
+    #     print('end_time: ' + str(end_time))
+    #     duration = end_time - start_time
+    #     print('duration: ' + str(duration))
+
+
+
+def place_bets_simultaneously(driver, arb, test):
     print('\n===Place Bets Simultaneously===\n')
     print('Input: arb = {...} = ' + str(arb) + '\n')
 
-    # change to bet 1 window
-    driver.switch_to.window(driver.window_handles[2])
-    # enter bet 1
-    wager_field1 = arb['wager field1']
-    bet_size1 = arb['size1'].split('$')[1]
-    wager_field1.clear()
-    wager_field1.send_keys(bet_size1)
-    time.sleep(1)
-    # click bet 1
-    place_btn1 = arb['place btn1']
-    place_btn1.click()
-    #time.sleep(3)
-    # confirm placed bet 1
-    source1 = arb['source1']
-    loading = True
-    while loading:
-        # look for loading bar or spinner
+    side_num = 1
+    place_arb_bet(driver, arb, side_num, test)
 
-        # or close receipt btn
-        if source1 == 'betmgm':
-            driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-        elif source1 == 'betrivers':
-            driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
-        
-        loading = False
-        print('Done Loading')
-
-    # change to bet 2 window
-    driver.switch_to.window(driver.window_handles[3])
-    # enter bet 2
-    wager_field2 = arb['wager field2']
-    bet_size2 = arb['size2'].split('$')[1]
-    wager_field2.clear()
-    wager_field2.send_keys(bet_size2)
-    time.sleep(1)
-    # click bet 2
-    place_btn2 = arb['place btn2']
-    place_btn2.click()
-    #time.sleep(3)
-    # confirm placed bet 2
-    source2 = arb['source2']
-    loading = True
-    while loading:
-        # look for loading bar or spinner
-
-        # or close receipt btn
-        if source2 == 'betmgm':
-            driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-        elif source2 == 'betrivers':
-            driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
-        
-        loading = False
-        print('Done Loading')
+    side_num = 2
+    place_arb_bet(driver, arb, side_num, test)
 
     print('\nPlaced Bets Simultaneously\n')
 
@@ -1637,6 +1789,9 @@ def place_bets_simultaneously(driver, arb):
 def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     print('\n===Place Arb Bets===\n')
     print('Input: arb = {...} = ' + str(arb) + '\n')
+
+    num_windows = len(driver.window_handles)
+    print('num_windows: ' + str(num_windows))
 
     # bet1
     # bet_dict = {'market':arb['market'], 
@@ -1665,6 +1820,7 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     # so save them here and pass them to place bet fcn
     # so we do not need to get them twice
     # BUT does driver.find_element actually take more time than retrieving from memory? probably
+   
     side_num = 1
     bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num)
     bet_limit1 = bet_limit_data[0]
@@ -1700,17 +1856,17 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
 
     bet1_size, bet2_size = determiner.determine_arb_bet_sizes(arb)
     
-    arb['size1'] = bet1_size
-    arb['size2'] = bet2_size
+    arb['size1'] = '$' + str(bet1_size)
+    arb['size2'] = '$' + str(bet2_size)
 
     # write in and place bets
-    place_bets_simultaneously(driver, arb)
+    place_bets_simultaneously(driver, arb, test)
 
 
 
 
     print('Done Placing Both Bets Auto Arb, so close windows')
-    close_bet_windows(driver, side_num=2)
+    close_bet_windows(driver, side_num=2, test=test)
 
     #print('arb: ' + str(arb))
     
@@ -1815,6 +1971,7 @@ def write_arb_to_post(arb, client, post=False):
     props_str += 'MARKET: ' + market + ' \n\n'
     #props_str += 'BETS: ' + bet1 + ', ' + bet2 + ' \n\n'
     props_str += 'GAME: ' + game + ' \n\n'
+    #props_str += 'TIME: ' + game_time + ' \n\n'
     props_str += 'VALUE: ' + value + '% \n\n'
     props_str += 'PROFIT: $' + profit + ' \n\n'
     props_str += 'LINK 1:\n' + link1 + ' \n'
