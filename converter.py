@@ -396,8 +396,14 @@ def convert_market_to_team_name(market, league, sport):
     print('Input: market = ' + market)
 
     # 1st half atlas total
+    # 1st half university of north carolina at charlotte total
     if re.search('innings?|halfs?|quarters?', market):
         market = re.split('innings? |halfs? |quarters? ', market)[1]
+
+    # university of north carolina at charlotte total
+    # -> charlotte total
+    if re.search(' at ', market):
+        market = market.split(' at ')[1]
 
     # only convert team name format if usa league
     # atlas total

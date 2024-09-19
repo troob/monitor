@@ -47,8 +47,8 @@ def close_bet_windows(driver, side_num=1, test=False):
     # need to know how many monitor windows to know how many arb windows
     # so assume 2 monitor windows: 1 auto, 1 manual
     windows = driver.window_handles
-    num_windows = len(windows)
-    print('init num_windows: ' + str(num_windows))
+    init_num_windows = len(windows)
+    print('init num_windows: ' + str(init_num_windows))
 
     # close window 1 or 2
     driver.close()
@@ -62,18 +62,21 @@ def close_bet_windows(driver, side_num=1, test=False):
         num_monitor_windows = 1
     num_full_auto_windows = num_monitor_windows + 2
     print('num_full_auto_windows: ' + str(num_full_auto_windows))
-    print('init num_windows: ' + str(num_windows))
+    print('init num_windows: ' + str(init_num_windows))
 
     # if side 2, both windows open
     # so also close side 1 window
-    if side_num == 2 and num_windows >= num_full_auto_windows:
+    if side_num == 2 and init_num_windows >= num_full_auto_windows:
         print('Close Side 1 Window')
-        driver.switch_to.window(updated_windows[-1]) # idx 2 usually but depends on other windows
+        side1_window_idx = num_monitor_windows
+        driver.switch_to.window(updated_windows[side1_window_idx]) # idx 2 usually but depends on other windows
         driver.close()
         print('Closed Side 1 Window')
     
     # send back to main window
     driver.switch_to.window(windows[0])
+
+    print('\n===Closed Bet Windows===\n')
 
 
 
@@ -1372,33 +1375,50 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     #     driver.switch_to.window(driver.window_handles[2])
     #     print('Changed to Window 3')
 
-    if side_num == 2:
+    num_monitor_windows = 2
+    if test:
+        num_monitor_windows = 1
+    num_full_auto_windows = num_monitor_windows + 2
+    print('num_full_auto_windows: ' + str(num_full_auto_windows))
+    
+    window_idx = num_monitor_windows
+    if side_num == 2 and bet_dict['actual odds1'] != '':
+        # if both sides open for full auto arb,
+        # idx = num_monitors+1
+        # problem is cannot count windows bc counts manual windows opened
+        # so instead look if actual odds 1 populated
+        #if bet_dict['actual odds1'] != '':
+            # both sides auto open
+            # so window idx = num_monitors+1
+        window_idx = num_monitor_windows + 1
+
         # always last window? or does it depend if manual windows open???
         # change to 1 or 2 more than monitor windows
         # depends if both arb sides open
-        driver.switch_to.window(driver.window_handles[-1])
-        print('Changed to Last Window')
-    else: # side 1
-        # either last or 2nd to last window
-        num_monitor_windows = 2
-        if test:
-            num_monitor_windows = 1
-        num_full_auto_windows = num_monitor_windows + 2
-        print('num_full_auto_windows: ' + str(num_full_auto_windows))
+        # side2_window_idx = num_monitor_windows + 1
+        # driver.switch_to.window(driver.window_handles[side2_window_idx])
+        # print('Changed to Arb Side 2, Window 4')
+    #else: # side 1
+        # always idx = num_monitors
 
+
+        # either last or 2nd to last window
         # when manual windows open it counts those at end
         # so not always last, but always 1 more than monitor windows?
         # last window if only 1 side open
-        if len(driver.window_handles) < num_full_auto_windows:
-            driver.switch_to.window(driver.window_handles[-1])
-            print('Changed to Last Window')
+        # if len(driver.window_handles) < num_full_auto_windows:
+        #     side1_window_idx = num_monitor_windows + 1
+        #     driver.switch_to.window(driver.window_handles[side1_window_idx])
+        #     print('Changed to Arb Side 1, Window 4')
 
-        # second to last window if both sides open
-        else:
-            driver.switch_to.window(driver.window_handles[-2])
-            print('Changed to 2nd to Last Window')
+        # # second to last window if both sides open
+        # else:
+        #     side1_window_idx = num_monitor_windows
+        #     driver.switch_to.window(driver.window_handles[side1_window_idx])
+        #     print('Changed to Arb Side 1, Window 3')
 
-
+    print('Switch to Window Idx: ' + str(window_idx))
+    driver.switch_to.window(driver.window_handles[window_idx])
 
 
     # if bet dict has bet1/bet2 then we know arb
@@ -1684,7 +1704,7 @@ def place_arb_bet(driver, arb, side_num, test):
         #time.sleep(3)
         # confirm placed bet 1
         
-        start_time = datetime.datetime.now().time()
+        start_time = datetime.now().time()
         print('start_time: ' + str(start_time))
         loading = True
         while loading:
@@ -1701,7 +1721,7 @@ def place_arb_bet(driver, arb, side_num, test):
             except:
                 print('Loading bet receipt...')
                 time.sleep(0.5)
-        end_time = datetime.datetime.now().time()
+        end_time = datetime.now().time()
         print('end_time: ' + str(end_time))
         duration = end_time - start_time
         print('duration: ' + str(duration))
@@ -1913,21 +1933,28 @@ def write_arb_to_post(arb, client, post=False):
     source1 = arb['source1'].title()
     source2 = arb['source2'].title()
 
+    size1 = arb['size1']
+    size2 = arb['size2']
+
+    game_date = arb['game date']
+    game_time = arb['game time']
+
     
     # Make list of sizes depending on limit, from 1000 to 100, every 100
     # size1_options = []
     # size2_options = []
     max_limit = 1000
     # Better to make hedge bet rounder number bc seems more normal/rec
-    size1 = converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
-    size1_str = '$' + str(size1)
-    size2_str = '$' + str(max_limit)
+    # size1 = converter.convert_odds_to_bet_size(odds1, odds2, max_limit)
+    # size1_str = '$' + str(size1)
+    # size2_str = '$' + str(max_limit)
+    size1_float = float(size1.split('$')[1])
 
     # compute payout, given odds and bet size
     # For positive American odds, divide the betting odds by 100 and multiply the result by the amount of your wager (Profit = odds/100 x wager). 
     # With negative odds, you divide 100 by the betting odds, then multiply that number by the wager amount (Profit = 100/odds x wager).
     # take positive side bc = both sides
-    profit = str(converter.round_half_up(int(odds2) / 100 * max_limit) - size1)
+    profit = str(converter.round_half_up(int(odds2) / 100 * max_limit) - size1_float)
     #print('profit: ' + profit)
 
 
@@ -1951,8 +1978,10 @@ def write_arb_to_post(arb, client, post=False):
     props_str = '\n===Arb===\n'
     props_str += '\n' + source1 + ' ' + odds1 + ', ' + source2 + ' ' + odds2 +'. \n\n'
     props_str += game + ' - \n\n'
+    props_str += game_date + ', ' + game_time + ' - \n\n'
     props_str += market + ' - \n\n'
     props_str += bet1 + ', ' + bet2 + ' - \n\n'
+    props_str += size1 + ', ' + size2 + ' - \n\n'
     props_str += value + '%' + ' - \n\n'
     
 
@@ -1996,7 +2025,7 @@ def write_arb_to_post(arb, client, post=False):
 
     # props_str += '\n' + size1_str + '\t' + size2_str
 
-    arb_table = [[source1, '', source2], [odds1, '', odds2], [size1_str, '', size2_str]]
+    arb_table = [[source1, '', source2], [odds1, '', odds2], [size1, '', size2]]
 
     props_str += '\n' + tabulate(arb_table)
 

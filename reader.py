@@ -561,6 +561,7 @@ def read_market_odds(market, market_element, bet_dict):
 	return market_odds, final_outcome
 
 def read_section_idx(section_title, sections, default=0):
+	print('\n===Read Section Idx: ' + section_title + '===\n')
 
 	section_idx = default
 
@@ -569,11 +570,11 @@ def read_section_idx(section_title, sections, default=0):
 		# get title
 		# remove &nbsp;
 		section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&nbsp;')[0]
-		section_title_element = re.sub('&amp;', '&', section_title_element)
+		section_title_element = re.sub('amp;', '', section_title_element)
 		print('section_title_element: ' + section_title_element)					
 
 		if section_title == section_title_element:
-			print('Found Player Section')
+			print('Found Section')
 			section_idx = s_idx
 			break
 
@@ -4950,8 +4951,11 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 					# Mon Jul 1, 4:00 AM -> Jul 1
 					# OR Today, 9:00 PM
 					# remove comma for csv
-					game_date = game_data[0].get_attribute('innerHTML').split(',')[0]
+					game_date_data = game_data[0].get_attribute('innerHTML').split(', ')
+					game_date = game_date_data[0]
 					#print('\ngame_date: ' + str(game_date))
+					game_time = game_date_data[1]
+					#print('\ngame_time: ' + str(game_time))
 
 					if game_date == 'Today':
 						#print('Today')
@@ -5064,6 +5068,7 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 								'link':link,
 								'size':size,
 								'game date':game_date,
+								'game time':game_time,
 								'sport':sport,
 								'league':league}
 
@@ -5233,8 +5238,11 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 					# Mon Jul 1, 4:00 AM -> Jul 1
 					# OR Today, 9:00 PM
 					# remove comma for csv
-					game_date = game_data[0].get_attribute('innerHTML').split(',')[0]
+					game_date_data = game_data[0].get_attribute('innerHTML').split(', ')
+					game_date = game_date_data[0]
 					#print('game_date: ' + str(game_date))
+					game_time = game_date_data[1]
+					#print('\ngame_time: ' + str(game_time))
 
 					if game_date == 'Today':
 						#print('Today')
@@ -5455,6 +5463,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 								'size1':size1,
 								'size2':size2,
 								'game date':game_date,
+								'game time':game_time,
 								'sport':sport,
 								'league':league}
 
@@ -5512,6 +5521,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False, mobile=False):
 	#print('\n===Open React Website===\n')
 
+	# 
 	#try:
 
 	options = webdriver.ChromeOptions()
@@ -5548,7 +5558,18 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# so bot not detected
 	#if first_window:
 	driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
-	driver.get(url)
+	
+	# selenium.common.exceptions.WebDriverException: Message: unknown error: net::ERR_INTERNET_DISCONNECTED
+	internet_connected = False
+	while not internet_connected:
+		try:
+			driver.get(url)
+			internet_connected = True
+		except Exception as e:
+			print('Internet Disconnected? Try again.')
+			print('Error: ', e)
+			time.sleep(1)
+		
 
 	
 	# wait after get url to ensure reads all data!

@@ -607,6 +607,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 					except TimeoutError as e:
 						print('Input Timeout, so turn off manual mode')
 						manual_picks = False
+						print('\nManual Mode Disabled\n')
 
 				print('\nDone Half Auto Arb\n')
 				# window still open from reading odds to verify valid
@@ -1202,7 +1203,7 @@ if __name__ == "__main__":
 	# then it switches to manual false (auto only)
 	# if manual not enabled, then turn off audio notification bc nobody there to hear it
 	# and sometimes want sound off while still running
-	test = True
-	manual_picks = True
+	test = False
+	manual_picks = False
 	#manual_arbs = False # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
 	monitor_website(url, manual_picks, test, test_ev, test_arb)
