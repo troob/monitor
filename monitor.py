@@ -1204,6 +1204,6 @@ if __name__ == "__main__":
 	# if manual not enabled, then turn off audio notification bc nobody there to hear it
 	# and sometimes want sound off while still running
 	test = False
-	manual_picks = False
+	manual_picks = True
 	#manual_arbs = False # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
 	monitor_website(url, manual_picks, test, test_ev, test_arb)

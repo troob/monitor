@@ -185,7 +185,18 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 			# but only sports with no tie need to be converted to comma format
 			# avoid yes/no win 1 set
 			if sport not in team_sports:
-				outcome_label = converter.convert_name_format(outcome_label)#, name_format=',')
+				# if / in label then 2 names
+				# eg doubles tennis
+				# bet outcome: i. dodig / r. matos
+				# listed label: dodig, i/matos, r
+				if re.search('/', outcome_label):
+					label_names = outcome_label.split('/')
+					outcome_label = label_names[0]
+					for label_name in label_names[1:]:
+						label_name = converter.convert_name_format(label_name)
+						outcome_label = '/' + label_name
+				else:
+					outcome_label = converter.convert_name_format(outcome_label)#, name_format=',')
 
 			# monitor format uses draw and betrivers uses tie
 			# so convert source format to standard format
@@ -475,6 +486,8 @@ def read_market_odds(market, market_element, bet_dict):
 				else:
 					bet_outcome = 'under ' + line
 
+	# bet outcome: i. dodig / r. matos
+	# listed label: dodig, i/matos, r
 	print('bet_outcome: ' + bet_outcome)
 
 		
@@ -1229,7 +1242,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 			writer.close_bet_windows(driver, side_num, test)
 			return actual_odds, final_outcome, cookies_file, saved_cookies
 		
-		print('\nCheck Betslip')
+		print('\nCheck Betslip\n')
 
 		# if not player props
 		# simply convert market to source format
@@ -1337,6 +1350,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 					# already converted spread to handicap
 					# if re.search('handicap', listed_market):
 					# 	listed_market = 'spread'
+
 
 					listed_market = re.sub(':','',listed_market)
 					print('listed_market: ' + listed_market)

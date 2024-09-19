@@ -53,7 +53,7 @@ def close_bet_windows(driver, side_num=1, test=False):
     # close window 1 or 2
     driver.close()
 
-    print('Closed Last Window')
+    print('Closed Last Bet Window')
     updated_windows = driver.window_handles
     print('updated num_windows: ' + str(len(updated_windows)))
 
@@ -230,118 +230,128 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         login_page = False
         while not login_page:
             try:
-                submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+                # .find_element('class name', 'login')#
+                submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
                 print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
                 login_page = True
             except:
                 print('Loading Login Page...')
                 time.sleep(1)
         
-        submit_btn.click()
-        time.sleep(3) 
-
-        # if error, try backup login method
-        pwd_msg = ''
-        loading = True
-        while loading and not logged_in:
-            try:
-                pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
-                print('pwd_msg: ' + pwd_msg)
-                loading = False
-                print('Done Loading')
-            except:
-                print('Loading...')
-
-                try:
-                    pwd_field = driver.find_element('name', 'password')
-                except:
-                    logged_in = True
-                    print('\nLogin Success\n')
-
-
-        # glitch error
-        if pwd_msg != '':
-        
-            # Need to click register>login to avoid tech glitch
-            login_page = False
-            while not login_page:
-                try:
-                    reg_link = driver.find_element('class name', 'registration-link')
-                    login_page = True
-                except:
-                    print('Loading Login Page...')
-                    time.sleep(1)
-                
-            reg_link.click() # goes to signup page
-            time.sleep(1)
-
-            # error not found sometimes???
-            # loop until found, but timeout after 60 seconds
-            loading = True
-            while loading:
-                try:
-                    login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
-                    print('Done loading signup page')
-                    loading = False
-                    login_link.click() # goes to login page
-                    time.sleep(1) 
-                except KeyboardInterrupt:
-                    #loading = False
-                    print('Exit')
-                    exit()
-                except:
-                    print('Loading signup page...')
-                    time.sleep(1)
-
-            # path_to_btn = [('class','conversation-textalign'), ('tag','a')]
-            # click_after_load(driver, path_to_btn)
-
-
-            usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
-            if re.search('ng-untouched', usr_field_html):
-                print('Enter Username')
-                usr_field = driver.find_element('id', 'userId')
-                usr_field.send_keys(email)
-                time.sleep(1)
-
-            pwd_field = driver.find_element('id', 'password')
-            pwd_field_html = pwd_field.get_attribute('innerHTML')
-            if re.search('ng-untouched', pwd_field_html):
-                print('Enter Password')
-                #pwd_field = driver.find_element('name', 'password')
-                pwd_field.clear()
-                time.sleep(1)
-                pwd_field.send_keys(token)
-                time.sleep(3)
-
-            submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
-            print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+        submitted_login = False
+        try:
             submit_btn.click()
             time.sleep(3) 
+            submitted_login = True
+        except:
+            print('Error: Failed to click submit btn!')
 
+        if submitted_login:
 
-            # If Error, click sign up > log in again
+            # if error, try backup login method
             pwd_msg = ''
-            try:
-                pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
-                print('pwd_msg: ' + pwd_msg)
-            except:
-                print('Loading...')
+            loading = True
+            while loading and not logged_in:
+                try:
+                    pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
+                    print('pwd_msg: ' + pwd_msg)
+                    loading = False
+                    print('Done Loading')
+                except:
+                    print('Loading...')
+
+                    try:
+                        pwd_field = driver.find_element('name', 'password')
+                    except:
+                        logged_in = True
+                        print('\nLogin Success\n')
+
 
             # glitch error
             if pwd_msg != '':
-                signup_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="registerbutton"]')
-                signup_btn.click()
-                time.sleep(3)
+            
+                # Need to click register>login to avoid tech glitch
+                login_page = False
+                while not login_page:
+                    try:
+                        reg_link = driver.find_element('class name', 'registration-link')
+                        login_page = True
+                    except:
+                        print('Loading Login Page...')
+                        time.sleep(1)
+                    
+                reg_link.click() # goes to signup page
+                time.sleep(1)
 
-                login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
-                login_link.click()
-                time.sleep(3) 
+                # error not found sometimes???
+                # loop until found, but timeout after 60 seconds
+                loading = True
+                while loading:
+                    try:
+                        login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
+                        print('Done loading signup page')
+                        loading = False
+                        login_link.click() # goes to login page
+                        time.sleep(1) 
+                    except KeyboardInterrupt:
+                        #loading = False
+                        print('Exit')
+                        exit()
+                    except:
+                        print('Loading signup page...')
+                        time.sleep(1)
 
-                submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+                # path_to_btn = [('class','conversation-textalign'), ('tag','a')]
+                # click_after_load(driver, path_to_btn)
+
+
+                usr_field_html = driver.find_element('id', 'username').get_attribute('innerHTML')
+                if re.search('ng-untouched', usr_field_html):
+                    print('Enter Username')
+                    usr_field = driver.find_element('id', 'userId')
+                    usr_field.send_keys(email)
+                    time.sleep(1)
+
+                pwd_field = driver.find_element('id', 'password')
+                pwd_field_html = pwd_field.get_attribute('innerHTML')
+                if re.search('ng-untouched', pwd_field_html):
+                    print('Enter Password')
+                    #pwd_field = driver.find_element('name', 'password')
+                    pwd_field.clear()
+                    time.sleep(1)
+                    pwd_field.send_keys(token)
+                    time.sleep(3)
+
+                #.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+                # error with just using login class, other btn would receive click
+                submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]') 
                 print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
                 submit_btn.click()
                 time.sleep(3) 
+
+
+                # If Error, click sign up > log in again
+                pwd_msg = ''
+                try:
+                    pwd_msg = driver.find_element('class name', 'm2-validation-message').get_attribute('innerHTML').lower()
+                    print('pwd_msg: ' + pwd_msg)
+                except:
+                    print('Loading...')
+
+                # glitch error
+                if pwd_msg != '':
+                    signup_btn = driver.find_element('xpath', '//vn-menu-item-text-content[@data-testid="registerbutton"]')
+                    signup_btn.click()
+                    time.sleep(3)
+
+                    login_link = driver.find_element('class name', 'conversation-textalign').find_element('tag name', 'a')
+                    login_link.click()
+                    time.sleep(3) 
+
+                    submit_btn = driver.find_element('class name', 'login')#find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
+                    print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+                    submit_btn.click()
+                    time.sleep(3) 
 
 
 
@@ -931,22 +941,22 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             # print('\nHandle Session Timeout\n')
                             # time.sleep(100)
 
-                        # if no receipt yet, check if alert msg
-                        try:
-                            alert_msg = driver.find_element('class name', 'alert-content__message').get_attribute('innerHTML').lower() # Wager too high
-                            print('alert_msg: ' + alert_msg)
-                            loading = False
-                            print('Done Loading')
+                            # if no receipt yet, check if alert msg
+                            try:
+                                alert_msg = driver.find_element('class name', 'alert-content__message').get_attribute('innerHTML').lower() # Wager too high
+                                print('alert_msg: ' + alert_msg)
+                                loading = False
+                                print('Done Loading')
 
-                            print('\nBet Failed\n')
-                            print('Odds Change or Other Error???')
+                                print('\nBet Failed\n')
+                                print('Odds Change or Other Error???')
 
-                            # handle session timeout
-                            # read bottom msg below button or wager field???
-                            print('\nHandle Session Timeout\n')
-                            time.sleep(100)
-                        except:
-                            print('Loading final placed bet...')
+                                # handle session timeout
+                                # read bottom msg below button or wager field???
+                                print('\nHandle Session Timeout\n')
+                                time.sleep(100)
+                            except:
+                                print('Loading final placed bet...')
 
 
                     
@@ -1383,6 +1393,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     
     window_idx = num_monitor_windows
     if side_num == 2 and bet_dict['actual odds1'] != '':
+        print('Both Arb Sides Open')
         # if both sides open for full auto arb,
         # idx = num_monitors+1
         # problem is cannot count windows bc counts manual windows opened
@@ -1661,10 +1672,13 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
 def place_arb_bet(driver, arb, side_num, test):
     print('\n===Place Arb Bet: ' + str(side_num) + '===\n')
 
-    # === Place Arb Bet 1 ===
-    window_idx = -2
-    if side_num == 2:
-        window_idx = -1
+    num_monitor_windows = 2
+    if test:
+        num_monitor_windows = 1
+
+    window_idx = num_monitor_windows # 1 or 2 currently based on desired manual testing setup we add 1 window on top of main monitor window
+    if side_num == 2 and arb['actual odds1'] != '':
+        window_idx = num_monitor_windows + 1
     
     # change to bet 1 window
     # second to last window
@@ -1704,8 +1718,8 @@ def place_arb_bet(driver, arb, side_num, test):
         #time.sleep(3)
         # confirm placed bet 1
         
-        start_time = datetime.now().time()
-        print('start_time: ' + str(start_time))
+        # start_time = datetime.now().time()
+        # print('start_time: ' + str(start_time))
         loading = True
         while loading:
             try:
@@ -1721,12 +1735,12 @@ def place_arb_bet(driver, arb, side_num, test):
             except:
                 print('Loading bet receipt...')
                 time.sleep(0.5)
-        end_time = datetime.now().time()
-        print('end_time: ' + str(end_time))
-        duration = end_time - start_time
-        print('duration: ' + str(duration))
+        # end_time = datetime.now().time()
+        # print('end_time: ' + str(end_time))
+        # duration = end_time - start_time
+        # print('duration: ' + str(duration))
 
-
+        
 
 
 
@@ -1802,6 +1816,10 @@ def place_bets_simultaneously(driver, arb, test):
     place_arb_bet(driver, arb, side_num, test)
 
     print('\nPlaced Bets Simultaneously\n')
+
+    # pause for video
+    # to confirm bets placed
+    time.sleep(3)
 
 
 # input adjustable arb deepcopy of init arb

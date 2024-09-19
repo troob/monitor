@@ -50,10 +50,16 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             bet_data = bet_line.split()
             direction = bet_data[0]
             line_val = bet_data[1]
-            if direction == 'o':
-                bet_line = 'over ' + line_val
+            if re.search('first', market):
+                if direction == 'o':
+                    bet_line = 'yes'
+                else:
+                    bet_line = 'no'
             else:
-                bet_line = 'under ' + line_val
+                if direction == 'o':
+                    bet_line = 'over ' + line_val
+                else:
+                    bet_line = 'under ' + line_val
 
         elif sport == 'soccer' and market == 'spread':
             # +0.5 -> (0.5)
@@ -67,6 +73,12 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
     return bet_line
 
 def convert_market_to_source_format(market, sport, game, website_name):
+    print('\n===Convert Market to Source Format===\n')
+    print('market: ' + market)
+    print('sport: ' + sport)
+    print('game: ' + game)
+    print('website_name: ' + website_name)
+    print('\nOutput: market_title = string\n')
 
     market_title = market
 
@@ -101,6 +113,10 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif re.search('innings? moneyline', market):
 
                 market_title = re.sub('moneyline', 'money line', market)
+
+            elif market == 'first inning total':
+
+                market_title = '1st inning run'
 
             elif re.search('innings? total', market):
 
@@ -361,6 +377,9 @@ def convert_name_format(name, name_format=None):
         else:
             names = name.split(' ', 1) 
             name = names[1] + ', ' + names[0]
+
+            # remove dots
+            name = re.sub('\.', '', name)
 
     print('name: ' + name)
     return name
