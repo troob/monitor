@@ -484,6 +484,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				# if both odds auto read, 
 				# also close third window, idx 2
 				if actual_odds1 != '' and actual_odds2 != '':
+					# detect side 1 window idx
 					driver.switch_to.window(driver.window_handles[-1]) # idx 2 last window
 					driver.close()
 				# relinquish control to monitor window
@@ -574,10 +575,14 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 						side_num = 2
 					print('side_num: ' + str(side_num))
 					bet_limit_data = writer.find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num)
-					# limit = bet_limit_data[0]
+					limit = bet_limit_data[0]
 					# payout = bet_limit_data[1]
 					# print('limit: ' + str(limit))
 					# print('payout: ' + str(payout))
+
+					if limit == 0:
+						print('\nLimit = 0, so continue to next arb\n')
+						continue
 
 					# do not need to update arb bc the rest is manual?
 					# still need to calc bet sizes and print
@@ -616,9 +621,10 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				# give control to main window 
 				# while waiting for user input to continue
 				# close window
-				driver.close()
-				# finally, switch back to main window
-				driver.switch_to.window(driver.window_handles[0])
+				# driver.close()
+				# # finally, switch back to main window
+				# driver.switch_to.window(driver.window_handles[0])
+				writer.close_bet_windows(driver)
 
 		# if onyl odds1 populated, then place single bet
 		# if actual_odds2 == '' and treat_ev:

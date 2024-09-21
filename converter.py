@@ -7,6 +7,49 @@ import reader # read player abbrevs
 import math
 
 
+def round_to_base(x, base=5):
+    return base * round(x/base)
+
+def round_arb_bet_size(arb, side_num):
+    print('\n===Round Arb Bet Size===\n')
+
+    size_key = 'size' + side_num
+    init_size_str = arb[size_key]
+    print('init_size_str: ' + init_size_str)
+
+    init_size_float = float(re.sub('\$','',init_size_str))
+
+    scale = '1' #-99
+    if init_size_float > 999:
+        scale = '1000' #-9999'
+    elif init_size_float > 99:
+        scale = '100' #-999'
+    print('scale: ' + scale)
+
+    # scale is used to tell whether to round to 50 if <1000 or 100 if >1000
+    
+    rounded_bet_size = round_to_base(init_size_float, base=5)
+
+    print('rounded_bet_size: ' + rounded_bet_size)
+    return rounded_bet_size
+
+# based on scale and source
+# round to nearest 5
+# if unlimited source, round more to remain unlimited
+# if limited source, all 2 decimals if 
+def round_ev_bet_size(ev):
+    #print('\n===Round EV Bet Size===\n')
+
+    init_size_str = ev['size']
+    #print('init_size_str: ' + init_size_str)
+
+    init_size_float = float(re.sub('\$','',init_size_str))
+
+    # always round to nearest whole number for ev, no matter the scale
+    rounded_bet_size = '$' + str(round_half_up(init_size_float))
+
+    #print('rounded_bet_size: ' + rounded_bet_size)
+    return rounded_bet_size
 
 def convert_name_to_standard_format(name):
 
@@ -50,7 +93,7 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             bet_data = bet_line.split()
             direction = bet_data[0]
             line_val = bet_data[1]
-            if re.search('first', market):
+            if re.search('first inning', market):
                 if direction == 'o':
                     bet_line = 'yes'
                 else:
@@ -152,7 +195,7 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
                 market_title = 'runs batted in'
 
-            elif market == 'hits + runs + rbis':
+            elif market == 'hits runs rbis':
 
                 market_title = 'total hits, runs and rbis'
 
@@ -222,6 +265,10 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif market == 'total':
 
                 market_title = 'totals'
+
+            elif market == 'touchdowns':
+
+                market_title = 'anytime td scorer'
 
             # 1st half totals is only market with abbrev
             # others spell out first
@@ -378,8 +425,12 @@ def convert_name_format(name, name_format=None):
             names = name.split(' ', 1) 
             name = names[1] + ', ' + names[0]
 
-            # remove dots
-            name = re.sub('\.', '', name)
+            # remove dots after 1 initial
+            # dodig, i. -> dodig, i
+            # do not change abbrevs like c.j.
+            #name = re.sub(r'([a-z])\.', '{1}', name)
+            if name.count('.') == 1:
+                name = re.sub('\.', '', name)
 
     print('name: ' + name)
     return name

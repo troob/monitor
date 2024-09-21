@@ -922,7 +922,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 				passing_markets = ['passing yards', 'passing touchdowns', 'passing attempts', 'passing completions']
 				receiving_markets = ['receiving yards', 'longest reception', 'receptions made']
-				rushing_markets = ['rushing yards', 'longest rush']
+				rushing_markets = ['rushing yards', 'rushing attempts', 'longest rush']
 				kicking_markets = ['kicking points', 'field goals']
 				if player_market == 'touchdowns':
 					section_title = 'Touchdown Scorer'
@@ -1163,6 +1163,16 @@ def save_cookies(driver, website_name, cookies_file, saved_cookies):
 # -Batter Specials
 # -Races
 
+def read_cur_window_idx(driver):
+	print('\n===Read Cur Window Idx===\n')
+
+	tabs = driver.window_handles
+	for window_handle in tabs:
+		if window_handle == driver.current_window_handle:
+			tab = tabs.index(window_handle)
+			print('tab: ' + str(tab))
+			return tab
+
 #selected_markets = ['moneyline', 'run line', 'total runs']
 def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
 	print('\n===Read Actual Odds===\n')
@@ -1174,6 +1184,11 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 	website_name = bet_dict['source']
 	print('website_name = ' + website_name)
 	
+
+	# Close extra windows before logging into arb windows
+	# to avoid window idx confusion
+	# do not close extra windows earlier because odds may be invalid
+	# but the problem is once opened we need to store window idx
 	
 	size = driver.get_window_size() # get size of window 1 to determine window 2 x
 	driver.switch_to.new_window(type_hint='window')
@@ -1190,6 +1205,17 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 	num_windows = len(driver.window_handles)
 	print('num_windows: ' + str(num_windows))
+
+	cur_window_idx = read_cur_window_idx(driver)
+	# save window idx to dict
+	# detect arb if 2 sides
+	if 'bet2' in bet_dict.keys():
+		if side_num == 1:
+			bet_dict['window1'] = cur_window_idx
+		else:
+			bet_dict['window2'] = cur_window_idx
+	else:
+		bet_dict['window'] = cur_window_idx
 	
 	section_idx = 0
 
