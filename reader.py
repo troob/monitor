@@ -1170,7 +1170,7 @@ def read_cur_window_idx(driver):
 	for window_handle in tabs:
 		if window_handle == driver.current_window_handle:
 			tab = tabs.index(window_handle)
-			print('tab: ' + str(tab))
+			print('Cur Window Idx: ' + str(tab) + '\n')
 			return tab
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
@@ -1189,583 +1189,618 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 	# to avoid window idx confusion
 	# do not close extra windows earlier because odds may be invalid
 	# but the problem is once opened we need to store window idx
+
+	# WARNING before opening new window make sure closed other windows of same source
+	# to avoid bot detection
+	# especially Fanduel!!!
+	if website_name == 'fanduel':
+		print('Close Fanduel Windows before Opening New Window!')
+		return
 	
-	size = driver.get_window_size() # get size of window 1 to determine window 2 x
-	driver.switch_to.new_window(type_hint='window')
-	# side num refers to side of arb
-	window2_x = size['width'] * side_num + 1 # why +1???
-	driver.set_window_position(window2_x, 0)
-	url = bet_dict['link']
-	# Must navigate to page before adding cookies
-	driver.get(url)
-	cookies_file = 'data/cookies.json'
-	saved_cookies = ''#add_cookies(driver, website_name, cookies_file)
-	#time.sleep(2) # wait to load. sometimes fails at 1 sec
-	#save_cookies(driver, website_name, cookies_file, saved_cookies)
+	try:
+	
+		size = driver.get_window_size() # get size of window 1 to determine window 2 x
+		driver.switch_to.new_window(type_hint='window')
+		# side num refers to side of arb
+		window2_x = size['width'] * side_num + 1 # why +1???
+		driver.set_window_position(window2_x, 0)
+		url = bet_dict['link']
+		# Must navigate to page before adding cookies
+		driver.get(url)
+		cookies_file = 'data/cookies.json'
+		saved_cookies = ''#add_cookies(driver, website_name, cookies_file)
+		#time.sleep(2) # wait to load. sometimes fails at 1 sec
+		#save_cookies(driver, website_name, cookies_file, saved_cookies)
 
-	num_windows = len(driver.window_handles)
-	print('num_windows: ' + str(num_windows))
+		num_windows = len(driver.window_handles)
+		print('num_windows: ' + str(num_windows))
 
-	cur_window_idx = read_cur_window_idx(driver)
-	# save window idx to dict
-	# detect arb if 2 sides
-	if 'bet2' in bet_dict.keys():
-		if side_num == 1:
-			bet_dict['window1'] = cur_window_idx
+		#cur_window_idx = read_cur_window_idx(driver)
+		cur_window_handle = driver.current_window_handle
+		# save window idx to dict
+		# detect arb if 2 sides
+		if 'bet2' in bet_dict.keys():
+			if side_num == 1:
+				bet_dict['window1'] = cur_window_handle
+			else:
+				bet_dict['window2'] = cur_window_handle
 		else:
-			bet_dict['window2'] = cur_window_idx
-	else:
-		bet_dict['window'] = cur_window_idx
-	
-	section_idx = 0
+			bet_dict['window'] = cur_window_handle
 
-	final_outcome = None
-	
-	market = bet_dict['market'].lower()
-	print('market: ' + market)
-	bet_line = bet_dict['bet'].lower()
-	print('bet_line: ' + bet_line)
-	sport = bet_dict['sport']
-	print('sport: ' + sport)
-	league = bet_dict['league']
-	print('league: ' + league)
-	game = bet_dict['game'].lower()
-	print('game: ' + game)
-
-	#try:
-
-	if website_name == 'betmgm':
-
-		# session timeout may happen when opening new window
-		# if cookies not added properly
-		print('\nCheck Session Expired')
-		try:
-
-			# Your session expired. Please log in again.
-			msg = driver.find_element('tag name', 'vn-message-panel').find_element('class name', 'cms-container').get_attribute('innerHTML').lower()
-			print('msg: ' + msg)
-			if re.search('session expired', msg):
-				writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
 		
-		except:
-			print('No Message, Session Current')
-
-		print('\nCheck Bet Available')
-		bet_available = False
-		try:
-			driver.find_element('class name', 'modal-body')#.find_element('tag name', 'button')
-			print('No')
-		except KeyboardInterrupt:
-			print('Exit')
-			exit()
-		except:
-			bet_available = True
-			print('Yes')
-
-		# if bet na, close window
-		if bet_available == False:
-			print('Bet NA')
-			writer.close_bet_windows(driver, side_num, test)
-			return actual_odds, final_outcome, cookies_file, saved_cookies
 		
-		print('\nCheck Betslip\n')
+		section_idx = 0
 
-		# if not player props
-		# simply convert market to source format
-		# but player props need to split and match player name and market separate
-		market_title = input_name = input_market = ''
-		if not re.search(' - ', market):
-			# spread -> run line spread
-			# total -> totals
-			market_title = converter.convert_market_to_source_format(market, sport, game, website_name)
-		else:
-			market_data = market.split(' - ')
-			input_name = market_data[0]
-			input_market = market_data[1]
-			print('input_name: ' + input_name)
-			print('input_market: ' + input_market)
+		final_outcome = None
+		
+		market = bet_dict['market'].lower()
+		print('market: ' + market)
+		bet_line = bet_dict['bet'].lower()
+		print('bet_line: ' + bet_line)
+		sport = bet_dict['sport']
+		print('sport: ' + sport)
+		league = bet_dict['league']
+		print('league: ' + league)
+		game = bet_dict['game'].lower()
+		print('game: ' + game)
 
-			input_market = converter.convert_market_to_source_format(input_market, sport, game, website_name)
+		#try:
 
-		bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
+		if website_name == 'betmgm':
 
-
-		#betslip = driver.find_element('tag name', 'bs-betslip')
-		#print('betslip: ' + betslip.get_attribute('innerHTML'))
-
-		# wait to load
-		# while True:
-		# 	try:
-		# 		# straight bet section
-		# 		straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
-		# 		#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
-		# 		break
-		# 	except KeyboardInterrupt:
-		# 		exit()
-		# 	except:
-		# 		print('Loading...')
-		# 		time.sleep(3)
-
-		straights_section = None
-		loading = True
-		load_retries = 0
-		while loading:
+			# session timeout may happen when opening new window
+			# if cookies not added properly
+			print('\nCheck Session Expired')
 			try:
-				# straight bet section
-				straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
-				#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
-				
-				listed_bets = straights_section.find_elements('tag name', 'bs-digital-single-bet-pick')
 
-				#listed_line = listed_bets[0].find_element('class name', 'betslip-digital-pick__line-0-container')
-				for listed_bet in listed_bets:
-					listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container')
-				loading = False
-				print('Done Loading listed bets')
+				# Your session expired. Please log in again.
+				msg = driver.find_element('tag name', 'vn-message-panel').find_element('class name', 'cms-container').get_attribute('innerHTML').lower()
+				print('msg: ' + msg)
+				if re.search('session expired', msg):
+					writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
+			
+			except:
+				print('No Message, Session Current')
+
+			print('\nCheck Bet Available')
+			bet_available = False
+			try:
+				driver.find_element('class name', 'modal-body')#.find_element('tag name', 'button')
+				print('No')
 			except KeyboardInterrupt:
-				loading = False
 				print('Exit')
 				exit()
 			except:
-				# if more than 3 times than close window and reopen
-				# bc refresh does not work
-				# closing and reopen does not always work either
-				# so give up and move on after 3 tries
-				print('Loading listed bets...')
-				time.sleep(1)
-				if load_retries == max_retries:
-					loading = False
-					print('Error: Failed to Load listed bets during read actual odds, BetMGM!')
-				load_retries += 1
+				bet_available = True
+				print('Yes')
 
-		
-		# after finding bet in list and reading actual odds
-		# remove old unused bets
-		# keep bottom one unless second time calling bet 
-		# after being interrupted by another bet
-		found_market = False
-		for listed_bet in listed_bets:
-			# Under 1.5
-			listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container').find_element('tag name', 'span').get_attribute('innerHTML').lower()
-			print('\ninit listed_line: ' + listed_line)
+			# if bet na, close window
+			if bet_available == False:
+				print('Bet NA')
+				writer.close_bet_windows(driver, side_num, test, bet_dict)
+				return actual_odds, final_outcome, cookies_file, saved_cookies
+			
+			print('\nCheck Betslip\n')
 
-			# convert listed line to standard format 
-			# bc cannot always convert standard input to source format
-			# if extra letters such as
-			# pittsburgh u +0.5 -> pittsburgh +0.5
-			listed_line = converter.convert_bet_line_to_standard_format(listed_line)
-			print('listed_line: ' + listed_line)
+			# if not player props
+			# simply convert market to source format
+			# but player props need to split and match player name and market separate
+			market_title = input_name = input_market = ''
+			if not re.search(' - ', market):
+				# spread -> run line spread
+				# total -> totals
+				market_title = converter.convert_market_to_source_format(market, sport, game, website_name)
+			else:
+				market_data = market.split(' - ')
+				input_name = market_data[0]
+				input_market = market_data[1]
+				print('input_name: ' + input_name)
+				print('input_market: ' + input_market)
 
-			#  Masyn Winn (STL): Hits 
-			listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
-			print('init listed_market: ' + listed_market)
+				input_market = converter.convert_market_to_source_format(input_market, sport, game, website_name)
 
-			# listed_line: ca independiente avellaneda (0.5)
-			# init listed_market: 2way handicap (-0.5) -> spread
-
-			# odds
-			listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
-			print('listed_odds: ' + listed_odds)
-
-			if listed_odds != '':
-
-				# if NOT player market, 
-				# match directly with listed market
-				if not re.search(' - ', market):
-
-					# already converted spread to handicap
-					# if re.search('handicap', listed_market):
-					# 	listed_market = 'spread'
+			bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
 
 
-					listed_market = re.sub(':','',listed_market)
-					print('listed_market: ' + listed_market)
+			#betslip = driver.find_element('tag name', 'bs-betslip')
+			#print('betslip: ' + betslip.get_attribute('innerHTML'))
 
-					# match result - early payout
-					# remove early payout
-					listed_market = re.sub(' - early payout', '', listed_market)
+			# wait to load
+			# while True:
+			# 	try:
+			# 		# straight bet section
+			# 		straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
+			# 		#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
+			# 		break
+			# 	except KeyboardInterrupt:
+			# 		exit()
+			# 	except:
+			# 		print('Loading...')
+			# 		time.sleep(3)
 
-					#if listed_market == market_title:
-					if determiner.determine_matching_outcome(listed_market, market_title):
+			straights_section = None
+			loading = True
+			load_retries = 0
+			while loading:
+				try:
+					# straight bet section
+					straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
+					#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
 					
-						found_market = True
+					listed_bets = straights_section.find_elements('tag name', 'bs-digital-single-bet-pick')
 
-				# if player market
-				# match name and market
-				else:
+					#listed_line = listed_bets[0].find_element('class name', 'betslip-digital-pick__line-0-container')
+					for listed_bet in listed_bets:
+						listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container')
+					loading = False
+					print('Done Loading listed bets')
+				except KeyboardInterrupt:
+					loading = False
+					print('Exit')
+					exit()
+				except:
+					# if more than 3 times than close window and reopen
+					# bc refresh does not work
+					# closing and reopen does not always work either
+					# so give up and move on after 3 tries
+					print('Loading listed bets...')
+					time.sleep(1)
+					if load_retries == max_retries:
+						loading = False
+						print('Error: Failed to Load listed bets during read actual odds, BetMGM!')
+					load_retries += 1
 
-					# Masyn Winn (STL): Hits 
-					# if no '):', then not player market so not match
-					if re.search('\):', listed_market):
-						listed_name	 = listed_market.split(' (')[0]
-						listed_market = listed_market.split(': ')[1]
-						print('listed_name: ' + listed_name)
+			
+			# after finding bet in list and reading actual odds
+			# remove old unused bets
+			# keep bottom one unless second time calling bet 
+			# after being interrupted by another bet
+			found_market = False
+			for listed_bet in listed_bets:
+				# Under 1.5
+				listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container').find_element('tag name', 'span').get_attribute('innerHTML').lower()
+				print('\ninit listed_line: ' + listed_line)
+
+				# convert listed line to standard format 
+				# bc cannot always convert standard input to source format
+				# if extra letters such as
+				# pittsburgh u +0.5 -> pittsburgh +0.5
+				listed_line = converter.convert_bet_line_to_standard_format(listed_line)
+				print('listed_line: ' + listed_line)
+
+				#  Masyn Winn (STL): Hits 
+				listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
+				print('init listed_market: ' + listed_market)
+
+				# listed_line: ca independiente avellaneda (0.5)
+				# init listed_market: 2way handicap (-0.5) -> spread
+
+				# odds
+				listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
+				print('listed_odds: ' + listed_odds)
+
+				if listed_odds != '':
+
+					# if NOT player market, 
+					# match directly with listed market
+					if not re.search(' - ', market):
+
+						# already converted spread to handicap
+						# if re.search('handicap', listed_market):
+						# 	listed_market = 'spread'
+
+
+						listed_market = re.sub(':','',listed_market)
 						print('listed_market: ' + listed_market)
 
-						# bases (hits only)
-						# remove (...)
-						listed_market = re.sub(' \(.+\)', '', listed_market)
+						# match result - early payout
+						# remove early payout
+						listed_market = re.sub(' - early payout', '', listed_market)
 
-						#if listed_name == input_name and listed_market == input_market:
-						if determiner.determine_matching_player_outcome(listed_name, listed_market, input_name, input_market):
+						#if listed_market == market_title:
+						if determiner.determine_matching_outcome(listed_market, market_title):
+						
 							found_market = True
-				
 
-			# ca independiente avellaneda (0.5) -> independiente +0.5
-			if found_market and determiner.determine_matching_outcome(listed_line, bet_line):#listed_line == bet_line:
-				print('Found Bet Listed')
-				actual_odds = listed_odds
-				final_outcome = listed_bet
-				# do not break bc need to remove old picks from slip
-				#break
-			else:
-				# remove old bet
-				print('Remove Old Pick from Slip')
-				remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
-				remove_btn.click()
-				time.sleep(1)
+					# if player market
+					# match name and market
+					else:
 
+						# Masyn Winn (STL): Hits 
+						# if no '):', then not player market so not match
+						if re.search('\):', listed_market):
+							listed_name	 = listed_market.split(' (')[0]
+							listed_market = listed_market.split(': ')[1]
+							print('listed_name: ' + listed_name)
+							print('listed_market: ' + listed_market)
 
-	elif website_name == 'betrivers':
+							# bases (hits only)
+							# remove (...)
+							listed_market = re.sub(' \(.+\)', '', listed_market)
 
-		section_retries = 0
-		while section_retries < max_retries:
-
-			# error not getting all sections
-			sections = []
-
-			section_idx = 2
-			market_title = market
-
-			# while loading sections
-			# keep looking for outcome
-			
-			game_available = True
-			# sometimes only 1 section valid for ncaaf football
-			while len(sections) < section_idx and game_available:# and not game_available:# and section_retries < max_retries:
-				print('Get Sections')
-				sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
-				print('num sections: ' + str(len(sections)))
-				# if home page, close window
-				# id section-Games of the Week
-				if len(sections) < section_idx:
-					print('len(sections) < section_idx ' + str(section_idx))
-					try:
-						# home_section = 
-						# class 'sc-cTVAEU iceBwx'
-						# data-testid="parlay-widget-header"
-						#driver.find_element('id', 'sportsbook-ui-widget-top-container-sgp-feat') #('id', 'section-Games of the Week')
-						driver.find_element('xpath', '//div[@data-testid="parlay-widget-header"]')
-						print('Home Page: Game NA\n')
-						game_available = False
-						#break
-					except:
-						print('Game Page: Get Sections\n')
-						game_available = True
-
-				# Game NA
-				#if len(sections) < 2:
-				if not game_available:
-				#if len(sections) < 1:
-					driver.close()
-					driver.switch_to.window(driver.window_handles[0])
-					return actual_odds, final_outcome, cookies_file, saved_cookies
-
-				# get new sections if stale element
-				try:
-					market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
-				except:
-					print('Error Reading Market Section, Get New Sections')
-
-			market_keyword = ''
-			if re.search(' - ', market):
-				# market keyword must be found in offer label
-				# market_data = market.split(' - ')
-				market_keyword = market.split(' - ')[1] #market_data[1]
-
-				# pitcher props
-				# pitcher strikeouts -> strikeouts
-				# pitcher outs -> total outs
-				market_keyword = re.sub('pitcher |alt ', '', market_keyword)
-				# if re.search('strikeout', market):
-				#     keyword = keyword.split()[-1]
-				# strikeouts diff than outs
-				if market_keyword == 'outs' or market_keyword == 'bases':
-					market_keyword = 'total ' + market_keyword
-
-				# remove s from home runs bc only 1 home run
-				# not yet multiple
-				if market_keyword == 'home runs':
-					market_keyword = 'home run'
-				elif market_keyword == 'touchdowns':
-					market_keyword = 'touchdown'
-				elif market_keyword == 'passing touchdowns':
-					market_keyword = 'touchdown passes'
-				elif market_keyword == 'passing attempts':
-					market_keyword = 'pass attempts'
-				elif market_keyword == 'passing completions':
-					market_keyword = 'pass completions'
-				elif market_keyword == 'longest completion':
-					market_keyword = 'longest completed pass'
-				elif market_keyword == 'receptions made':
-					market_keyword = 'receptions'
-				elif market_keyword == 'threes':
-					market_keyword = '3-point'
-
-				market_keyword = re.sub(' and ', ' & ', market_keyword)
-
-				print('market_keyword: ' + market_keyword)
-
-			#offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
-			
-			# click if not expanded   
-			# print('\nSections:') 
-			# for section in sections:
-			#     print('\nSection: ' + section.get_attribute('innerHTML'))
-			# 
-			if len(sections) > section_idx:
-				section = sections[section_idx]
-				#print('\nsection: ' + section.get_attribute('innerHTML'))
-				# format makes it so it only opens but does not close with same element
-				
-				retries = 0
-				# do not click section if only 1 section
-				if len(sections) > 1:
-					# starts at top of page so only scroll if > section 0
-					#if section_idx > 0:
-					# scrolls to bottom? and does not scroll back up to find element!
-
-					while retries < max_retries:
-						try:
-							section.click()
-							print('\nOpened Section ' + str(section_idx))
-							time.sleep(1)
-							break
-						except:
-							print('Error clicking Section')
-							driver.execute_script("arguments[0].scrollIntoView(true);", section)
-							retries += 1
-							time.sleep(1)
+							#if listed_name == input_name and listed_market == input_market:
+							if determiner.determine_matching_player_outcome(listed_name, listed_market, input_name, input_market):
+								found_market = True
 					
-				# Markets in section
-				found_offer = False
-				#market_retries = 0
-				markets = None
-				#while market_retries < max_retries:
-				while markets is None:
+
+				# ca independiente avellaneda (0.5) -> independiente +0.5
+				if found_market and determiner.determine_matching_outcome(listed_line, bet_line):#listed_line == bet_line:
+					print('Found Bet Listed')
+					actual_odds = listed_odds
+					final_outcome = listed_bet
+					# do not break bc need to remove old picks from slip
+					#break
+				else:
+					# remove old bet
+					print('Remove Old Pick from Slip')
+					remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
+					remove_btn.click()
+					time.sleep(1)
+
+
+		elif website_name == 'betrivers':
+
+			section_retries = 0
+			while section_retries < max_retries:
+
+				# error not getting all sections
+				sections = []
+
+				section_idx = 2
+				market_title = market
+
+				# while loading sections
+				# keep looking for outcome
+				
+				game_available = True
+				# sometimes only 1 section valid for ncaaf football
+				while len(sections) < section_idx and game_available:# and not game_available:# and section_retries < max_retries:
+					print('Get Sections')
+					sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+					print('num sections: ' + str(len(sections)))
+					# if home page, close window
+					# id section-Games of the Week
+					if len(sections) < section_idx:
+						print('len(sections) < section_idx ' + str(section_idx))
+						try:
+							# home_section = 
+							# class 'sc-cTVAEU iceBwx'
+							# data-testid="parlay-widget-header"
+							#driver.find_element('id', 'sportsbook-ui-widget-top-container-sgp-feat') #('id', 'section-Games of the Week')
+							driver.find_element('xpath', '//div[@data-testid="parlay-widget-header"]')
+							print('Home Page: Game NA\n')
+							game_available = False
+							#break
+						except:
+							print('Game Page: Get Sections\n')
+							game_available = True
+
+					# Game NA
+					#if len(sections) < 2:
+					if not game_available:
+					#if len(sections) < 1:
+						driver.close()
+						driver.switch_to.window(driver.window_handles[0])
+						return actual_odds, final_outcome, cookies_file, saved_cookies
+
+					# get new sections if stale element
 					try:
-						print('Get Markets in Section')
-						markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
-						#break
-					except:
-						
-						# market_retries += 1
-						# print('No Markets in Section, try ' + str(market_retries) + '/3')
-						# time.sleep(1)
-
-						print('Reload Sections')
-						sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
-						print('num sections: ' + str(len(sections)))
 						market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
-						section = sections[section_idx]
-						print('Get Markets in Section')
-						markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
-						print('num markets: ' + str(len(markets)))
-						
+					except:
+						print('Error Reading Market Section, Get New Sections')
 
-				# if markets=None, reload sections
+				market_keyword = ''
+				if re.search(' - ', market):
+					# market keyword must be found in offer label
+					# market_data = market.split(' - ')
+					market_keyword = market.split(' - ')[1] #market_data[1]
 
-				# list_elements = section.find_elements('tag name', 'li')
-				# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
-				for market_idx in range(len(markets)):
-					market_element = markets[market_idx]
-					#list_element = list_elements[market_idx]
-					#market = offer_categories[1]
-					#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
-					# print('\nouter market_element: ' + market_element.get_attribute('outerHTML'))
-					# print('\nlist_element: ' + list_element.get_attribute('innerHTML'))
-					# moneyline always first if available
-					# but others might shift depending if moneyline or others are NA
-					# so need to search for given offer in subcategory label
-					offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower().strip()
-					#offer_label = re.sub('amp;','',offer_label)
-					offer_label = converter.convert_name_to_standard_format(offer_label)
-					print('\noffer_label: ' + offer_label)
+					# pitcher props
+					# pitcher strikeouts -> strikeouts
+					# pitcher outs -> total outs
+					market_keyword = re.sub('pitcher |alt ', '', market_keyword)
+					# if re.search('strikeout', market):
+					#     keyword = keyword.split()[-1]
+					# strikeouts diff than outs
+					if market_keyword == 'outs' or market_keyword == 'bases':
+						market_keyword = 'total ' + market_keyword
+
+					# remove s from home runs bc only 1 home run
+					# not yet multiple
+					if market_keyword == 'home runs':
+						market_keyword = 'home run'
+					elif market_keyword == 'touchdowns':
+						market_keyword = 'touchdown'
+					elif market_keyword == 'passing touchdowns':
+						market_keyword = 'touchdown passes'
+					elif market_keyword == 'passing attempts':
+						market_keyword = 'pass attempts'
+					elif market_keyword == 'passing completions':
+						market_keyword = 'pass completions'
+					elif market_keyword == 'longest completion':
+						market_keyword = 'longest completed pass'
+					elif market_keyword == 'receptions made':
+						market_keyword = 'receptions'
+					elif market_keyword == 'threes':
+						market_keyword = '3-point'
+
+					market_keyword = re.sub(' and ', ' & ', market_keyword)
+
 					print('market_keyword: ' + market_keyword)
 
-					# easiest when = but not the case for player props
-					if offer_label == market_title:
-						print('Found Offer')
-						found_offer = True
+				#offer_categories_element = driver.find_element('class', 'KambiBC-bet-offer-categories')
+				
+				# click if not expanded   
+				# print('\nSections:') 
+				# for section in sections:
+				#     print('\nSection: ' + section.get_attribute('innerHTML'))
+				# 
+				if len(sections) > section_idx:
+					section = sections[section_idx]
+					#print('\nsection: ' + section.get_attribute('innerHTML'))
+					# format makes it so it only opens but does not close with same element
+					
+					retries = 0
+					# do not click section if only 1 section
+					if len(sections) > 1:
+						# starts at top of page so only scroll if > section 0
+						#if section_idx > 0:
+						# scrolls to bottom? and does not scroll back up to find element!
 
-					# player props market label always has - with spaces on either side
-					# KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant
-					elif re.search(' - ', market):
-						# market keyword must be found in offer label
-						# market_data = market.split(' - ')
-						# market_keyword = market.split(' - ')[1] #market_data[1]
+						while retries < max_retries:
+							try:
+								section.click()
+								print('\nOpened Section ' + str(section_idx))
+								time.sleep(1)
+								break
+							except:
+								print('Error clicking Section')
+								driver.execute_script("arguments[0].scrollIntoView(true);", section)
+								retries += 1
+								time.sleep(1)
+						
+					# Markets in section
+					found_offer = False
+					#market_retries = 0
+					markets = None
+					#while market_retries < max_retries:
+					while markets is None:
+						try:
+							print('Get Markets in Section')
+							markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+							#break
+						except:
+							
+							# market_retries += 1
+							# print('No Markets in Section, try ' + str(market_retries) + '/3')
+							# time.sleep(1)
 
-						# # pitcher props
-						# # pitcher strikeouts -> strikeouts
-						# # pitcher outs -> total outs
-						# market_keyword = re.sub('pitcher |alt ', '', market_keyword)
-						# # if re.search('strikeout', market):
-						# #     keyword = keyword.split()[-1]
-						# # strikeouts diff than outs
-						# if market_keyword == 'outs' or market_keyword == 'bases':
-						# 	market_keyword = 'total ' + market_keyword
+							print('Reload Sections')
+							sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+							print('num sections: ' + str(len(sections)))
+							market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
+							section = sections[section_idx]
+							print('Get Markets in Section')
+							markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+							print('num markets: ' + str(len(markets)))
+							
 
-						# # remove s from home runs bc only 1 home run
-						# # not yet multiple
-						# if market_keyword == 'home runs':
-						# 	market_keyword = 'home run'
-						# find 'home run' in 'player to hit home run...'
-						if re.search(market_keyword, offer_label):
-							print('Found Player Market, Search for Offer')
+					# if markets=None, reload sections
 
-							player_name = market_title
-							print('player_name: ' + player_name)
+					# list_elements = section.find_elements('tag name', 'li')
+					# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
+					for market_idx in range(len(markets)):
+						market_element = markets[market_idx]
+						#list_element = list_elements[market_idx]
+						#market = offer_categories[1]
+						#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
+						# print('\nouter market_element: ' + market_element.get_attribute('outerHTML'))
+						# print('\nlist_element: ' + list_element.get_attribute('innerHTML'))
+						# moneyline always first if available
+						# but others might shift depending if moneyline or others are NA
+						# so need to search for given offer in subcategory label
+						offer_label = market_element.find_element('class name', 'KambiBC-bet-offer-subcategory__label').find_element('tag name', 'span').get_attribute('innerHTML').lower().strip()
+						#offer_label = re.sub('amp;','',offer_label)
+						offer_label = converter.convert_name_to_standard_format(offer_label)
+						print('\noffer_label: ' + offer_label)
+						print('market_keyword: ' + market_keyword)
 
-							participant_names = []
+						# easiest when = but not the case for player props
+						if offer_label == market_title:
+							print('Found Offer')
+							found_offer = True
 
-							# Home Runs do not have participant elements
-							# instead participants in first column of table
-							# KambiBC-outcomes-list__column
-							if market_keyword == 'home run':
-								print('Find HR players')
-								participant_retries = 0
-								
-								while participant_retries < max_retries:
-									stale_participant = False
-									participant_names = []
+						# player props market label always has - with spaces on either side
+						# KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant
+						elif re.search(' - ', market):
+							# market keyword must be found in offer label
+							# market_data = market.split(' - ')
+							# market_keyword = market.split(' - ')[1] #market_data[1]
 
-									name_column = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')[0]
-									participant_elements = name_column.find_elements('class name', 'KambiBC-outcomes-list__label')
-									for participant_element in participant_elements:
-										# avoid stale element
-										try:
-											participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
-											# remove jr to match source
-											
-											participant = converter.convert_name_to_standard_format(participant)
-											print('participant: ' + participant)
-											participant_names.append(participant)
+							# # pitcher props
+							# # pitcher strikeouts -> strikeouts
+							# # pitcher outs -> total outs
+							# market_keyword = re.sub('pitcher |alt ', '', market_keyword)
+							# # if re.search('strikeout', market):
+							# #     keyword = keyword.split()[-1]
+							# # strikeouts diff than outs
+							# if market_keyword == 'outs' or market_keyword == 'bases':
+							# 	market_keyword = 'total ' + market_keyword
 
-											if participant == player_name:
-												print('Found Offer')
-												found_offer = True 
+							# # remove s from home runs bc only 1 home run
+							# # not yet multiple
+							# if market_keyword == 'home runs':
+							# 	market_keyword = 'home run'
+							# find 'home run' in 'player to hit home run...'
+							if re.search(market_keyword, offer_label):
+								print('Found Player Market, Search for Offer')
 
-										except:
-											print('Participant Gone!')
-											stale_participant = True
-											participant_retries += 1
-											break
+								player_name = market_title
+								print('player_name: ' + player_name)
 
-									# if gets thru all participants, break to move on
-									if not stale_participant:
-										break 
-							else:
-								
-								participant_retries = 0
-								
-								while participant_retries < max_retries:
-									stale_participant = False
-									participant_names = []
-									participant_elements = market_element.find_elements('class name', 'KambiBC-outcomes-list__row-header--participant')
+								participant_names = []
+
+								# Home Runs do not have participant elements
+								# instead participants in first column of table
+								# KambiBC-outcomes-list__column
+								if market_keyword == 'home run':
+									print('Find HR players')
+									participant_retries = 0
 									
-									#player_market_name = player_name
-									for participant_element in participant_elements:
-										# avoid stale element
-										try:
-											participant_element_str = participant_element.get_attribute('innerHTML')
-											#print('participant_element: ' + participant_element_str)
-											if re.search('\<span', participant_element_str):
-												participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
-												#participant = re.sub(' jr\.?| ii+', '', participant)
+									while participant_retries < max_retries:
+										stale_participant = False
+										participant_names = []
+
+										name_column = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')[0]
+										participant_elements = name_column.find_elements('class name', 'KambiBC-outcomes-list__label')
+										for participant_element in participant_elements:
+											# avoid stale element
+											try:
+												participant  = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+												# remove jr to match source
+												
 												participant = converter.convert_name_to_standard_format(participant)
 												print('participant: ' + participant)
 												participant_names.append(participant)
 
-												# search for player
 												if participant == player_name:
 													print('Found Offer')
-													found_offer = True  
-													#player_market_name = player_name
-													#break # break player loop
-										except:
-											print('Participant Gone!')
-											stale_participant = True
-											participant_retries += 1
+													found_offer = True 
+
+											except:
+												print('Participant Gone!')
+												stale_participant = True
+												participant_retries += 1
+												break
+
+										# if gets thru all participants, break to move on
+										if not stale_participant:
+											break 
+								else:
+									
+									participant_retries = 0
+									
+									while participant_retries < max_retries:
+										stale_participant = False
+										participant_names = []
+										participant_elements = market_element.find_elements('class name', 'KambiBC-outcomes-list__row-header--participant')
+										
+										#player_market_name = player_name
+										for participant_element in participant_elements:
+											# avoid stale element
+											try:
+												participant_element_str = participant_element.get_attribute('innerHTML')
+												#print('participant_element: ' + participant_element_str)
+												if re.search('\<span', participant_element_str):
+													participant = participant_element.find_element('tag name', 'span').get_attribute('innerHTML').lower()
+													#participant = re.sub(' jr\.?| ii+', '', participant)
+													participant = converter.convert_name_to_standard_format(participant)
+													print('participant: ' + participant)
+													participant_names.append(participant)
+
+													# search for player
+													if participant == player_name:
+														print('Found Offer')
+														found_offer = True  
+														#player_market_name = player_name
+														#break # break player loop
+											except:
+												print('Participant Gone!')
+												stale_participant = True
+												participant_retries += 1
+												break
+
+										# if gets thru all participants, break to move on
+										if not stale_participant:
 											break
 
-									# if gets thru all participants, break to move on
-									if not stale_participant:
-										break
+								if found_offer:
+									actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict)
 
-							if found_offer:
-								actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict)
+								break # done after found market
+
+
+						if found_offer:
+							actual_odds, final_outcome = read_market_odds(market, market_element, bet_dict)
 
 							break # done after found market
 
+					break # done retry loop
 
-					if found_offer:
-						actual_odds, final_outcome = read_market_odds(market, market_element, bet_dict)
+				else:
+					print('Error: Missing Sections!')
+					section_retries += 1
 
-						break # done after found market
+		# find element by bet dict
+		# first search for type element
+		#offer_element = driver.find_element()
 
-				break # done retry loop
+
+
+		# Next level: accept different as long as still less than fair odds
+		# if EV, close if gone or odds got worse
+		if pick_type == 'ev':
+			pick_odds = bet_dict['odds']
+
+			if actual_odds == None or int(actual_odds) < int(pick_odds):
+				if actual_odds == None:
+					print('\nNo Bet')
+				# still accept better price
+				else:
+					print('\nOdds Mismatch')
+					print('init_odds: ' + pick_odds)
+					print('actual_odds: ' + str(actual_odds) + '\n')
+					actual_odds = None # invalid indicator
+
+				writer.close_bet_windows(driver, side_num, test, bet_dict)
 
 			else:
-				print('Error: Missing Sections!')
-				section_retries += 1
-
-	# find element by bet dict
-	# first search for type element
-	#offer_element = driver.find_element()
-
-
-
-	# Next level: accept different as long as still less than fair odds
-	# if EV, close if gone or odds got worse
-	if pick_type == 'ev':
-		pick_odds = bet_dict['odds']
-
-		if actual_odds == None or int(actual_odds) < int(pick_odds):
+				# continue to place bet
+				# First notify users before placing bet
+				#print('\nPlace Bet or Find Limit')
+				print('\nValid Actual Odds, so continue to place EV bet\n')
+		
+		# if Arb, do not close unless gone or changed more than other side
+		else:
+			
 			if actual_odds == None:
 				print('\nNo Bet')
-			# still accept better price
+
+				writer.close_bet_windows(driver, side_num, test, bet_dict)
+
 			else:
-				print('\nOdds Mismatch')
-				print('init_odds: ' + pick_odds)
-				print('actual_odds: ' + str(actual_odds) + '\n')
-				actual_odds = None # invalid indicator
-
-			writer.close_bet_windows(driver, side_num, test)
-
-		else:
-			# continue to place bet
-			# First notify users before placing bet
-			#print('\nPlace Bet or Find Limit')
-			print('\nValid Actual Odds, so continue to place EV bet\n')
-	
-	# if Arb, do not close unless gone or changed more than other side
-	else:
-		
-		if actual_odds == None:
-			print('\nNo Bet')
-
-			writer.close_bet_windows(driver, side_num, test)
-
-		else:
-			# continue to place bet
-			# First notify users before placing bet
-			print('\nValid Actual Odds, so continue to find Arb limit\n')
+				# continue to place bet
+				# First notify users before placing bet
+				print('\nValid Actual Odds, so continue to find Arb limit\n')
 
 	
 	# except:
 	# 	print('Error while reading actual odds')
 	# 	writer.close_bet_windows(driver, side_num)
 
+	except KeyboardInterrupt:
+		print('\nKeyboard Interrupt in Read Prematch Arb Data')
+		print('Exit')
+		exit()
+
+	except ConnectionResetError:
+		print('\nConnectionResetError in Read Prematch Arb Data')
+		print('Exit')
+		exit()
+
+	except Exception as e:
+		print('Unknown Error: ', e)
+		e_str = str(e)
+		#print('e_str: ' + e_str)
+		if re.search('invalid session id', e_str):
+			# reboot window
+			# open dynamic window
+			# restart monitor website fcn from the top
+			return 'reboot'
+		elif re.search('Connection refused', e_str):
+			print('\nConnection refused in Read Prematch Arb Data')
+			print('Exit')
+			exit()
 
 	print('actual_odds: ' + str(actual_odds))
 	return actual_odds, final_outcome, cookies_file, saved_cookies

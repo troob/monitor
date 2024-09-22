@@ -54,11 +54,13 @@ def round_ev_bet_size(ev):
 def convert_name_to_standard_format(name):
 
     name = re.sub(' jr\.?| ii+| \(.+\)|amp;', '', name)
-    name = re.sub('á', 'a', name)
+    name = re.sub('á|ã', 'a', name)
     name = re.sub('é|ê', 'e', name)
     name = re.sub('ó', 'o', name)
     name = re.sub('ú', 'u', name)
     
+    # remove university of
+    name = re.sub('university of | university', '', name)
 
     return name
 
@@ -75,6 +77,10 @@ def convert_bet_line_to_standard_format(listed_line):
     return bet_line
 
 def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
+    print('\n===Convert Bet Line to Source Format===\n')
+    print('Input: bet_line = ' + bet_line)
+    print('Input: market = ' + market)
+    print('\nOutput: source bet_line = string\n')
 
     # universal rule for university sports
     bet_line = re.sub('university of | university', '', bet_line)
@@ -112,7 +118,12 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
             bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
 
-    print('bet_line: ' + bet_line)
+        # football anytime td scorer has player name as line
+        elif re.search('- touchdowns', market):
+            player_name = market.split(' - ')[0]
+            bet_line = player_name
+
+    print('source bet_line: ' + bet_line)
     return bet_line
 
 def convert_market_to_source_format(market, sport, game, website_name):

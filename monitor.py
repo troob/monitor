@@ -267,6 +267,8 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 			#actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
 			actual_odds_data = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type, test=test)
+			if actual_odds_data == 'reboot':
+				return 'reboot'
 			actual_odds = actual_odds_data[0]
 			final_outcome = actual_odds_data[1]
 
@@ -395,6 +397,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
 			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type='ev', test=test)
+			if actual_odds_data == 'reboot':
+				return 'reboot'
 			actual_odds1 = actual_odds_data[0]
 			final_outcome1 = actual_odds_data[1]
 
@@ -425,6 +429,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				# side num defines placement of window
 				# actual_odds1, final_outcome1, cookies_file, saved_cookies = 
 				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type, side_num=1, test=test)
+				if actual_odds_data == 'reboot':
+					return 'reboot'
 				actual_odds1 = actual_odds_data[0]
 				final_outcome1 = actual_odds_data[1]
 
@@ -450,6 +456,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# actual_odds2, final_outcome2, cookies_file, saved_cookies
 				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type, side_num=2, test=test)
+				if actual_odds_data == 'reboot':
+					return 'reboot'
 				actual_odds2 = actual_odds_data[0]
 				final_outcome2 = actual_odds_data[1]
 
@@ -485,7 +493,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				# also close third window, idx 2
 				if actual_odds1 != '' and actual_odds2 != '':
 					# detect side 1 window idx
-					driver.switch_to.window(driver.window_handles[-1]) # idx 2 last window
+					driver.switch_to.window(arb['window1']) # idx 2 last window
 					driver.close()
 				# relinquish control to monitor window
 				driver.switch_to.window(driver.window_handles[0])
@@ -833,6 +841,7 @@ def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}
 				driver.switch_to.new_window()
 				driver.get(url)
 				time.sleep(1)
+				# init manual window by selecting filter
 
 			# # # Window 3: Live Small Markets
 			# # driver.switch_to.new_window()
@@ -952,7 +961,10 @@ def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}
 					
 						# monitor either live or pre, not both
 						new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
-						
+						if new_arbs == 'reboot':
+							print('Reboot')
+							driver.quit()
+							break
 						# new_live_arbs = new_arbs[0]
 						# new_prematch_arbs = new_arbs[1]
 
@@ -1019,6 +1031,10 @@ def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}
 					if ev_data is not None:
 						#try:
 						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
+						if new_evs == 'reboot':
+							print('Reboot')
+							driver.quit()
+							break
 						# except KeyboardInterrupt:
 						# 	print('Stop Monitor EVs')
 						# prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance

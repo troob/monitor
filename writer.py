@@ -56,8 +56,11 @@ def switch_to_bet_window(bet_dict, driver, test, side_num=1):
     if side_num == 2 and bet_dict['actual odds1'] != '':
         window_idx = num_monitor_windows + 1
 
+    window_key = 'window' + str(side_num)
+    window_handle = bet_dict[window_key]
+
     print('Switch to Window Idx: ' + str(window_idx))
-    driver.switch_to.window(driver.window_handles[window_idx])
+    driver.switch_to.window(window_handle)
 
     # we have what window idx is supposed to be
     # if no other windows open,
@@ -196,9 +199,10 @@ def remove_old_bets(driver, website_name):
 # if arb side 2, close both windows
 # then relinquish control back to main monitor window
 # test has only 1 monitor window
-def close_bet_windows(driver, side_num=1, test=False):
+def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
     print('\n===Close Bet Windows===\n')
     print('side_num: ' + str(side_num) + '\n')
+    print('bet_dict: ' + str(bet_dict))
 
     # get total num windows before closing first window
     # need to know how many monitor windows to know how many arb windows
@@ -229,12 +233,28 @@ def close_bet_windows(driver, side_num=1, test=False):
 
     # if side 2, both windows open
     # so also close side 1 window
-    if side_num == 2 and init_num_windows >= num_full_auto_windows:
-        print('Close Side 1 Window')
-        side1_window_idx = num_monitor_windows
-        driver.switch_to.window(updated_windows[side1_window_idx]) # idx 2 usually but depends on other windows
-        driver.close()
-        print('Closed Side 1 Window')
+    # check if both window idxs given in arb dict
+    #if init_num_windows >= num_full_auto_windows:
+    if 'window1' in bet_dict.keys() and 'window2' in bet_dict.keys():
+        if side_num == 2:
+            print('Close Side 1 Window')
+            #side1_window_idx = num_monitor_windows
+            #side1_window_idx = bet_dict['window1']
+            driver.switch_to.window(bet_dict['window1']) # idx 2 usually but depends on other windows
+            driver.close()
+            print('Closed Side 1 Window')
+        
+        # if side 1 dictates invalid arb
+        # we closed side 1 already
+        # so also close side 2
+        else: # side 1 first, so side 2 second
+            print('Close Side 2 Window')
+            #side1_window_idx = num_monitor_windows
+            #side2_window_idx = bet_dict['window2']
+            driver.switch_to.window(bet_dict['window2']) # idx 2 usually but depends on other windows
+            driver.close()
+            print('Closed Side 2 Window')
+
     
     # send back to main window
     driver.switch_to.window(windows[0])
@@ -318,10 +338,13 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
                 close_popup_btn.click()
                 time.sleep(1)
 
+                print('Closed Main Popup')
+                popup = False
+
             # First time login each day shows profit boost popup instead
             except:
-                print('Close Profit Boost Popup')
-                popup = False
+                print('Check If Profit Boost Popup')
+                
 
                 # 'data-translate="BTN_CLOSE_TITLE"'
                 try:
@@ -331,9 +354,17 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
                 except:
                     print('No Profit Boost')
 
-            # close location popup
-            'data-testid="alert"'
-            # > tag button or aria-label="Close"
+                print('Check If Location Popup')
+                try:
+                    # close location popup
+                    # 'data-testid="alert"'
+                    # > tag button or aria-label="Close"
+                    close_loc_btn = driver.find_element('xpath', '//div[@data-testid="alert"]').find_element('tag name', 'button')
+                    print('close_loc_btn: ' + close_loc_btn.get_attribute('outerHTML'))
+                    close_loc_btn.click()
+                    print('Closed Location Popup')
+                except:
+                    print('No Location Popup')
 
         logged_in = True
 
@@ -925,7 +956,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             logged_in = False
             login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
             if login_result == 'fail':
-                close_bet_windows(driver, test=test)
+                close_bet_windows(driver, test=test, bet_dict=bet_dict)
                 return
 
             bet_size = determiner.determine_limit(bet_dict, website_name, pick_type, test)
@@ -1257,7 +1288,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             #if not test:
             login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
             if login_result == 'fail':
-                close_bet_windows(driver, test=test)
+                close_bet_windows(driver, test=test, bet_dict=bet_dict)
                 return
             
             # For Arbs, find limit by placing large bet we know above limit
@@ -1439,7 +1470,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             bet_limit = wager_field.get_attribute('value')
                             if bet_limit == '':
                                 print('Reached Bet Limit')#: ' + str(bet_limit))
-                                close_bet_windows(driver, test=test)#, side_num)
+                                close_bet_windows(driver, test=test, bet_dict=bet_dict)#, side_num)
                                 return
 
                     place_bet_btn.click()
@@ -1553,7 +1584,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
     # # always switch bot back to main window so it can click btns  
     # driver.switch_to.window(driver.window_handles[0])
 
-    close_bet_windows(driver, test=test)
+    close_bet_windows(driver, test=test, bet_dict=bet_dict)
 
 # just like place bet but only up to getting limit
 # remove the final place bet click
@@ -1656,7 +1687,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     #     close_bet_windows(driver, side_num, test)
     #     return bet_limit
     
-    driver.switch_to.window(driver.window_handles[bet_dict['window']])
+    driver.switch_to.window(bet_dict['window'])
     
     website_name = bet_dict['source']
     print('website_name = ' + website_name)
@@ -1678,7 +1709,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     # should not reach this point bc actual odds would also be none
     if final_outcome is None:
         print('final_outcome none, Close Bet Windows\n')
-        close_bet_windows(driver, side_num, test)
+        close_bet_windows(driver, side_num, test, bet_dict)
         return bet_limit
     
     # get max number that is less than available funds
@@ -1690,7 +1721,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         logged_in = False
         login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
         if login_result == 'fail':
-            close_bet_windows(driver, side_num, test)
+            close_bet_windows(driver, side_num, test, bet_dict)
             return
 
         while not logged_in:
@@ -1787,7 +1818,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
 
         login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
         if login_result == 'fail':
-            close_bet_windows(driver, side_num, test)
+            close_bet_windows(driver, side_num, test, bet_dict)
             return
         
         # add max bet size to wager field
@@ -1807,8 +1838,32 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             
         remove_old_bets(driver, website_name)
 
-        placed_bet = False
-        while not placed_bet: #not place_btn_clicked:
+        # placed_bet = False
+        # while not placed_bet: #not place_btn_clicked:
+        #     try:
+        #         # Need to click twice for this website
+        #         place_bet_btn.click()
+        #         time.sleep(1) # need wait for bet to fully load and submit before moving on
+        #         try:
+        #             place_bet_btn.click()
+        #             time.sleep(1)
+        #         except:
+        #             print('Failed to Click Place Bet second time so check if already placed?')
+                
+        #         print('Placed Bet to find limit')
+        #         #break
+        #         placed_bet = True
+        #     except KeyboardInterrupt:
+        #         print('Exit')
+        #         exit()
+        #     except:
+        #         print('Failed to click Place Bet Button. Retry.')
+        #         time.sleep(1)
+
+        # wait to finish loading
+        loading = True
+        while loading:
+
             try:
                 # Need to click twice for this website
                 place_bet_btn.click()
@@ -1828,10 +1883,14 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             except:
                 print('Failed to click Place Bet Button. Retry.')
                 time.sleep(1)
+                place_bet_btn_text = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn').get_attribute('innerHTML').lower()
+                print('place_bet_btn_text: ' + place_bet_btn_text)
+                if place_bet_btn_text == 'approve odds change':
+                    # close windows and move on
+                    print('Odds Changed, so skip')
+                    close_bet_windows(driver, side_num, test, bet_dict)
+                    return bet_limit, payout, wager_field, place_bet_btn
 
-        # wait to finish loading
-        loading = True
-        while loading:
             try:
                 error_title = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__title').get_attribute('innerHTML').lower() # Wager too high
                 print('error_title: ' + error_title)
@@ -1845,13 +1904,13 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                     return remaining_funds, payout, wager_field, place_bet_btn
                 elif error_title == 'bet offer suspended':
                     # close window and move on
-                    close_bet_windows(driver, side_num, test)
+                    close_bet_windows(driver, side_num, test, bet_dict)
                     return bet_limit, payout, wager_field, place_bet_btn
                 elif error_title == 'odds changed':
                     # ideally check other side to see if odds still in range
                     # OR
                     # close window and move on
-                    close_bet_windows(driver, side_num, test)
+                    close_bet_windows(driver, side_num, test, bet_dict)
                     return bet_limit, payout, wager_field, place_bet_btn
 
                 # Sorry, the maximum allowed wager is $4.01.
@@ -1896,7 +1955,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     # if bet limit 0, close and move on bc no use
     if bet_limit == 0:
         print('\nWarning: Bet Limit 0\n')
-        close_bet_windows(driver, side_num, test)
+        close_bet_windows(driver, side_num, test, bet_dict)
 
     return bet_limit, payout, wager_field, place_bet_btn
 
@@ -1912,12 +1971,14 @@ def place_arb_bet(driver, arb, side_num, test):
     # if side_num == 2 and arb['actual odds1'] != '':
     #     window_idx = num_monitor_windows + 1
 
-    window_idx = determiner.determine_window_idx(driver, side_num, arb, test)
+    #window_idx = determiner.determine_window_idx(driver, side_num, arb, test)
     
+
     # change to bet 1 window
     # second to last window
-    driver.switch_to.window(driver.window_handles[window_idx])
-    print('Changed to Bet ' + str(side_num) + ': Window ' + str(window_idx))
+    window_key = 'window' + str(side_num)
+    driver.switch_to.window(arb[window_key])
+    print('Changed to Bet ' + str(side_num))# + ': Window ' + str(window_idx))
     # enter bet 1
     wager_field_key = 'wager field' + str(side_num)
     source_key = 'source' + str(side_num)
@@ -1952,8 +2013,8 @@ def place_arb_bet(driver, arb, side_num, test):
         #time.sleep(3)
         # confirm placed bet 1
         
-        start_time = datetime.today().time()
-        print('start_time: ' + str(start_time))
+        start_time = datetime.today()
+        
         loading = True
         while loading:
             try:
@@ -1969,11 +2030,14 @@ def place_arb_bet(driver, arb, side_num, test):
             except:
                 print('Loading bet receipt...')
                 time.sleep(0.5)
-        end_time = datetime.today().time()
+
+        end_time = datetime.today()
+        duration = (end_time - start_time).seconds
+        start_time = str(start_time.hour) + ':' + str(start_time.minute) + ':' + str(start_time.seconds)
+        end_time = str(end_time.hour) + ':' + str(end_time.minute) + ':' + str(start_time.seconds)
+        print('start_time: ' + str(start_time))
         print('end_time: ' + str(end_time))
-        # duration = end_time - start_time
-        duration = datetime.combine(datetime.date.min, end_time) - datetime.combine(datetime.date.min, start_time)
-        print('duration: ' + str(duration))
+        print('duration: ' + str(duration) + ' seconds')
 
         
 
@@ -2139,7 +2203,7 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
 
 
     print('Done Placing Both Bets Auto Arb, so close windows')
-    close_bet_windows(driver, side_num=2, test=test)
+    close_bet_windows(driver, side_num=2, test=test, bet_dict=arb)
 
     #print('arb: ' + str(arb))
     
@@ -2231,9 +2295,9 @@ def write_arb_to_post(arb, client, post=False):
     props_str = '\n===Arb===\n'
     props_str += '\n' + source1 + ' ' + odds1 + ', ' + source2 + ' ' + odds2 +'. \n\n'
     props_str += game + ' - \n\n'
-    props_str += market + ' - \n\n'
+    props_str += market + ' - \n\n\n'
 
-    props_str += '\n' + source1 + ', ' + source2 +'. \n\n'
+    props_str += source1 + ', ' + source2 +'. \n\n'
     props_str += bet1 + ', ' + bet2 + ' - \n\n'
     props_str += odds1 + ', ' + odds2 + ' - \n\n'
     props_str += size1 + ', ' + size2 + ' - \n\n'
@@ -2241,8 +2305,8 @@ def write_arb_to_post(arb, client, post=False):
 
     props_str += game_date + ', ' + game_time + ' - \n\n\n'
 
-    props_str += '\nLINK 1:\n' + link1 + ' \n'
-    props_str += '\nLINK 2:\n' + link2 + ' \n\n'
+    props_str += 'LINK 1:\n' + link1 + ' \n\n'
+    props_str += 'LINK 2:\n' + link2 + ' \n\n\n'
     
 
     # split player and market in given market field
@@ -2299,7 +2363,9 @@ def write_arb_to_post(arb, client, post=False):
         # add to new user str bc they avoid home runs
         new_user_props_str += props_str
 
-    print('\nTimestamp: ' + str(datetime.today().time()) + '\n')
+    cur_time = datetime.today().time()
+    timestamp = str(cur_time.hour) + ':' + str(cur_time.minute)
+    print('\nTimestamp: ' + timestamp + '\n')
     print(all_props_str)
     #print(tabulate(arb_table))
     # print('New User Arbs')
@@ -2626,7 +2692,9 @@ def write_ev_to_post(ev, client, post=False):
         # add to new user str bc they avoid home runs
         new_user_props_str += props_str
 
-    print('\nTimestamp: ' + str(datetime.today().time()) + '\n')
+    cur_time = datetime.today().time()
+    timestamp = str(cur_time.hour) + ':' + str(cur_time.minute)
+    print('\nTimestamp: ' + timestamp + '\n')
     print(all_props_str)
     #print(tabulate(arb_table))
     # print('New User Arbs')
