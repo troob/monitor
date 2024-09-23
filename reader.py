@@ -450,10 +450,16 @@ def read_market_odds(market, market_element, bet_dict):
 		# if market has team name in it
 		#team_markets = ['moneyline', 'run line', 'spread']
 		
+
+		# === Convert Bet Outcome to Source Format
 		# convert team loc to abbrev
 		#if market in team_markets or 
 		# ties are moneyline but no team name to convert
 		if re.search('moneyline|spread|run line', market):
+			# remove dots from team name if not player prop
+			if not re.search(' - ', market) and sport in team_sports:
+				bet_outcome = re.sub('\.', '', bet_outcome)
+			
 			if league in national_leagues and bet_outcome != 'tie' and bet_outcome != 'draw':
 				#multi_name_locs = ['new york', 'los angeles']
 				#team = bet_outcome.rsplit(' ', 1)[0]

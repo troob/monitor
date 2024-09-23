@@ -94,6 +94,13 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             names = bet_line.split(' ', 1)
             bet_line = names[0][0] + '. ' + names[1]
 
+        # special case player props not o/u but yes only
+        # so player name is bet line
+        # football anytime td scorer has player name as line
+        elif re.search('- touchdowns', market):
+            player_name = market.split(' - ')[0]
+            bet_line = player_name
+
         # totals and player props are over/unders
         elif re.search('total| - ', market):
             bet_data = bet_line.split()
@@ -118,10 +125,7 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
             bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
 
-        # football anytime td scorer has player name as line
-        elif re.search('- touchdowns', market):
-            player_name = market.split(' - ')[0]
-            bet_line = player_name
+        
 
     print('source bet_line: ' + bet_line)
     return bet_line
@@ -280,6 +284,10 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif market == 'touchdowns':
 
                 market_title = 'anytime td scorer'
+
+            elif market == 'defensive tackles and assists':
+
+                market_title = 'total tackles and assists'
 
             # 1st half totals is only market with abbrev
             # others spell out first
@@ -1264,9 +1272,12 @@ def convert_team_loc_to_abbrev(team_loc, sport=''):
     return abbrev
 
 def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
-    print('\n===Convert Team Location to Abbrev: ' + team_loc + '===\n')
+    print('\n===Convert Team Location to Source Abbrev: ' + team_loc + '===\n')
     
     abbrev = ''
+
+    # remove dots
+    team_loc = re.sub('\.', '', team_loc)
 
     if source == 'betrivers':
         # for baseball, need logo info bc multiple teams same city

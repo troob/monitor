@@ -976,6 +976,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             placed_bet = False
             while not attempted_bet and not placed_bet:
                 # login takes time so check if odds changed
+                #try:
                 place_bet_btn = driver.find_element('class name', 'place-button')
                 # check if enough funds
                 place_btn_text = place_bet_btn.find_element('class name', 'ds-btn-text').get_attribute('innerHTML').lower()
@@ -1043,10 +1044,13 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             print('Clicked My Bets')
                             time.sleep(3) # TEMP wait to manually check bet placed before closing
 
-                            open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[2]')
-                            open_bets_btn.click()
-                            print('Clicked Open Bets')
-                            time.sleep(3)
+                            try:
+                                open_bets_btn = driver.find_element('class name', 'sliding-menu').find_element('xpath', 'div[2]')
+                                open_bets_btn.click()
+                                print('Clicked Open Bets')
+                                time.sleep(3)
+                            except:
+                                print('Failed to Click Open Bets')
 
                             placed_bet = True
                             print('Placed Bet')
@@ -1977,7 +1981,9 @@ def place_arb_bet(driver, arb, side_num, test):
     # change to bet 1 window
     # second to last window
     window_key = 'window' + str(side_num)
-    driver.switch_to.window(arb[window_key])
+    window_handle = arb[window_key]
+    print('window_handle: ' + window_handle)
+    driver.switch_to.window(window_handle)
     print('Changed to Bet ' + str(side_num))# + ': Window ' + str(window_idx))
     # enter bet 1
     wager_field_key = 'wager field' + str(side_num)
@@ -2033,8 +2039,8 @@ def place_arb_bet(driver, arb, side_num, test):
 
         end_time = datetime.today()
         duration = (end_time - start_time).seconds
-        start_time = str(start_time.hour) + ':' + str(start_time.minute) + ':' + str(start_time.seconds)
-        end_time = str(end_time.hour) + ':' + str(end_time.minute) + ':' + str(start_time.seconds)
+        start_time = str(start_time.hour) + ':' + str(start_time.minute) + ':' + str(start_time.second)
+        end_time = str(end_time.hour) + ':' + str(end_time.minute) + ':' + str(end_time.second)
         print('start_time: ' + str(start_time))
         print('end_time: ' + str(end_time))
         print('duration: ' + str(duration) + ' seconds')
@@ -2186,7 +2192,8 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     
 
     bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num=2)
-    arb['limit2'] = bet_limit_data[0]
+    bet_limit2 = bet_limit_data[0]
+    arb['limit2'] = bet_limit2
     arb['payout2'] = bet_limit_data[1]
     arb['wager field2'] = bet_limit_data[2]
     arb['place btn2'] = bet_limit_data[3]
@@ -2195,6 +2202,9 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     
     arb['size1'] = '$' + str(bet1_size)
     arb['size2'] = '$' + str(bet2_size)
+
+    if bet_limit2 == 0:
+        return 
 
     # write in and place bets
     place_bets_simultaneously(driver, arb, test)
@@ -2692,7 +2702,7 @@ def write_ev_to_post(ev, client, post=False):
         # add to new user str bc they avoid home runs
         new_user_props_str += props_str
 
-    cur_time = datetime.today().time()
+    cur_time = datetime.today()
     timestamp = str(cur_time.hour) + ':' + str(cur_time.minute)
     print('\nTimestamp: ' + timestamp + '\n')
     print(all_props_str)
