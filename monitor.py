@@ -199,7 +199,7 @@ monitor_ev = True
 # input all EVs read this scan
 # output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, manual_picks, test, pick_time_group='prematch', pick_type='ev'):
+def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, manual_picks, send_mobile, test, pick_time_group='prematch', pick_type='ev'):
 	# print('\n===Monitor New EVs===\n')
 	# print('Input: ev_data = [[...],...]')# + str(ev_data))
 	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
@@ -282,6 +282,8 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 		if valid_ev_idx == 0:
 			if manual_picks:
 				os.system(say_str)
+			else:
+				print('Manual Picks DISABLED')
 			# Also say if still need to check mobile only sources
 			#os.system(say_mobile)
 			print('\n' + str(monitor_idx) + ': Found New EVs')
@@ -293,7 +295,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 		# notify before placing bet so other devices can start placing bets
 		# format string to post
-		writer.write_ev_to_post(ev_row, client, True)
+		writer.write_ev_to_post(ev_row, client, send_mobile)
 
 
 		# === Place Bet === 
@@ -372,7 +374,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		cookies_file = 'data/cookies.json'
 		saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
 
-		enabled_sources = ['betrivers', 'betmgm']
+		enabled_sources = ['betrivers', 'betmgm'] # dk next bc most limited
 		bet1_dict = {}
 		bet2_dict = {}
 
@@ -519,6 +521,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		if valid_arb_idx == 0:
 			if manual_picks:
 				os.system(say_str)
+			else:
+				print('Manual Picks DISABLED')
 			print('\n' + str(monitor_idx) + ': Found New Arbs')
 			
 			
@@ -530,7 +534,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		# notify before placing bet so other devices can start placing bets
 		# format string to post
 		# pass updated arb to post all data
-		writer.write_arb_to_post(arb, client, True)
+		writer.write_arb_to_post(arb, client)
 
 
 		# === Place Bet === 
@@ -684,7 +688,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 	
 
 
-	return new_picks
+	return new_picks, manual_picks
 
 # use time of day to tell arb type
 # if before first game, only pre
@@ -788,7 +792,7 @@ def monitor_arb_type(first_live_time, last_pre_time):
 # open website once 
 # and then loop over it 
 # simulate human behavior to avoid getting blocked
-def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}, max_retries=3):
+def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_ev={}, test_arb={}, max_retries=3):
 	print('\n===Monitor Website===\n')
 
 	cur_yr = str(todays_date.year)
@@ -826,8 +830,11 @@ def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}
 
 			
 
-
-			# time.sleep(100) # wait before opening next page to seem human
+			# Add time to manually relogin after resetting oddsview account
+			# NEED to replace with autologin including 2fa
+			#time.sleep(1000) # wait before opening next page to seem human
+			
+			
 			# cookies = driver.get_cookies()
 			# print('cookies:\n' + str(cookies))
 
@@ -960,7 +967,7 @@ def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}
 					if arb_data is not None:
 					
 						# monitor either live or pre, not both
-						new_arbs = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
+						new_arbs, manual_picks = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
 						if new_arbs == 'reboot':
 							print('Reboot')
 							driver.quit()
@@ -1030,7 +1037,7 @@ def monitor_website(url, manual_picks=False, test=False, test_ev={}, test_arb={}
 						break
 					if ev_data is not None:
 						#try:
-						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
+						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, send_mobile, test)
 						if new_evs == 'reboot':
 							print('Reboot')
 							driver.quit()
@@ -1227,5 +1234,15 @@ if __name__ == "__main__":
 	# and sometimes want sound off while still running
 	test = False
 	manual_picks = True
+
+	# post to mobile for mobile manual action
+	# need desktop for arb so no need to ever send arb for mobile manual action
+	# ev is mobile capable bc only 1
+	send_mobile = True # send for notice and manual action
+	
+	# Main switch to stop sending commands out 
+	# to external devices for auto action
+	send_commands = False
+
 	#manual_arbs = False # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
-	monitor_website(url, manual_picks, test, test_ev, test_arb)
+	monitor_website(url, manual_picks, send_mobile, test, test_ev, test_arb)

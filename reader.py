@@ -1064,6 +1064,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			elif market == 'total':
 				market_title = 'total goals'
 
+			# overall half total
 			elif re.search('half total', market):
 				section_idx = 1
 
@@ -1071,6 +1072,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				time_part = market.split(' total')[0] # '1st half'
 				market_title = 'total goals - ' + time_part
 
+			# team half total
 			elif re.search('half .+ total', market):
 				section_idx = 1
 
@@ -1079,7 +1081,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				time_part = market.split(' ' + team_name)[0] # '1st half'
 				market_title = 'total goals by ' + team_name + ' - ' + time_part
 
-			elif re.search('half .+ moneyline', market):
+			elif re.search('half moneyline', market):
 				section_idx = 1
 
 				# 1st half moneyline 3 way -> half time
@@ -1178,6 +1180,26 @@ def read_cur_window_idx(driver):
 			tab = tabs.index(window_handle)
 			print('Cur Window Idx: ' + str(tab) + '\n')
 			return tab
+		
+def check_bet_available(driver, website_name):
+	print('\n===Check Bet Available===\n')
+	print('website_name = ' + website_name)
+
+	bet_available = False
+
+	# if no notice saying NA, assume available
+	notice_class = ''
+	if website_name == 'betmgm':
+		notice_class = 'modal-body'
+	elif website_name == 'draftkings':
+		notice_class = '404'
+
+	try:
+		driver.find_element('class name', notice_class)#.find_element('tag name', 'button')
+		print('No')
+	except:
+		bet_available = True
+		print('Yes')
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
 def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
@@ -1742,7 +1764,44 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 		#offer_element = driver.find_element()
 
 
+		elif website_name == 'draftkings':
 
+			# ===Check Bet Available===
+			bet_available = check_bet_available(driver, website_name)
+
+			# if bet na, close window
+			if bet_available == False:
+				print('Bet NA')
+				writer.close_bet_windows(driver, side_num, test, bet_dict)
+				return actual_odds, final_outcome, cookies_file, saved_cookies
+
+			# ===Convert Market to Source Format===
+			# either either player name and player market
+			# or market title
+			market_title = player_name = player_market = ''
+			if re.search(' - ', market):
+				market_data = market.split(' - ')
+				player_name = market_data[0]
+				player_market = market_data[1]
+				print('player_name: ' + player_name)
+				print('player_market: ' + player_market)
+
+				player_market = converter.convert_market_to_source_format(input_market, sport, game, website_name)
+			
+			else:
+				market_title = converter.convert_market_to_source_format(market, sport, game, website_name)
+
+			# ===Convert Bet Line to Source Format===
+			bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
+
+			# ===Load Listed Bets===
+
+			# ===Find Matching Market + Line===
+
+			# ===Remove Old Picks from Betslip===
+
+
+		# After reading actual odds, decide whether to continue or close windows
 		# Next level: accept different as long as still less than fair odds
 		# if EV, close if gone or odds got worse
 		if pick_type == 'ev':
@@ -5617,7 +5676,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 14') 
+	options.add_argument(r'--profile-directory=Profile 16') 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)

@@ -262,7 +262,7 @@ def convert_market_to_source_format(market, sport, game, website_name):
                 market_title = 'three-pointers made'
 
 
-        elif sport == 'boxing':
+        elif sport == 'boxing' or sport == 'mma':
             
             if market == 'moneyline':
 
