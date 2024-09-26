@@ -619,7 +619,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 					# so until queue made, need to wait
 					#input("\nPress Enter to continue...\n")
 					try:
-						reader.input_with_timeout("\nPress Enter to continue...\n", 90)
+						reader.input_with_timeout("\nPress Enter to continue...\n", 100)
 						print('You Pressed Enter, so continue')
 					except TimeoutError as e:
 						print('Input Timeout, so turn off manual mode')
@@ -1124,6 +1124,7 @@ if __name__ == "__main__":
 	# === TEST ===
 	
 	# Fully Auto
+	#test_arb = {}
 	test_arb = {'market':'Total', 
 				'bet1':'U 56.5', 
 				'bet2':'O 56.5', 
@@ -1131,8 +1132,8 @@ if __name__ == "__main__":
 				'odds2':'+360', 
 				'game':'Houston Texans vs Minnesota Vikings',
 				'sport':'football',
-				'source1':'betmgm',
-				'source2':'betrivers',
+				'source1':'caesars',
+				'source2':'caesars',
 				'league':'nfl',
 				'value':'5.0',
 				'size1':'$1.00',
@@ -1165,17 +1166,18 @@ if __name__ == "__main__":
 	# 			'link1':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417',
 	# 			'link2':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417'}
 	
-	test_ev = {'market':'Moneyline', 
-				'bet':'Yoelvis Gomez', 
-				'odds':'-2000', 
-				'game':'Yoelvis Gomez',
-				'sport':'football',
-				'source':'betmgm',
-				'league':'nfl',
+	test_ev = {'market':'Patrick Bailey - Hits', 
+				'bet':'O 0.5', 
+				'odds':'-110', 
+				'game':'San Francisco Giants vs Arizona Diamondbacks',
+				'sport':'baseball',
+				'source':'betrivers',
+				'league':'mlb',
 				'value':'5.0',
 				'size':'$3.00',
-				'game date':'Thu Sep 5 2024',
-				'link':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417'}
+				'game date':'Thu Sep 25 2024',
+				'game time':'7:00 PM',
+				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376168'}
 	# test_ev = {'market':'Spread', 
 	# 			'bet':'Washington Commanders -4', 
 	# 			'odds':'+105', 

@@ -1018,9 +1018,13 @@ def close_popups(driver, website_name):
                 if main_popup == False:
                     loc_popup = False
 
-            
+            # either none or all means exit loop
             if not main_popup and not boost_popup and not loc_popup:
                 popups = False
+
+            elif main_popup and boost_popup and loc_popup:
+                popups = False
+
 
 def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type='ev', test=True, max_retries=3):
     print('\n===Place Bet===\n')
@@ -2145,6 +2149,7 @@ def place_arb_bet(driver, arb, side_num, test):
     # change to bet 1 window
     # second to last window
     window_key = 'window' + str(side_num)
+    print('window_key: ' + window_key)
     window_handle = arb[window_key]
     print('window_handle: ' + window_handle)
     driver.switch_to.window(window_handle)
@@ -2153,10 +2158,14 @@ def place_arb_bet(driver, arb, side_num, test):
     wager_field_key = 'wager field' + str(side_num)
     source_key = 'source' + str(side_num)
     outcome_key = 'outcome' + str(side_num)
+    print('wager_field_key: ' + wager_field_key)
+    print('source_key: ' + source_key)
+    print('outcome_key: ' + outcome_key)
     wager_field = arb[wager_field_key]
     # problem sending keys in betrivers after leaving window
     source = arb[source_key]
     outcome = arb[outcome_key]
+    print('source: ' + source)
     if source == 'betrivers':
         outcome.click() # close betslip
         time.sleep(0.5)
@@ -2166,6 +2175,7 @@ def place_arb_bet(driver, arb, side_num, test):
     # bet_size1 = arb['size1']
     # if re.search('\$', str(bet_size1)):
     size_key = 'size' + str(side_num)
+    print('size_key: ' + size_key)
     bet_size = arb[size_key].split('$')[1]
     print('bet_size: ' + bet_size)
     if test:
@@ -2178,36 +2188,42 @@ def place_arb_bet(driver, arb, side_num, test):
     # click bet 1
     if not test:
         place_btn_key = 'place btn' + str(side_num)
+        print('place_btn_key: ' + place_btn_key)
         place_btn = arb[place_btn_key]
-        place_btn.click()
-        #time.sleep(3)
-        # confirm placed bet 1
-        
-        start_time = datetime.today()
-        
-        loading = True
-        while loading:
-            try:
-                # look for loading bar or spinner
-                # or close receipt btn
-                if source == 'betmgm':
-                    driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-                elif source == 'betrivers':
-                    driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
-                
-                loading = False
-                print('Done Loading')
-            except:
-                print('Loading bet receipt...')
-                time.sleep(0.5)
+        try:
+            place_btn.click()
+            print('Clicked Place Bet')
+            #time.sleep(3)
+            # confirm placed bet 1
+            
+            start_time = datetime.today()
+            
+            loading = True
+            while loading:
+                try:
+                    # look for loading bar or spinner
+                    # or close receipt btn
+                    if source == 'betmgm':
+                        driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
+                    elif source == 'betrivers':
+                        driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                    
+                    loading = False
+                    print('Done Loading')
+                except:
+                    print('Loading bet receipt...')
+                    time.sleep(0.5)
 
-        end_time = datetime.today()
-        duration = (end_time - start_time).seconds
-        start_time = str(start_time.hour) + ':' + str(start_time.minute) + ':' + str(start_time.second)
-        end_time = str(end_time.hour) + ':' + str(end_time.minute) + ':' + str(end_time.second)
-        print('start_time: ' + str(start_time))
-        print('end_time: ' + str(end_time))
-        print('duration: ' + str(duration) + ' seconds')
+            end_time = datetime.today()
+            duration = (end_time - start_time).seconds
+            start_time = str(start_time.hour) + ':' + str(start_time.minute) + ':' + str(start_time.second)
+            end_time = str(end_time.hour) + ':' + str(end_time.minute) + ':' + str(end_time.second)
+            print('start_time: ' + str(start_time))
+            print('end_time: ' + str(end_time))
+            print('duration: ' + str(duration) + ' seconds')
+
+        except Exception as e:
+            print('Failed to Click Place Bet Btn: ', e)
 
         
 
@@ -2565,26 +2581,27 @@ def write_arb_to_post(arb, client):#, post=False):
 
 
     #send msg on slack app
-    # print('Post: ' + str(post) + '\n\n')
-    # if post:
-    #     # to avoid double msg, 
-    #     # only apply 1 channel per user
-    #     # OR do not repeat arbs
-    #     # BUT all will repeat all which are separated into channels
-    #     post_all = True # for testing all arbs before finalizing all category channels
-    #     if all_props_str != '' and post_all:
-    #         client.chat_postMessage(
-    #             channel='all-arbs',
-    #             text=props_str,
-    #             username='Ball'
-    #         )
+    post = True # send to log so we can see if arb still available later
+    print('Post: ' + str(post) + '\n\n')
+    if post:
+        # to avoid double msg, 
+        # only apply 1 channel per user
+        # OR do not repeat arbs
+        # BUT all will repeat all which are separated into channels
+        post_all = True # for testing all arbs before finalizing all category channels
+        if all_props_str != '' and post_all:
+            client.chat_postMessage(
+                channel='all-arbs',
+                text=props_str,
+                username='Ball'
+            )
 
-    #     elif new_user_props_str != '':
-    #         client.chat_postMessage(
-    #             channel='ball', # arbitrary name given to first channel
-    #             text=props_str,
-    #             username='Ball'
-    #         )
+        elif new_user_props_str != '':
+            client.chat_postMessage(
+                channel='ball', # arbitrary name given to first channel
+                text=props_str,
+                username='Ball'
+            )
 
 # def write_arb_to_post(arb, client, post=False):
 #     # print('\n===Write Arb to Post===\n')

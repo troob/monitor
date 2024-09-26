@@ -266,12 +266,14 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 	# Chicago Cubs +1.5
 	# U 0.5, O 0.5
 	bet_outcome = bet_dict['bet'].lower()
+	source = bet_dict['source']
+	print('source: ' + source)
 
 	bet_data = bet_outcome.split()
 	direction = bet_data[0]
 	line = bet_data[1]
 
-	if bet_dict['source'] == 'betrivers':
+	if source == 'betrivers':
 		
 		# Player Props over under except home runs yes/no
 		if re.search('^[ou]\s', bet_outcome):
@@ -287,26 +289,33 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 		final_outcome = None # pass it on to click in place bet fcn
 
 		# get column lists
-		columns = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')
-		# for column in columns:
-		# 	print('column: ' + column.get_attribute('innerHTML'))
+		# HR still uses columns but other player props have 1 list
+		columns = column = None
+		try:
+			columns = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')
+			# for column in columns:
+			# 	print('column: ' + column.get_attribute('innerHTML'))
 
-		# idx = 0
-		# if len(columns) == 3:
-		# 	idx += 1
+			# idx = 0
+			# if len(columns) == 3:
+			# 	idx += 1
 
-		# need over column to determine when new player
-		over_column = columns[-2].get_attribute('innerHTML')
-		# under_column = columns[1]
+			# need either column to determine when new player
+			#over_column = columns[-2].get_attribute('innerHTML')
+			# under_column = columns[1]
 
-		# look for participant in over column to get cutoff idx?
-		# no bc not outcome
-		# instead see if num is less than prev bc always in order
+			# look for participant in over column to get cutoff idx?
+			# no bc not outcome
+			# instead see if num is less than prev bc always in order
 
-		if direction == 'o':
-			column = columns[-2]
-		else:
-			column = columns[-1]
+			if direction == 'o':
+				column = columns[-2]
+			else:
+				column = columns[-1]
+
+		except:
+			print('Single Column')
+			column = market_element.find_element('class name', 'KambiBC-outcomes-list__column')
 		
 		# when it is grayed out NA disabled there is no odds section
 		outcomes = column.find_elements('class name', 'KambiBC-betty-outcome')
@@ -343,7 +352,7 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 			num_player_outcomes = 0
 			all_players_outcome_nums = []
 			# players in idx 1+ bc idx 0 is header
-			player_column_split = over_column.split('<h4 class="KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant">')
+			player_column_split = column.get_attribute('innerHTML').split('<h4 class="KambiBC-outcomes-list__row-header KambiBC-outcomes-list__row-header--participant">')
 			for player_column in player_column_split[1:]:
 				outcome_buttons = player_column.split('<button')
 				num_player_outcomes = len(outcome_buttons) - 1 # minus header row
@@ -458,7 +467,18 @@ def read_market_odds(market, market_element, bet_dict):
 		if re.search('moneyline|spread|run line', market):
 			# remove dots from team name if not player prop
 			if not re.search(' - ', market) and sport in team_sports:
-				bet_outcome = re.sub('\.', '', bet_outcome)
+				bet_outcome_line = ''
+				bet_outcome_name = bet_outcome
+				if market == 'spread':
+					# we know not player prop 
+					# so look for -[0-9] or +[0-9] for spread
+					bet_outcome_name = re.split(' -[0-9]| \+[0-9]', bet_outcome)[0]
+					bet_outcome_line = bet_outcome.split(bet_outcome_name)[1]
+
+				bet_outcome_name = re.sub('\.', '', bet_outcome_name)
+				print('bet_outcome_name: ' + bet_outcome_name)
+				print('bet_outcome_line: ' + bet_outcome_line)
+				bet_outcome = bet_outcome_name + bet_outcome_line
 			
 			if league in national_leagues and bet_outcome != 'tie' and bet_outcome != 'draw':
 				#multi_name_locs = ['new york', 'los angeles']
@@ -1201,6 +1221,52 @@ def check_bet_available(driver, website_name):
 		bet_available = True
 		print('Yes')
 
+
+def load_listed_bets(driver, website_name, max_retries=3):
+	print('\n===Load Listed Bets===\n')
+
+	bet_element = {}
+	if website_name == 'betmgm':
+		bet_element = ('tag name', 'bs-digital-single-bet-pick')
+	elif website_name == 'draftkings':
+		bet_element = ('class name', 'single-card')
+
+	#straights_section = None
+	loading = True
+	load_retries = 0
+	while loading:
+		try:
+			# straight bet section
+			#straights_section = driver.find_element('tag name', 'bs-single-bet-linear')
+			#print('straights_section: ' + straights_section.get_attribute('innerHTML'))
+			
+			listed_bets = driver.find_elements(bet_element[0], bet_element[1])
+
+			#listed_line = listed_bets[0].find_element('class name', 'betslip-digital-pick__line-0-container')
+			for listed_bet in listed_bets:
+				listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container')
+			
+			loading = False
+			print('Done Loading listed bets')
+
+		except KeyboardInterrupt:
+			loading = False
+			print('Exit')
+			exit()
+		except:
+			# if more than 3 times than close window and reopen
+			# bc refresh does not work
+			# closing and reopen does not always work either
+			# so give up and move on after 3 tries
+			print('Loading listed bets...')
+			time.sleep(1)
+			if load_retries == max_retries:
+				loading = False
+				print('Error: Failed to Load listed bets during read actual odds, BetMGM!')
+			load_retries += 1
+
+
+
 #selected_markets = ['moneyline', 'run line', 'total runs']
 def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
 	print('\n===Read Actual Odds===\n')
@@ -1795,6 +1861,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 			bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
 
 			# ===Load Listed Bets===
+			load_listed_bets(driver)
 
 			# ===Find Matching Market + Line===
 
@@ -1806,6 +1873,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 		# if EV, close if gone or odds got worse
 		if pick_type == 'ev':
 			pick_odds = bet_dict['odds']
+			print('init_odds: ' + pick_odds)
 
 			if actual_odds == None or int(actual_odds) < int(pick_odds):
 				if actual_odds == None:
@@ -1813,7 +1881,6 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 				# still accept better price
 				else:
 					print('\nOdds Mismatch')
-					print('init_odds: ' + pick_odds)
 					print('actual_odds: ' + str(actual_odds) + '\n')
 					actual_odds = None # invalid indicator
 
