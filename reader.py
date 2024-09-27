@@ -448,7 +448,7 @@ def read_market_odds(market, market_element, bet_dict):
 	sport = bet_dict['sport']
 	source = bet_dict['source']
 	# leagues needed to know if loc abbrev format
-	national_leagues = ['mlb', 'nfl', 'nhl', 'nba', 'wnba']
+	national_leagues = ['mlb', 'nfl', 'cfl', 'nhl', 'nba', 'wnba']
 	league = bet_dict['league']
 
 	# === Convert Bet Outcome to Source Format === 
@@ -1225,6 +1225,8 @@ def check_bet_available(driver, website_name):
 def load_listed_bets(driver, website_name, max_retries=3):
 	print('\n===Load Listed Bets===\n')
 
+	listed_bets = None
+
 	bet_element = {}
 	if website_name == 'betmgm':
 		bet_element = ('tag name', 'bs-digital-single-bet-pick')
@@ -1262,9 +1264,110 @@ def load_listed_bets(driver, website_name, max_retries=3):
 			time.sleep(1)
 			if load_retries == max_retries:
 				loading = False
-				print('Error: Failed to Load listed bets during read actual odds, BetMGM!')
+				print('Error: Failed to Load listed bets during read actual odds! ' + website_name)
 			load_retries += 1
 
+	return listed_bets
+
+def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market, website_name):
+	print('\n===Find Matching Bet===\n')
+	print('market_title: ' + str(market_title))
+	print('bet_line: ' + str(bet_line))
+	print('player_name: ' + str(player_name))
+	print('player_market: ' + str(player_market))
+	print('website_name: ' + str(website_name))
+	print('listed_bets: ' + str(listed_bets))
+
+	listed_line_element = None
+	if website_name == 'betmgm':
+		listed_line_element = (('class name', 'betslip-digital-pick__line-0-container'), ('tag name', 'span'))
+
+
+	found_market = False
+	for listed_bet in listed_bets:
+		# Under 1.5
+		listed_line = listed_bet.find_element(listed_line_element[0], listed_line_element[1])
+		if len(listed_line_element) > 1:
+			for element in listed_line_element[1:]:
+				listed_line = listed_line.find_element(element[0], element[1])
+		listed_line = listed_line.get_attribute('innerHTML').lower()
+		print('\ninit listed_line: ' + listed_line)
+
+		# convert listed line to standard format 
+		# bc cannot always convert standard input to source format
+		# if extra letters such as
+		# pittsburgh u +0.5 -> pittsburgh +0.5
+		listed_line = converter.convert_bet_line_to_standard_format(listed_line)
+		print('listed_line: ' + listed_line)
+
+		#  Masyn Winn (STL): Hits 
+		listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
+		print('init listed_market: ' + listed_market)
+
+		# listed_line: ca independiente avellaneda (0.5)
+		# init listed_market: 2way handicap (-0.5) -> spread
+
+		# odds
+		listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
+		print('listed_odds: ' + listed_odds)
+
+		if listed_odds != '':
+
+			# if NOT player market, 
+			# match directly with listed market
+			if not re.search(' - ', market):
+
+				# already converted spread to handicap
+				# if re.search('handicap', listed_market):
+				# 	listed_market = 'spread'
+
+
+				listed_market = re.sub(':','',listed_market)
+				print('listed_market: ' + listed_market)
+
+				# match result - early payout
+				# remove early payout
+				listed_market = re.sub(' - early payout', '', listed_market)
+
+				#if listed_market == market_title:
+				if determiner.determine_matching_outcome(listed_market, market_title):
+				
+					found_market = True
+
+			# if player market
+			# match name and market
+			else:
+
+				# Masyn Winn (STL): Hits 
+				# if no '):', then not player market so not match
+				if re.search('\):', listed_market):
+					listed_name	 = listed_market.split(' (')[0]
+					listed_market = listed_market.split(': ')[1]
+					print('listed_name: ' + listed_name)
+					print('listed_market: ' + listed_market)
+
+					# bases (hits only)
+					# remove (...)
+					listed_market = re.sub(' \(.+\)', '', listed_market)
+
+					#if listed_name == input_name and listed_market == input_market:
+					if determiner.determine_matching_player_outcome(listed_name, listed_market, input_name, input_market):
+						found_market = True
+			
+
+		# ca independiente avellaneda (0.5) -> independiente +0.5
+		if found_market and determiner.determine_matching_outcome(listed_line, bet_line):#listed_line == bet_line:
+			print('Found Bet Listed')
+			actual_odds = listed_odds
+			final_outcome = listed_bet
+			# do not break bc need to remove old picks from slip
+			#break
+		else:
+			# remove old bet
+			print('Remove Old Pick from Slip')
+			remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
+			remove_btn.click()
+			time.sleep(1)
 
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
@@ -1861,11 +1964,13 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 			bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
 
 			# ===Load Listed Bets===
-			load_listed_bets(driver)
+			listed_bets = load_listed_bets(driver)
 
 			# ===Find Matching Market + Line===
-
 			# ===Remove Old Picks from Betslip===
+			actual_odds, final_outcome = find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market)
+
+			
 
 
 		# After reading actual odds, decide whether to continue or close windows
@@ -5303,7 +5408,7 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 			print('Unknown Error: ', e)
 			e_str = str(e)
 			#print('e_str: ' + e_str)
-			if re.search('invalid session id', e_str):
+			if re.search('invalid session id', e_str) or re.search('disconnected', e_str):
 				# reboot window
 				# open dynamic window
 				# restart monitor website fcn from the top
@@ -5698,7 +5803,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 			print('Unknown Error: ', e)
 			e_str = str(e)
 			#print('e_str: ' + e_str)
-			if re.search('invalid session id', e_str):
+			if re.search('invalid session id', e_str) or re.search('disconnected', e_str):
 				# reboot window
 				# open dynamic window
 				# restart monitor website fcn from the top

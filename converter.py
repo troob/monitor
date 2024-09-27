@@ -72,6 +72,9 @@ def convert_bet_line_to_standard_format(listed_line):
     bet_line = re.sub(' u$', '', listed_line)
     bet_line = re.sub(' u ', ' ', bet_line)
 
+    # remove ole from ole miss
+    bet_line = re.sub('^ole ', '', bet_line)
+
     bet_line = convert_name_to_standard_format(bet_line)
 
     return bet_line
@@ -89,17 +92,23 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
     solo_sports = ['boxing', 'mma', 'tennis']
     if website_name == 'betmgm':
 
-        if sport in solo_sports:
-            # josh kelly -> j. kelly
-            names = bet_line.split(' ', 1)
-            bet_line = names[0][0] + '. ' + names[1]
-
         # special case player props not o/u but yes only
         # so player name is bet line
         # football anytime td scorer has player name as line
-        elif re.search('- touchdowns', market):
+        if re.search('- touchdowns', market):
             player_name = market.split(' - ')[0]
             bet_line = player_name
+
+        elif market == 'total sets':
+            # u 2.5 -> 2 sets
+            # o 2.5 -> 3 sets
+            bet_data = bet_line.split()
+            direction = bet_data[0]
+            line_val = bet_data[1]
+            if direction == 'o':
+                bet_line = '3 sets'
+            else:
+                bet_line = '2 sets'
 
         # totals and player props are over/unders
         elif re.search('total| - ', market):
@@ -124,6 +133,12 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             #bet_line = re.sub('\+', '', bet_line)
             bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
             bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
+
+        elif sport in solo_sports:
+            # josh kelly -> j. kelly
+            names = bet_line.split(' ', 1)
+            bet_line = names[0][0] + '. ' + names[1]
+
 
         
 
@@ -393,21 +408,28 @@ def convert_market_to_source_format(market, sport, game, website_name):
                 market_title = 'player ' + player_num + ' to win at least 1 set'
 
 
+            elif market == 'total sets':
+
+                market_title = 'how many sets will be played in the match?'
 
 
     print('market_title: ' + market_title)
     return market_title
 
+# extract team loc from bet
+# by separating team name
 def convert_bet_to_team_loc(bet_outcome, market):
     print('\n===Convert Bet to Team Loc===\n')
     print('Input: bet_outcome = team name = ' + bet_outcome)
 
     # only sox has 2 names in team
-    # white sox is 2 words
-    multi_name = 'sox'
+    # white sox and blue bombers is 2 words
+    multi_names = ['sox', 'blue']
     split_num = 1
-    if multi_name in bet_outcome:
-        split_num = 2
+    for multi_name in multi_names:
+        if multi_name in bet_outcome:
+            split_num = 2
+            break
     print('split_num: ' + str(split_num))
 
     # moneyline outcome is just team name
@@ -1381,7 +1403,17 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
                             'arizona':'ari',
                             'los angeles rams':'la',
                             'san francisco':'sf',
-                            'seattle':'sea'}
+                            'seattle':'sea',
+                            # CFL
+                            'hamilton':'ham',
+                            'montreal':'mtl',
+                            'toronto':'tor',
+                            'winnipeg':'wpg',
+                            'british columbia':'bc',
+                            'calgary':'cal',
+                            'edmonton':'edm',
+                            'sasketchewan':'ssk',
+                            'ottawa':'ott'}
             
         else: # basketball
             # even tho 2 teams in LA 1 labeled LA and other Los Angeles
@@ -1519,7 +1551,17 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
                             'arizona':'ari',
                             'los angeles rams':'la',
                             'san francisco':'sf',
-                            'seattle':'sea'}
+                            'seattle':'sea',
+                            # CFL
+                            'hamilton':'ham',
+                            'montreal':'mtl',
+                            'toronto':'tor',
+                            'winnipeg':'wpg',
+                            'british columbia':'bc',
+                            'calgary':'cal',
+                            'edmonton':'edm',
+                            'sasketchewan':'ssk',
+                            'ottawa':'ott'}
             
         else: # basketball
             # even tho 2 teams in LA 1 labeled LA and other Los Angeles

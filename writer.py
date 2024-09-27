@@ -187,12 +187,33 @@ def remove_old_bets(driver, website_name):
     if len(remove_bet_btns) > 1:
         # remove old bets
         num_old_bets = len(remove_bet_btns) - 1
-        print('\nRemove Old Bets: ' + str(num_old_bets) + '\n')
-        for btn in remove_bet_btns[:-2]:
+        print('\nnum_old_bets: ' + str(num_old_bets) + '\n')
+        remove_bets = remove_bet_btns[:-2]
+        print('remove_bets: ' + str(remove_bets))
+        print('\nRemove Old Bets: ' + str(len(remove_bets)) + '\n')
+        for btn in remove_bets:
             btn.click()
             time.sleep(1)
+            print('Removed Bet')
     else:
         print('\nNo Old Bets\n')
+
+# def remove_old_picks(driver, website_name):
+#     print('\n===Remove Old Picks===\n')
+
+#     if website_name == 'betrivers':
+#         # remove all but bottom last pick bc most recent new pick
+#         try:
+#             remove_pick_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+        
+#             if len(remove_pick_btns) > 1:
+#                 for remove_pick_btn in remove_pick_btns[:-2]:
+#                     remove_pick_btn.click()
+#                     print('Removed Pick')
+#             else:
+#                 print('Only 1 Pick in Betslip')
+#         except:
+#             print('Betslip Empty')
 
 # if ev, just close 1 window
 # if arb side 1, just close 1 window
@@ -336,7 +357,7 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
                 close_popup_btn = driver.find_element('xpath', '//div[@class="close-modal-button"]')
                 print('close_popup_btn: ' + close_popup_btn.get_attribute('innerHTML'))
                 close_popup_btn.click()
-                time.sleep(1)
+                time.sleep(0.5)
 
                 print('\nClosed Main Popup\n')
                 main_popup = False
@@ -597,17 +618,18 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
                 logged_in = True
                 print('\nLogin Success\n')
 
-        if logged_in:
-            # check for confirm phone popup
-            try:
-                confirm_dialog = driver.find_element('tag name', 'ms-modal-dialog')#
-                close_dialog_btn = confirm_dialog.find_element('class name', 'ds-button')
-                print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
-                close_dialog_btn.click()
-                time.sleep(1)
-                print('Closed Confirm Popup')
-            except:
-                print('No Confirm Popup')
+        # ideal to only check for popup if error placing bet bc takes time to check
+        # if logged_in:
+        #     # check for confirm phone popup
+        #     try:
+        #         confirm_dialog = driver.find_element('tag name', 'ms-modal-dialog')#
+        #         close_dialog_btn = confirm_dialog.find_element('class name', 'ds-button')
+        #         print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
+        #         close_dialog_btn.click()
+        #         time.sleep(1)
+        #         print('Closed Confirm Popup')
+        #     except:
+        #         print('No Confirm Popup')
 
 
         # login_page = False
@@ -919,6 +941,10 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
     #return driver not needed bc already in parent fcn
     #gets updated
 
+
+
+        
+
 def clear_betslip(driver):
     # Require that betslip is empty
     # So look for betslip html to see if open
@@ -1067,6 +1093,8 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                     print('Not Logged In Yet')
                     time.sleep(1)
 
+            remove_old_bets(driver, website_name)
+
             # if error other than limit
             # then not considered attempted bet
             # so fix error and retry bet to find limit
@@ -1113,15 +1141,25 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                     # needs fcn to account for glitches to ensure clean click
                     # may fail with popup glitch 
                     # which simply needs to be closed and retried
-                    #try:
-                    place_bet_btn.click()
-                    time.sleep(1)
-                    print('Placed Bet to Find Limit')
-                    time.sleep(3) 
-                    # except:
-                    #     print('Error: Failed to Click Place Bet Button! Check popup confirm number popup.')
+                    try:
+                        place_bet_btn.click()
+                        time.sleep(1)
+                        print('Placed Bet to Find Limit')
+                        time.sleep(3) 
+                    except:
+                        print('Error: Failed to Click Place Bet Button! Check popup confirm number popup.')
 
-                        
+                        #if logged_in:
+                        # check for confirm phone popup
+                        try:
+                            confirm_dialog = driver.find_element('tag name', 'ms-modal-dialog')#
+                            close_dialog_btn = confirm_dialog.find_element('class name', 'ds-button')
+                            print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
+                            close_dialog_btn.click()
+                            time.sleep(1)
+                            print('Closed Confirm Popup')
+                        except:
+                            print('No Confirm Popup')
 
 
                     # wait to finish loading
@@ -1574,7 +1612,15 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                     # make sure place btn loads
                     # close and continue and if odds changed
                     place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
-                    print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
+                    place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
+                    print('place_bet_btn: ' + place_bet_btn_text)
+                    
+                    if place_bet_btn_text == 'approve odds change':
+                        # close window and move on
+                        print('Odds Changed')
+                        close_bet_windows(driver, test=test, bet_dict=bet_dict)
+                        return
+                    
                     # wait for place bet btn to enable
                     place_btn_disabled = place_bet_btn.get_attribute('disabled')
                     print('place_btn_disabled: ' + str(place_btn_disabled))
@@ -1856,6 +1902,8 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             except:
                 print('Not Logged In Yet')
                 time.sleep(1)
+
+        remove_old_bets(driver, website_name)
 
         attempted_bet = False
         while not attempted_bet:

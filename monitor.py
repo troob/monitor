@@ -1166,18 +1166,18 @@ if __name__ == "__main__":
 	# 			'link1':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417',
 	# 			'link2':'https://sports.ny.betmgm.com/en/sports/events/yoelvis-gomez-cub-diego-allan-ferreira-lablonski-16279417'}
 	
-	test_ev = {'market':'Patrick Bailey - Hits', 
-				'bet':'O 0.5', 
+	test_ev = {'market':'1st Half Total', 
+				'bet':'O 28.5', 
 				'odds':'-110', 
-				'game':'San Francisco Giants vs Arizona Diamondbacks',
-				'sport':'baseball',
-				'source':'betrivers',
-				'league':'mlb',
+				'game':'University of Kentucky vs University of Mississipi',
+				'sport':'football',
+				'source':'draftkings',
+				'league':'ncaaf',
 				'value':'5.0',
 				'size':'$3.00',
-				'game date':'Thu Sep 25 2024',
-				'game time':'7:00 PM',
-				'link':'https://ny.betrivers.com/?page=sportsbook#event/1020376168'}
+				'game date':'Thu Sep 28 2024',
+				'game time':'12:00 PM',
+				'link':'https://sportsbook.draftkings.com/event/31063256?outcomes=0OU76795728O2850_1'}
 	# test_ev = {'market':'Spread', 
 	# 			'bet':'Washington Commanders -4', 
 	# 			'odds':'+105', 
