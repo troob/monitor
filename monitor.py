@@ -199,7 +199,7 @@ monitor_ev = True
 # input all EVs read this scan
 # output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, manual_picks, send_mobile, test, pick_time_group='prematch', pick_type='ev'):
+def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, send_mobile, test, pick_time_group='prematch', pick_type='ev'):
 	# print('\n===Monitor New EVs===\n')
 	# print('Input: ev_data = [[...],...]')# + str(ev_data))
 	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
@@ -266,7 +266,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 		if ev_source in enabled_sources:
 
 			#actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type, test=test)
+			actual_odds_data = reader.read_actual_odds(ev_row, driver, betrivers_window_handle, pick_time_group, pick_type, test=test)
 			if actual_odds_data == 'reboot':
 				return 'reboot'
 			actual_odds = actual_odds_data[0]
@@ -313,7 +313,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, manual_picks=False, test=False, pick_time_group='prematch', pick_type='arb'):
+def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks=False, test=False, pick_time_group='prematch', pick_type='arb'):
 	# print('\n===Monitor New Arbs===\n')
 	# print('Input: arb_data = [{...},...]')# + str(arb_data))
 	# print('Input: init_arbs = {0:{...},...}')
@@ -398,7 +398,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			bet1_dict['link'] = arb['link1']
 			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type='ev', test=test)
+			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type='ev', test=test)
 			if actual_odds_data == 'reboot':
 				return 'reboot'
 			actual_odds1 = actual_odds_data[0]
@@ -417,7 +417,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 			# if arb_source1 in enabled_sources or arb_source2 in enabled_sources:
 			# 	print('\nAuto Arb\n')
-
+			side_num = 1
 			# check first side to make sure odds still valid arb
 			if arb_source1 in enabled_sources:
 				print('\nAuto Check Side 1 Odds\n')
@@ -430,7 +430,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# side num defines placement of window
 				# actual_odds1, final_outcome1, cookies_file, saved_cookies = 
-				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type, side_num=1, test=test)
+				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test)
 				if actual_odds_data == 'reboot':
 					return 'reboot'
 				actual_odds1 = actual_odds_data[0]
@@ -457,7 +457,8 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				bet2_dict['size'] = determiner.determine_source_limit(bet2_dict['source'])
 
 				# actual_odds2, final_outcome2, cookies_file, saved_cookies
-				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, pick_time_group, pick_type, side_num=2, test=test)
+				side_num = 2
+				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test)
 				if actual_odds_data == 'reboot':
 					return 'reboot'
 				actual_odds2 = actual_odds_data[0]
@@ -489,16 +490,17 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			if not test and not determiner.determine_valid_arb_odds(arb):
 				print('Arb Odds Changed to Invalid: ' + actual_odds1 + ', ' + actual_odds2)
 				print('\nClose Arb Windows\n')
-				# close last window, either idx 2 or 3
-				driver.close()
-				# if both odds auto read, 
-				# also close third window, idx 2
-				if actual_odds1 != '' and actual_odds2 != '':
-					# detect side 1 window idx
-					driver.switch_to.window(arb['window1']) # idx 2 last window
-					driver.close()
-				# relinquish control to monitor window
-				driver.switch_to.window(driver.window_handles[0])
+				writer.close_bet_windows(driver, side_num, test, arb)
+				# # close last window, either idx 2 or 3
+				# driver.close()
+				# # if both odds auto read, 
+				# # also close third window, idx 2
+				# if actual_odds1 != '' and actual_odds2 != '':
+				# 	# detect side 1 window idx
+				# 	driver.switch_to.window(arb['window1']) # idx 2 last window
+				# 	driver.close()
+				# # relinquish control to monitor window
+				# driver.switch_to.window(driver.window_handles[0])
 				continue
 
 			
@@ -636,7 +638,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				# driver.close()
 				# # finally, switch back to main window
 				# driver.switch_to.window(driver.window_handles[0])
-				writer.close_bet_windows(driver)
+				writer.close_bet_windows(driver, side_num, test, arb)
 
 		# if onyl odds1 populated, then place single bet
 		# if actual_odds2 == '' and treat_ev:
@@ -798,6 +800,8 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 	cur_yr = str(todays_date.year)
 	#print('cur_yr: ' + cur_yr)
 
+	betrivers_window_handle = ''
+
 	# loop until keyboard interrupt
 	retries = 0
 	driver = None
@@ -850,10 +854,24 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 				time.sleep(1)
 				# init manual window by selecting filter
 
-			# # # Window 3: Live Small Markets
-			# # driver.switch_to.new_window()
-			# # driver.get(url)
-			# # time.sleep(1)
+				# # # Window 3: Live Small Markets
+				# # driver.switch_to.new_window()
+				# # driver.get(url)
+				# # time.sleep(1)
+
+
+				# === Bet Window ===
+				# Betrivers window should stay open bc logs out when closed
+				driver.switch_to.new_window(type_hint='window')
+				size = driver.get_window_size() # get size of window 1 to determine window 2 x
+				# side num refers to side of arb
+				window2_x = size['width'] + 1 # why +1???
+				driver.set_window_position(window2_x, 0)
+				betrivers_url = 'https://ny.betrivers.com/?page=sportsbook&feed=featured#home'
+				driver.get(betrivers_url)
+				time.sleep(1)
+				betrivers_window_handle = driver.current_window_handle
+				print('betrivers_window_handle: ' + betrivers_window_handle)
 
 			driver.switch_to.window(driver.window_handles[0])
 
@@ -967,7 +985,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 					if arb_data is not None:
 					
 						# monitor either live or pre, not both
-						new_arbs, manual_picks = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, test)
+						new_arbs, manual_picks = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, test)
 						if new_arbs == 'reboot':
 							print('Reboot')
 							driver.quit()
@@ -1037,7 +1055,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						break
 					if ev_data is not None:
 						#try:
-						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, manual_picks, send_mobile, test)
+						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, send_mobile, test)
 						if new_evs == 'reboot':
 							print('Reboot')
 							driver.quit()

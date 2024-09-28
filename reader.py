@@ -1371,7 +1371,7 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
+def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
 	print('\n===Read Actual Odds===\n')
 	print('Input: bet_dict = ' + str(bet_dict))
 	print('\nOutput: actual_odds = x\n')
@@ -1395,9 +1395,18 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 		return
 	
 	try:
-	
+		# if betrivers, use window already open bc logged in
+		# other sources keep logged in for time even if window closed
+		# betrivers logs out too quickly immediately when window closed
+		if website_name == 'betrivers':
+			print('Switch to Betrivers Window')
+			print('betrivers_window_handle: ' + betrivers_window_handle)
+			driver.switch_to.window(betrivers_window_handle)
+		else:
+			print('Switch to New Window')
+			driver.switch_to.new_window(type_hint='window')
+		
 		size = driver.get_window_size() # get size of window 1 to determine window 2 x
-		driver.switch_to.new_window(type_hint='window')
 		# side num refers to side of arb
 		window2_x = size['width'] * side_num + 1 # why +1???
 		driver.set_window_position(window2_x, 0)
@@ -1636,6 +1645,11 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 
 		elif website_name == 'betrivers':
+
+			# Check for Logged Out Popup
+			# class modal-window
+			# data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"
+			# class btn-modal-close
 
 			section_retries = 0
 			while section_retries < max_retries:
@@ -1922,6 +1936,8 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 
 							break # done after found market
 
+					
+
 					break # done retry loop
 
 				else:
@@ -1976,6 +1992,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 		# After reading actual odds, decide whether to continue or close windows
 		# Next level: accept different as long as still less than fair odds
 		# if EV, close if gone or odds got worse
+		valid = False
 		if pick_type == 'ev':
 			pick_odds = bet_dict['odds']
 			print('init_odds: ' + pick_odds)
@@ -1996,6 +2013,7 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 				# First notify users before placing bet
 				#print('\nPlace Bet or Find Limit')
 				print('\nValid Actual Odds, so continue to place EV bet\n')
+				valid = True
 		
 		# if Arb, do not close unless gone or changed more than other side
 		else:
@@ -2009,7 +2027,25 @@ def read_actual_odds(bet_dict, driver, pick_time_group='prematch', pick_type='ev
 				# continue to place bet
 				# First notify users before placing bet
 				print('\nValid Actual Odds, so continue to find Arb limit\n')
+				valid = True
 
+		if valid and website_name == 'betrivers':
+			# double check betrivers
+			print('Double Check Betrivers Odds')
+			# confirm actual odds
+			# click outcome to add to slip to confirm odds
+			# bc glitch causes odds change when slip open
+			writer.click_outcome_btn(final_outcome, driver, website_name)
+			# last in list
+			all_actual_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
+			if len(all_actual_odds) > 0:
+				actual_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
+			print('actual_odds: ' + actual_odds)
+			if int(actual_odds) < int(pick_odds):
+				print('\nOdds Mismatch')
+				print('actual_odds: ' + str(actual_odds) + '\n')
+				actual_odds = None # invalid indicator
+				writer.close_bet_windows(driver, side_num, test, bet_dict)
 	
 	# except:
 	# 	print('Error while reading actual odds')

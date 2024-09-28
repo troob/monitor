@@ -365,14 +365,18 @@ def convert_market_to_source_format(market, sport, game, website_name):
                 market_title = 'handicap'
 
             # 1st Half Huracán Total -> Huracán - 1st half - total goals
+            # 1st half real madrid total -> real madrid - total goals - 1st half
             elif re.search('half .+ total', market):
+                print('Half Team Total')
                 team_part = market.split('half ')[1] # 'Huracán Total'
                 # use team part to split off period part
-                period_part = market.split(team_part)[0] # '1st half '
+                period_part = market.split(team_part)[0].strip() # '1st half'
                 
                 team_name = team_part.split('total')[0] # 'huracan '
 
-                market_title = team_name + period_part + '- total goals'
+                #market_title = team_name + period_part + '- total goals'
+
+                market_title = team_name + '- total goals - ' + period_part
 
             # 1st half total -> 1st half - total goals
             # elif re.search('half total', market):

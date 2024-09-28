@@ -187,14 +187,14 @@ def remove_old_bets(driver, website_name):
     if len(remove_bet_btns) > 1:
         # remove old bets
         num_old_bets = len(remove_bet_btns) - 1
-        print('\nnum_old_bets: ' + str(num_old_bets) + '\n')
-        remove_bets = remove_bet_btns[:-2]
-        print('remove_bets: ' + str(remove_bets))
+        #print('\nnum_old_bets: ' + str(num_old_bets) + '\n')
+        remove_bets = remove_bet_btns[:-1]
+        #print('remove_bets: ' + str(remove_bets))
         print('\nRemove Old Bets: ' + str(len(remove_bets)) + '\n')
         for btn in remove_bets:
             btn.click()
             time.sleep(1)
-            print('Removed Bet')
+            #print('Removed Bet')
     else:
         print('\nNo Old Bets\n')
 
@@ -240,8 +240,18 @@ def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
         print('No Bet Windows Open')
         return
     
+    # if not always open window, like betrivers
     # close window 1 or 2
-    driver.close()
+    source_key  = 'source'
+    if 'source1' in bet_dict.keys(): # side 1 arb
+        source_key += str(side_num)
+
+    source = ''
+    if source_key in bet_dict.keys():
+        source = bet_dict[source_key]
+        
+    if source != 'betrivers':
+        driver.close()
 
     print('Closed Last Bet Window')
     updated_windows = driver.window_handles
@@ -255,26 +265,27 @@ def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
     # if side 2, both windows open
     # so also close side 1 window
     # check if both window idxs given in arb dict
-    #if init_num_windows >= num_full_auto_windows:
     if 'window1' in bet_dict.keys() and 'window2' in bet_dict.keys():
         if side_num == 2:
-            print('Close Side 1 Window')
-            #side1_window_idx = num_monitor_windows
-            #side1_window_idx = bet_dict['window1']
-            driver.switch_to.window(bet_dict['window1']) # idx 2 usually but depends on other windows
-            driver.close()
-            print('Closed Side 1 Window')
+            source_key  = 'source1'
+            source = bet_dict[source_key]
+            if source != 'betrivers':
+                print('Close Side 1 Window')
+                driver.switch_to.window(bet_dict['window1']) # idx 2 usually but depends on other windows
+                driver.close()
+                print('Closed Side 1 Window')
         
         # if side 1 dictates invalid arb
         # we closed side 1 already
         # so also close side 2
         else: # side 1 first, so side 2 second
-            print('Close Side 2 Window')
-            #side1_window_idx = num_monitor_windows
-            #side2_window_idx = bet_dict['window2']
-            driver.switch_to.window(bet_dict['window2']) # idx 2 usually but depends on other windows
-            driver.close()
-            print('Closed Side 2 Window')
+            source_key  = 'source2'
+            source = bet_dict[source_key]
+            if source != 'betrivers':
+                print('Close Side 2 Window')
+                driver.switch_to.window(bet_dict['window2']) # idx 2 usually but depends on other windows
+                driver.close()
+                print('Closed Side 2 Window')
 
     
     # send back to main window
@@ -305,6 +316,7 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         try:
             driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
             print('\nAlready Logged In Betrivers\n')
+            return
         except:
             print('\nLogin Betrivers\n')
             # login_betrivers()
@@ -946,6 +958,7 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         
 
 def clear_betslip(driver):
+    print('\n===Clear Betslip===\n')
     # Require that betslip is empty
     # So look for betslip html to see if open
     # if open, click clear all
@@ -955,9 +968,10 @@ def clear_betslip(driver):
         print('Cleared Betslip')
     except:
         try:
-            remove_pick_btn = driver.find_element('class name', 'mod-KambiBC-betslip-outcome__close-btn')
-            remove_pick_btn.click()
-            print('Removed Pick')
+            remove_pick_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+            for remove_pick_btn in remove_pick_btns:
+                remove_pick_btn.click()
+                print('Removed Pick')
         except:
             print('Betslip Empty')
 
@@ -1108,7 +1122,10 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 place_btn_text = place_bet_btn.find_element('class name', 'ds-btn-text').get_attribute('innerHTML').lower()
                 print('place_btn_text: ' + str(place_btn_text))
                 # if odds changed, if ev, stop and continue to monitor
-                if not re.search('accept', place_btn_text):
+                if re.search('accept', place_btn_text):
+                    attempted_bet = True
+                
+                else: # Odds Valid
                 
                     #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
                     placeholder = wager_field.get_attribute('placeholder')
@@ -1160,6 +1177,19 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             print('Closed Confirm Popup')
                         except:
                             print('No Confirm Popup')
+
+                            print('Check Location Popup')
+                            try:
+                                # tag ms-geo-location-installer
+                                # class close
+                                loc_dialog = driver.find_element('tag name', 'ms-geo-location-installer')#
+                                close_dialog_btn = loc_dialog.find_element('class name', 'close')
+                                print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
+                                close_dialog_btn.click()
+                                time.sleep(1)
+                                print('Closed Location Popup')
+                            except:
+                                print('No Location Popup')
 
 
                     # wait to finish loading
@@ -1473,12 +1503,19 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             #print('input_container: ' + input_container.get_attribute('innerHTML'))
             # loading = True
             # while loading:
+
+            # remove bets before sending keys bc might erase
+            remove_old_bets(driver, website_name)
+            # need to get wager field after removing bets bc new wager field
             try:   
                 wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
                 loading = False
             except:
                 final_outcome.click()
                 time.sleep(1)
+                # remove bets before sending keys bc might erase
+                remove_old_bets(driver, website_name)
+
                 wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
 
             #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
@@ -1489,7 +1526,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
             #print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
                 
-            remove_old_bets(driver, website_name)
+            
 
             # === MONEY ===
             #try:
@@ -1504,6 +1541,8 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 # then if fails, close windows and move on
                 # click_retries = 0
                 # while click_retries < max_retries:
+                # place_initial_bet(bet_size, place_bet_btn, driver, website_name)
+                # click_place_bet_btn()
                 try:
                     place_bet_btn.click()
                     time.sleep(0.5) # need wait for bet to fully load and submit before moving on
@@ -1601,6 +1640,11 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 except:
                     print('Unknown Error while placing bet')
 
+                    print('Re-Enter Wager in Field')
+                    #wager_field.send_keys(bet_size)
+
+                print('Done Loading Initial Bet')
+
                 # if odds change, may still be ok for arb, depending on other side
                 # approve odds btn: mod-KambiBC-betslip__place-bet-btn mod-KambiBC-betslip__approve-odds-btn
                 # but for ev if odds change need to compare to fair odds before deciding if still proceed
@@ -1638,7 +1682,12 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             print('Place Button Enabled')
 
                         if place_btn_disabled == 'true':
-                            bet_limit = wager_field.get_attribute('value')
+                            bet_limit = ''
+                            try:
+                                bet_limit = wager_field.get_attribute('value')
+                            except:
+                                print('Unknown Bet Limit')
+
                             if bet_limit == '':
                                 print('Reached Bet Limit')#: ' + str(bet_limit))
                                 close_bet_windows(driver, test=test, bet_dict=bet_dict)#, side_num)
@@ -1757,6 +1806,40 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
     close_bet_windows(driver, test=test, bet_dict=bet_dict)
 
+def click_outcome_btn(final_outcome, driver, website_name):
+    print('Click Outcome Button')
+
+    try:
+        # final_outcome: 
+        # <div data-touch-feedback="true" 
+        #   class="sc-gEvEer kOrbku"><div data-touch-feedback="true" class="sc-eqUAAy kLwvTb"><div class="sc-fqkvVR cyiQDV">Over</div><div data-touch-feedback="true" class="sc-dcJsrY gCFiej">6.5</div></div><div data-touch-feedback="true" class="sc-iGgWBj kAIwQy"><div class="sc-jXbUNg jRmJQc"></div><div data-touch-feedback="true" class="sc-gsFSXq dqtSKK"><div data-touch-feedback="true" class="sc-kAyceB gLUWXi">-360</div></div></div></div>
+        #print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
+        if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
+            # 
+            # #driver.execute_script('window.scrollTo(0, 0);')
+            # 
+            try:
+                final_outcome.click()
+            except:
+                coordinates = final_outcome.location_once_scrolled_into_view
+                print('coordinates: ' + str(coordinates))
+                driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
+                #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
+                final_outcome.click()
+            
+            print('Clicked Outcome Button')
+            time.sleep(1)
+        else:
+            print('Outcome Button Already Clicked')
+    except:
+        print('Error pressing Betrivers outcome button!')
+
+    #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
+
+    # always remove old bets after clicking bet 
+    # bc glitch may not show betslip until outcome clicked
+    remove_old_bets(driver, website_name)
+
 # just like place bet but only up to getting limit
 # remove the final place bet click
 # starts with window already open from reading actual odds
@@ -1858,6 +1941,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     #     close_bet_windows(driver, side_num, test)
     #     return bet_limit
     
+    print('Change Window to Bet: ' + str(side_num))
     driver.switch_to.window(bet_dict['window'])
     
     website_name = bet_dict['source']
@@ -2041,13 +2125,28 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             close_bet_windows(driver, side_num, test, bet_dict)
             return
         
+        # remove bets before sending keys bc might erase
+        remove_old_bets(driver, website_name)
+
         # add max bet size to wager field
         try:   
             wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
         except:
-            final_outcome.click()
-            time.sleep(1)
-            wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+            try:
+                final_outcome.click()
+                print('Clicked Final Outcome')
+                time.sleep(1)
+                # remove bets before sending keys bc might erase
+                remove_old_bets(driver, website_name)
+
+                wager_field = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+                print('Found Wager Field')
+            except Exception as e:
+                print('Failed to Click Final Outcome: ', e)
+                close_bet_windows(driver, side_num, test, bet_dict)
+                return bet_limit
+
+        
 
         #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
         wager_field.send_keys(max_bet_size)
@@ -2056,7 +2155,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
         #print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
             
-        remove_old_bets(driver, website_name)
+        
 
         # placed_bet = False
         # while not placed_bet: #not place_btn_clicked:
@@ -2110,6 +2209,8 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                     print('Odds Changed, so skip')
                     close_bet_windows(driver, side_num, test, bet_dict)
                     return bet_limit, payout, wager_field, place_bet_btn
+                else:
+                    click_outcome_btn(final_outcome, driver, website_name)
 
             try:
                 error_title = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__title').get_attribute('innerHTML').lower() # Wager too high
