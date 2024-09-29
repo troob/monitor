@@ -47,6 +47,26 @@ import determiner # determine matching outcome
 import sys, select # user input with timeout
 
 
+
+def read_betslip_odds(driver, website_name):
+	print('\n===Read Betslip Odds===\n')
+	print('website_name: ' + website_name)
+
+	betslip_odds = None
+
+	odds_element = None
+	if website_name == 'betrivers':
+		odds_element = ('class name', 'mod-KambiBC-betslip-outcome__odds')
+
+	# last in list
+	all_actual_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
+	if len(all_actual_odds) > 0:
+		actual_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
+	print('actual_odds: ' + actual_odds)
+
+	print('\nbetslip_odds: ' + str(betslip_odds) + '\n')
+	return betslip_odds	
+
 # read input with timeout
 # so infinite loop monitor program continues without input
 def input_with_timeout(prompt, timeout):
@@ -1369,6 +1389,24 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 			remove_btn.click()
 			time.sleep(1)
 
+def check_logged_out_popup(driver):
+	print('\n===Check Logged Out Popup===\n')
+
+	# class modal-window
+	# data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"
+	# class btn-modal-close
+	try:
+		driver.find_element('xpath', '//div[@data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"]')
+		print('Found Logged Out Popup')
+
+		return True
+
+	except Exception as e:
+		print('No Logged Out Popup')
+
+		return False
+			
+	
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
 def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
@@ -1647,9 +1685,9 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 		elif website_name == 'betrivers':
 
 			# Check for Logged Out Popup
-			# class modal-window
-			# data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"
-			# class btn-modal-close
+			# and close if there
+			#check_logged_out_popup(driver)
+			#writer.close_logged_out_popup(driver)
 
 			section_retries = 0
 			while section_retries < max_retries:
@@ -1988,14 +2026,15 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 
 			
 
+		pick_odds = bet_dict['odds']
+		print('init_odds: ' + pick_odds)
 
 		# After reading actual odds, decide whether to continue or close windows
 		# Next level: accept different as long as still less than fair odds
 		# if EV, close if gone or odds got worse
 		valid = False
 		if pick_type == 'ev':
-			pick_odds = bet_dict['odds']
-			print('init_odds: ' + pick_odds)
+			
 
 			if actual_odds == None or int(actual_odds) < int(pick_odds):
 				if actual_odds == None:
@@ -2035,15 +2074,16 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# confirm actual odds
 			# click outcome to add to slip to confirm odds
 			# bc glitch causes odds change when slip open
-			writer.click_outcome_btn(final_outcome, driver, website_name)
+			writer.add_bet_to_betslip(final_outcome, driver, website_name)
+			#writer.click_outcome_btn(final_outcome, driver, website_name)
 			# last in list
 			all_actual_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
+			betslip_odds = None
 			if len(all_actual_odds) > 0:
-				actual_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
-			print('actual_odds: ' + actual_odds)
-			if int(actual_odds) < int(pick_odds):
+				betslip_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
+			print('betslip_odds: ' + str(betslip_odds))
+			if betslip_odds == None or int(betslip_odds) < int(pick_odds):
 				print('\nOdds Mismatch')
-				print('actual_odds: ' + str(actual_odds) + '\n')
 				actual_odds = None # invalid indicator
 				writer.close_bet_windows(driver, side_num, test, bet_dict)
 	

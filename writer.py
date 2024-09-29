@@ -34,6 +34,23 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 
+def close_logged_out_popup(driver):
+    print('\n===Close Logged Out Popup===\n')
+
+    # class modal-window
+    # data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"
+    # class btn-modal-close
+    if reader.check_logged_out_popup(driver):
+        try:
+            close_popup_btn = driver.find_element('class name', 'modal-window').find_element('class name', 'btn-modal-close')
+            print('Found Close Popup Btn')
+            close_popup_btn.click()
+            time.sleep(0.5)
+            print('Closed Logged Out Popup')
+        except Exception as e:
+            print('Error Closing Logged Out Popup')
+
+
 # input EV or Arb with side num
 # if window idx None then we cannot find the outcome anymore
 # which means the odds changed so move on
@@ -175,7 +192,7 @@ def switch_to_bet_window(bet_dict, driver, test, side_num=1):
     return window_idx
 
 def remove_old_bets(driver, website_name):
-    print('\nCheck if Old Bets\n')
+    print('\n===Remove Old Bets===\n')
     print('website_name: ' + website_name)
 
     if website_name == 'betrivers':
@@ -1375,68 +1392,11 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 #     driver.close()
 
         elif website_name == 'betrivers':
-            #time.sleep(1) # load
-
-        
-            clear_betslip(driver)
+            #clear_betslip(driver)
             
-
-            # print('Has Page Shifted Inadvertently Yet??') No
-            # time.sleep(100)
-
-            # if not already clicked
-            # data-pressed=\"null\"
-
-            # final_outcome: 
-            # <button type="button" 
-            #   class="sc-aXZVg dYaJxz sc-dAlyuH buSnVV KambiBC-betty-outcome" 
-            #   data-touch-feedback="true">
-            #   <div data-touch-feedback="true" 
-            #       class="sc-gEvEer kOrbku">
-            #       <div data-touch-feedback="true" 
-            #           class="sc-eqUAAy kLwvTb">
-            #           <div class="sc-fqkvVR cyiQDV">Over</div>
-            #           <div data-touch-feedback="true" 
-            #               class="sc-dcJsrY gCFiej">6.5
-            #           </div>
-        #           </div>
-        #           <div data-touch-feedback="true" 
-        #               class="sc-iGgWBj kAIwQy">
-        #               <div class="sc-jXbUNg jRmJQc"></div>
-        #               <div data-touch-feedback="true" 
-        #                   class="sc-gsFSXq dqtSKK">
-        #                   <div data-touch-feedback="true" 
-        #                       class="sc-kAyceB gIMtGL">-360
-        #                   </div>
-    #                   </div>
-    #               </div>
-    #           </div>
-            # </button>
-
-            try:
-                # final_outcome: 
-                # <div data-touch-feedback="true" 
-                #   class="sc-gEvEer kOrbku"><div data-touch-feedback="true" class="sc-eqUAAy kLwvTb"><div class="sc-fqkvVR cyiQDV">Over</div><div data-touch-feedback="true" class="sc-dcJsrY gCFiej">6.5</div></div><div data-touch-feedback="true" class="sc-iGgWBj kAIwQy"><div class="sc-jXbUNg jRmJQc"></div><div data-touch-feedback="true" class="sc-gsFSXq dqtSKK"><div data-touch-feedback="true" class="sc-kAyceB gLUWXi">-360</div></div></div></div>
-                #print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
-                if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
-                    # 
-                    # #driver.execute_script('window.scrollTo(0, 0);')
-                    # 
-                    try:
-                        final_outcome.click()
-                    except:
-                        coordinates = final_outcome.location_once_scrolled_into_view
-                        print('coordinates: ' + str(coordinates))
-                        driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
-                        #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
-                        final_outcome.click()
-                    
-                    time.sleep(1)
-            except:
-                print('Error pressing Betrivers outcome button!')
-
-            #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
-
+            add_bet_to_betslip(final_outcome, driver, website_name)
+            #click_outcome_btn(final_outcome, driver, website_name)
+            
             # Need to double check no old bets in slip 
             # bc glitch may hide old betslip until new bet clicked
             # for now simplest way is to keep only last bet in slip bc adds to bottom
@@ -1806,39 +1766,46 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
     close_bet_windows(driver, test=test, bet_dict=bet_dict)
 
-def click_outcome_btn(final_outcome, driver, website_name):
-    print('Click Outcome Button')
+# click outcome btn to add to betslip
+def click_outcome_btn(outcome_btn, driver):
+    print('\n===Click Outcome Button===\n')
+
+    try:
+        outcome_btn.click()
+    except:
+        coordinates = outcome_btn.location_once_scrolled_into_view
+        print('coordinates: ' + str(coordinates))
+        driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
+        #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
+        outcome_btn.click()
+    
+    time.sleep(0.5)
+    print('Clicked Outcome Button')
+
+
+def add_bet_to_betslip(final_outcome, driver, website_name):
+    print('\n===Add Bet to Betslip===\n')
 
     try:
         # final_outcome: 
         # <div data-touch-feedback="true" 
         #   class="sc-gEvEer kOrbku"><div data-touch-feedback="true" class="sc-eqUAAy kLwvTb"><div class="sc-fqkvVR cyiQDV">Over</div><div data-touch-feedback="true" class="sc-dcJsrY gCFiej">6.5</div></div><div data-touch-feedback="true" class="sc-iGgWBj kAIwQy"><div class="sc-jXbUNg jRmJQc"></div><div data-touch-feedback="true" class="sc-gsFSXq dqtSKK"><div data-touch-feedback="true" class="sc-kAyceB gLUWXi">-360</div></div></div></div>
         #print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
+        # Determine if btn clicked if shown in betslip
         if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
-            # 
-            # #driver.execute_script('window.scrollTo(0, 0);')
-            # 
-            try:
-                final_outcome.click()
-            except:
-                coordinates = final_outcome.location_once_scrolled_into_view
-                print('coordinates: ' + str(coordinates))
-                driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
-                #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
-                final_outcome.click()
-            
-            print('Clicked Outcome Button')
-            time.sleep(1)
+            print('Confirmed Button Not Yet Clicked')
+            click_outcome_btn(final_outcome, driver)
         else:
             print('Outcome Button Already Clicked')
     except:
-        print('Error pressing Betrivers outcome button!')
+        print('Error pressing outcome button! ' + website_name)
 
     #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
     # always remove old bets after clicking bet 
     # bc glitch may not show betslip until outcome clicked
     remove_old_bets(driver, website_name)
+
 
 # just like place bet but only up to getting limit
 # remove the final place bet click
@@ -1917,6 +1884,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         bet_key = 'bet' + str(side_num)
         source_key = 'source' + str(side_num)
         odds_key = 'odds' + str(side_num)
+        actual_odds_key = 'odds' + str(side_num)
         link_key = 'link' + str(side_num)
         size_key = 'size' + str(side_num)
         outcome_key = 'outcome' + str(side_num)
@@ -1925,6 +1893,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         bet_dict['bet'] = bet_dict[bet_key]
         bet_dict['source'] = bet_dict[source_key]
         bet_dict['odds'] = bet_dict[odds_key]
+        bet_dict['actual odds'] = bet_dict[actual_odds_key]
         bet_dict['link'] = bet_dict[link_key]
         bet_dict['size'] = bet_dict[size_key]
         bet_dict['outcome'] = bet_dict[outcome_key]
@@ -2105,20 +2074,34 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
 
     elif website_name == 'betrivers':
         
-        clear_betslip(driver)
+        # source glitchy so sometimes betslip not shown
+        # even tho bet selected
+        # so already need to remove old picks after clicking current pick
+        # so no need to clear in beginning, to save time
+        #clear_betslip(driver)
 
         # click outcome btn to add to betslip
-        if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
-            try:
-                final_outcome.click()
-            except:
-                coordinates = final_outcome.location_once_scrolled_into_view
-                print('coordinates: ' + str(coordinates))
-                driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
-                #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
-                final_outcome.click()
-            
-            time.sleep(1)
+        add_bet_to_betslip(final_outcome, driver, website_name)
+        #click_outcome_btn(final_outcome, driver, website_name)
+
+        # Check if odds changed after clicking outcome btn
+        # problem is glitch changes back and forth
+        # so take only first change
+        betslip_odds = reader.read_betslip_odds(driver, website_name)
+        # if betslip odds None, error reading odds
+        # if betslip odds '', bet closed
+        # TEST
+        betslip_odds = bet_dict['actual odds'] # TEST until can read betslip odds to compare
+        if betslip_odds != '':
+            # update odds on side of arb
+            bet_dict[actual_odds_key] = betslip_odds
+            # compare init actual odds
+            actual_odds = bet_dict['actual odds']
+            if int(betslip_odds) < int(actual_odds):
+                # check if still valid
+                if not determiner.determine_valid_arb_odds(bet_dict):
+                    close_bet_windows(driver, side_num, test, bet_dict)
+                    return
 
         login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
         if login_result == 'fail':
@@ -2126,7 +2109,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             return
         
         # remove bets before sending keys bc might erase
-        remove_old_bets(driver, website_name)
+        #remove_old_bets(driver, website_name)
 
         # add max bet size to wager field
         try:   
@@ -2155,31 +2138,10 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
         #print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
             
-        
-
-        # placed_bet = False
-        # while not placed_bet: #not place_btn_clicked:
-        #     try:
-        #         # Need to click twice for this website
-        #         place_bet_btn.click()
-        #         time.sleep(1) # need wait for bet to fully load and submit before moving on
-        #         try:
-        #             place_bet_btn.click()
-        #             time.sleep(1)
-        #         except:
-        #             print('Failed to Click Place Bet second time so check if already placed?')
-                
-        #         print('Placed Bet to find limit')
-        #         #break
-        #         placed_bet = True
-        #     except KeyboardInterrupt:
-        #         print('Exit')
-        #         exit()
-        #     except:
-        #         print('Failed to click Place Bet Button. Retry.')
-        #         time.sleep(1)
-
         # wait to finish loading
+        # the only way to confirm button pressed is by output
+        # so need to include btn press in load loop
+        # in case btn press fails
         loading = True
         while loading:
 
@@ -2210,7 +2172,10 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                     close_bet_windows(driver, side_num, test, bet_dict)
                     return bet_limit, payout, wager_field, place_bet_btn
                 else:
-                    click_outcome_btn(final_outcome, driver, website_name)
+                    # if failed to click bc not add to betslip
+                    # so add to betslip
+                    add_bet_to_betslip(final_outcome, driver, website_name)
+                    #click_outcome_btn(final_outcome, driver, website_name)
 
             try:
                 error_title = driver.find_element('class name', 'mod-KambiBC-betslip-feedback__title').get_attribute('innerHTML').lower() # Wager too high
