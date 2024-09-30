@@ -496,6 +496,7 @@ def read_market_odds(market, market_element, bet_dict):
 					bet_outcome_line = bet_outcome.split(bet_outcome_name)[1]
 
 				bet_outcome_name = re.sub('\.', '', bet_outcome_name)
+				bet_outcome_name = re.sub('-', ' ', bet_outcome_name)
 				print('bet_outcome_name: ' + bet_outcome_name)
 				print('bet_outcome_line: ' + bet_outcome_line)
 				bet_outcome = bet_outcome_name + bet_outcome_line
@@ -1242,7 +1243,7 @@ def check_bet_available(driver, website_name):
 		print('Yes')
 
 
-def load_listed_bets(driver, website_name, max_retries=3):
+def load_listed_bets(driver, website_name, max_retries=10):
 	print('\n===Load Listed Bets===\n')
 
 	listed_bets = None
@@ -1728,8 +1729,9 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 					#if len(sections) < 2:
 					if not game_available:
 					#if len(sections) < 1:
-						driver.close()
-						driver.switch_to.window(driver.window_handles[0])
+						# driver.close()
+						# driver.switch_to.window(driver.window_handles[0])
+						writer.close_bet_windows(driver, side_num, test, bet_dict)
 						return actual_odds, final_outcome, cookies_file, saved_cookies
 
 					# get new sections if stale element
@@ -2032,43 +2034,9 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 		# After reading actual odds, decide whether to continue or close windows
 		# Next level: accept different as long as still less than fair odds
 		# if EV, close if gone or odds got worse
-		valid = False
-		if pick_type == 'ev':
-			
-
-			if actual_odds == None or int(actual_odds) < int(pick_odds):
-				if actual_odds == None:
-					print('\nNo Bet')
-				# still accept better price
-				else:
-					print('\nOdds Mismatch')
-					print('actual_odds: ' + str(actual_odds) + '\n')
-					actual_odds = None # invalid indicator
-
-				writer.close_bet_windows(driver, side_num, test, bet_dict)
-
-			else:
-				# continue to place bet
-				# First notify users before placing bet
-				#print('\nPlace Bet or Find Limit')
-				print('\nValid Actual Odds, so continue to place EV bet\n')
-				valid = True
+		actual_odds = determiner.determine_valid_actual_odds(actual_odds, pick_odds, pick_type, driver, side_num, test, bet_dict)
 		
-		# if Arb, do not close unless gone or changed more than other side
-		else:
-			
-			if actual_odds == None:
-				print('\nNo Bet')
-
-				writer.close_bet_windows(driver, side_num, test, bet_dict)
-
-			else:
-				# continue to place bet
-				# First notify users before placing bet
-				print('\nValid Actual Odds, so continue to find Arb limit\n')
-				valid = True
-
-		if valid and website_name == 'betrivers':
+		if actual_odds is not None and website_name == 'betrivers':
 			# double check betrivers
 			print('Double Check Betrivers Odds')
 			# confirm actual odds
@@ -2082,10 +2050,11 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			if len(all_actual_odds) > 0:
 				betslip_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
 			print('betslip_odds: ' + str(betslip_odds))
-			if betslip_odds == None or int(betslip_odds) < int(pick_odds):
-				print('\nOdds Mismatch')
-				actual_odds = None # invalid indicator
-				writer.close_bet_windows(driver, side_num, test, bet_dict)
+			actual_odds = determiner.determine_valid_actual_odds(betslip_odds, pick_odds, pick_type, driver, side_num, test, bet_dict)
+			# if betslip_odds == None or int(betslip_odds) < int(pick_odds):
+			# 	print('\nOdds Mismatch')
+			# 	actual_odds = None # invalid indicator
+			# 	writer.close_bet_windows(driver, side_num, test, bet_dict)
 	
 	# except:
 	# 	print('Error while reading actual odds')
@@ -2114,6 +2083,9 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			print('\nConnection refused in Read Prematch Arb Data')
 			print('Exit')
 			exit()
+		else:
+			# close windows and move
+			writer.close_bet_windows(driver, side_num, test, bet_dict)
 
 	print('actual_odds: ' + str(actual_odds))
 	return actual_odds, final_outcome, cookies_file, saved_cookies

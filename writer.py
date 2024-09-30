@@ -348,10 +348,21 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
             # div
             # second div
             # button
-            login_btn = driver.find_element('id', 'rsi-top-navigation').find_element('tag name', 'div').find_element('xpath', 'div[2]').find_element('tag name', 'button')   # .find_element('class name', 'sc-gHLcSH')
-            print('login_btn: ' + login_btn.get_attribute('innerHTML'))
-            login_btn.click()
-            time.sleep(1)
+            # goes to login page
+            try:
+                login_btn = driver.find_element('id', 'rsi-top-navigation').find_element('tag name', 'div').find_element('xpath', 'div[2]').find_element('tag name', 'button')   # .find_element('class name', 'sc-gHLcSH')
+                print('login_btn: ' + login_btn.get_attribute('innerHTML'))
+                login_btn.click()
+                time.sleep(0.5)
+            except Exception as e:
+                print('No Login Button', e)
+
+                try:
+                    driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
+                    print('\nAlready Logged In Betrivers\n')
+                    return
+                except:
+                    print('\nLogin Betrivers\n')
 
             try:
                 usr_field_input = driver.find_element('id', 'login-form-modal-email')
@@ -1797,14 +1808,18 @@ def add_bet_to_betslip(final_outcome, driver, website_name):
             click_outcome_btn(final_outcome, driver)
         else:
             print('Outcome Button Already Clicked')
+
+        # always remove old bets after clicking bet 
+        # bc glitch may not show betslip until outcome clicked
+        remove_old_bets(driver, website_name)
+
     except:
         print('Error pressing outcome button! ' + website_name)
+        click_outcome_btn(final_outcome, driver)
 
     #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
-    # always remove old bets after clicking bet 
-    # bc glitch may not show betslip until outcome clicked
-    remove_old_bets(driver, website_name)
+    
 
 
 # just like place bet but only up to getting limit
