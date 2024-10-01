@@ -55,7 +55,9 @@ def read_betslip_odds(driver, website_name):
 	betslip_odds = None
 
 	odds_element = None
-	if website_name == 'betrivers':
+	if website_name == 'betmgm':
+		odds_element = ('class name', 'mod-KambiBC-betslip-outcome__odds')
+	elif website_name == 'betrivers':
 		odds_element = ('class name', 'mod-KambiBC-betslip-outcome__odds')
 
 	# last in list
@@ -484,7 +486,7 @@ def read_market_odds(market, market_element, bet_dict):
 		# convert team loc to abbrev
 		#if market in team_markets or 
 		# ties are moneyline but no team name to convert
-		if re.search('moneyline|spread|run line', market):
+		if re.search('moneyline|spread', market):
 			# remove dots from team name if not player prop
 			if not re.search(' - ', market) and sport in team_sports:
 				bet_outcome_line = ''
@@ -1833,7 +1835,8 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 							section = sections[section_idx]
 							print('Get Markets in Section')
 							markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
-							print('num markets: ' + str(len(markets)))
+							
+					print('num markets: ' + str(len(markets)))
 							
 
 					# if markets=None, reload sections
@@ -2044,11 +2047,18 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# bc glitch causes odds change when slip open
 			writer.add_bet_to_betslip(final_outcome, driver, website_name)
 			#writer.click_outcome_btn(final_outcome, driver, website_name)
+			# adding to betslip still gets wrong reading when glitch
+			# so click wager field to see if causes odds change
 			# last in list
-			all_actual_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
+			wager_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+			if len(wager_fields) > 0:
+				wager_field = wager_fields[-1]
+				wager_field.clear()
+			# last in list
+			all_betslip_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
 			betslip_odds = None
-			if len(all_actual_odds) > 0:
-				betslip_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
+			if len(all_betslip_odds) > 0:
+				betslip_odds = all_betslip_odds[-1].get_attribute('innerHTML') # read from betslip
 			print('betslip_odds: ' + str(betslip_odds))
 			actual_odds = determiner.determine_valid_actual_odds(betslip_odds, pick_odds, pick_type, driver, side_num, test, bet_dict)
 			# if betslip_odds == None or int(betslip_odds) < int(pick_odds):
@@ -5896,7 +5906,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 16') 
+	options.add_argument(r'--profile-directory=Profile 17') 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)

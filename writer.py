@@ -2261,22 +2261,14 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     return bet_limit, payout, wager_field, place_bet_btn
 
 
+# given other side assumed odds
+# unless this side odds change, 
+# we must assume last reading other side is accurate
+# in arb['actual odds<other side num>']
 def place_arb_bet(driver, arb, side_num, test):
     print('\n===Place Arb Bet: ' + str(side_num) + '===\n')
 
-    # num_monitor_windows = 2
-    # if test:
-    #     num_monitor_windows = 1
-
-    # window_idx = num_monitor_windows # 1 or 2 currently based on desired manual testing setup we add 1 window on top of main monitor window
-    # if side_num == 2 and arb['actual odds1'] != '':
-    #     window_idx = num_monitor_windows + 1
-
-    #window_idx = determiner.determine_window_idx(driver, side_num, arb, test)
-    
-
-    # change to bet 1 window
-    # second to last window
+    # change to bet side window
     window_key = 'window' + str(side_num)
     print('window_key: ' + window_key)
     window_handle = arb[window_key]
@@ -2310,124 +2302,161 @@ def place_arb_bet(driver, arb, side_num, test):
     if test:
         bet_size = '1'
     
+    # rewrite in bet size
     wager_field.clear()
     wager_field.send_keys(bet_size)
     print('Entered Bet ' + str(side_num) + ': ' + bet_size)
     time.sleep(1)
-    # click bet 1
+    # click bet side
+    placed_bet = False
+    bet_placed_key = 'placed' + str(side_num)
+    arb[bet_placed_key] = placed_bet
+    valid_odds = True
+    bet_open = True
     if not test:
         place_btn_key = 'place btn' + str(side_num)
         print('place_btn_key: ' + place_btn_key)
         place_btn = arb[place_btn_key]
-        try:
-            place_btn.click()
-            print('Clicked Place Bet')
-            #time.sleep(3)
-            # confirm placed bet 1
-            
-            start_time = datetime.today()
-            
-            loading = True
-            while loading:
+
+        other_side_bet_placed = False
+        other_side_num = 2
+        if side_num == 2:
+            other_side_num = 1
+        other_side_bet_placed_key = 'placed' + str(other_side_num)
+        if other_side_bet_placed_key not in arb.keys():
+            arb[other_side_bet_placed_key] = other_side_bet_placed
+        other_side_bet_placed = arb[other_side_bet_placed_key]
+
+        # check if odds changed
+        # if side 1 odds changed, need to check side 2 before placing
+        # if side 2 odd changed, side 1 already placed, so place anyway
+        while not placed_bet and bet_open:# and valid_odds:
+            # case 1, odds same, bet accepted
+            # case 2, side 1 odds changed, check side 2
+            # case 2a betrivers: how to tell if glitch odds changed?
+            # - compare to init odds
+            # case 3, side 2 odds changed, approve and place
+            place_btn_text = place_btn.get_attribute('innerHTML').lower()
+            print('place_btn_text: ' + place_btn_text)
+            # new_odds = determiner.determine_odds_changed(driver, source)
+            # if new_odds is not None:
+            #     actual_odds_key = 'actual odds' + str(side_num)
+            #     arb[actual_odds_key] = new_odds
+            #     if source == 'betrivers' and new_odds == init_odds:
+            #         print('Approve Odds')
+            #     if side_num == 1:
+            #         return arb
+
+            if re.search('approve|accept', place_btn_text):
                 try:
-                    # look for loading bar or spinner
-                    # or close receipt btn
-                    if source == 'betmgm':
-                        driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-                    elif source == 'betrivers':
-                        driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                    print('Approve Odds')
+                    place_btn.click()
+                    print('Clicked Approve Odds')
+
+                    # if source == betrivers,
+                    # determine if odds changed glitch 
+                    # or actually need to check other side
+
+                    new_odds = reader.read_betslip_odds(driver, source)
+                    # actual_odds_key = 'actual odds' + str(side_num)
+                    # arb[actual_odds_key] = new_odds
+
+                    # If other side not yet placed:
+                    # check if odds changed other side
+                    if not other_side_bet_placed:
+                        print('Other Side Bet Not Yet Placed')
+                        # if other side not yet placed, check other side
+                        #return arb
                     
-                    loading = False
-                    print('Done Loading')
-                except:
-                    print('Loading bet receipt...')
-                    time.sleep(0.5)
+                    # If other side already placed:
+                    # determine if need to change bet size
+                    else:
+                        print('Other Side Bet Already Placed')
+                        # if odds still in arb range, get new bet size
+                        # to match payout other side
+                        # if other side already placed, keep same bet size
+                        
+                        
+                        # if not determiner.determine_valid_arb_odds(arb):
+                        #     bet_size = ''
 
-            end_time = datetime.today()
-            duration = (end_time - start_time).seconds
-            start_time = str(start_time.hour) + ':' + str(start_time.minute) + ':' + str(start_time.second)
-            end_time = str(end_time.hour) + ':' + str(end_time.minute) + ':' + str(end_time.second)
-            print('start_time: ' + str(start_time))
-            print('end_time: ' + str(end_time))
-            print('duration: ' + str(duration) + ' seconds')
 
-        except Exception as e:
-            print('Failed to Click Place Bet Btn: ', e)
+                except Exception as e:
+                    print('Failed to Click Approve Odds')
+
+
+            try:
+                print('Place Bet')
+                place_btn.click()
+                print('Clicked Place Bet')
+                #time.sleep(3)
+                # confirm placed bet 1
+                
+                start_time = datetime.today()
+                
+                loading = True
+                while loading:
+                    try:
+                        # look for loading bar or spinner
+                        # or close receipt btn
+                        if source == 'betmgm':
+                            driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
+                        elif source == 'betrivers':
+                            driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                        
+                        loading = False
+                        print('Done Loading')
+                    except:
+                        print('Loading bet receipt...')
+                        time.sleep(0.5)
+
+                end_time = datetime.today()
+                duration = (end_time - start_time).seconds
+                start_time = str(start_time.hour) + ':' + str(start_time.minute) + ':' + str(start_time.second)
+                end_time = str(end_time.hour) + ':' + str(end_time.minute) + ':' + str(end_time.second)
+                print('start_time: ' + str(start_time))
+                print('end_time: ' + str(end_time))
+                print('duration: ' + str(duration) + ' seconds')
+
+                placed_bet = True
+                arb[bet_placed_key] = placed_bet
+
+            except Exception as e:
+                print('Failed to Click Place Bet Btn: ', e)
+
+                # check odds changed
+
+                # check odds went up so new limit
+                # bet at limit
+
+                # check bet closed
+                bet_open = False
 
         
-
-
-
-    # change to bet 2 window
-    # last window
-    # driver.switch_to.window(driver.window_handles[-1])
-    # print('Changed to Bet 2: Last Window')
-    # # enter bet 2
-    # wager_field2 = arb['wager field2']
-    # # problem sending keys in betrivers after leaving window
-    # # so try to refind wager element in driver
-    # # simply refinding element does not work
-    # # need to close and reopen betslip
-    # source2 = arb['source2']
-    # outcome2 = arb['outcome2']
-    # if source2 == 'betrivers':
-    #     outcome2.click() # close betslip
-    #     time.sleep(0.5)
-    #     outcome2.click() # reopen betslip
-    #     wager_field2 = driver.find_element('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
-    
-    # bet_size2 = arb['size2'].split('$')[1]
-    # print('bet_size2: ' + bet_size2)
-    # if test:
-    #     bet_size2 = '1'
-    
-    # wager_field2.clear()
-    # wager_field2.send_keys(bet_size2)
-    # print('Entered Bet 2: ' + bet_size2)
-    # if test:
-    #     time.sleep(10) # test
-    
-    # time.sleep(1)
-    # # click bet 2
-    # if not test:
-    #     place_btn2 = arb['place btn2']
-    #     place_btn2.click()
-    #     #time.sleep(3)
-    #     # confirm placed bet 2
-    #     start_time = datetime.datetime.now().time()
-    #     print('start_time: ' + str(start_time))
-    #     loading = True
-    #     while loading:
-    #         try:
-    #             # look for loading bar or spinner
-    #             # or close receipt btn
-    #             if source2 == 'betmgm':
-    #                 driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
-    #             elif source2 == 'betrivers':
-    #                 driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
-                
-    #             loading = False
-    #             print('Done Loading')
-    #         except:
-    #             print('Loading bet receipt...')
-    #             time.sleep(0.5)
-
-    #     end_time = datetime.datetime.now().time()
-    #     print('end_time: ' + str(end_time))
-    #     duration = end_time - start_time
-    #     print('duration: ' + str(duration))
-
+    print('\nPlaced Arb Bet: ' + str(side_num) + '\n')
+    return arb
 
 
 def place_bets_simultaneously(driver, arb, test):
     print('\n===Place Bets Simultaneously===\n')
     print('Input: arb = {...} = ' + str(arb) + '\n')
 
-    side_num = 1
-    place_arb_bet(driver, arb, side_num, test)
+    bet1_placed = bet2_placed = False
+    while not bet1_placed or not bet2_placed:
+        if not bet1_placed:
+            side_num = 1
+            arb = place_arb_bet(driver, arb, side_num, test)
+            bet1_placed = arb['placed1']
 
-    side_num = 2
-    place_arb_bet(driver, arb, side_num, test)
+        # if side 1 odds changed while placing bet
+        # need to check side 2 before placing side 1
+        # and since then moved to side 2, also placed side 2
+        # before it has a chance to change as well
+
+        if not bet2_placed:
+            side_num = 2
+            arb = place_arb_bet(driver, arb, side_num, test)
+            bet2_placed = arb['placed2']
 
     print('\nPlaced Bets Simultaneously\n')
 
