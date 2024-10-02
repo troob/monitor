@@ -374,7 +374,9 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 		cookies_file = 'data/cookies.json'
 		saved_cookies = [] # init as blank bc will only get filled if enabled to read actual odds
 
-		enabled_sources = ['betrivers', 'betmgm'] # dk next bc most limited
+		enabled_sources = ['betrivers', 'betmgm']#, 'draftkings'] # dk next bc most limited
+		if manual_picks:
+			enabled_sources.append('draftkings')
 		bet1_dict = {}
 		bet2_dict = {}
 
@@ -1124,7 +1126,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 			print('Exit')
 			exit()
 		except ConnectionResetError:
-			print('\nKeyboardInterrupt in Monitor Website, outer loop')
+			print('\nConnectionResetError in Monitor Website, outer loop')
 			print('Exit')
 			exit()
 
@@ -1142,23 +1144,41 @@ if __name__ == "__main__":
 	# === TEST ===
 	
 	# Fully Auto
-	#test_arb = {}
-	test_arb = {'market':'Total', 
-				'bet1':'U 56.5', 
-				'bet2':'O 56.5', 
+	
+	test_arb = {'market':'Auburn University Total', 
+				'bet1':'O 9.5', 
+				'bet2':'U 9.5', 
 				'odds1':'-350', 
 				'odds2':'+360', 
-				'game':'Houston Texans vs Minnesota Vikings',
+				'game':'Auburn University vs University of Georgia',
 				'sport':'football',
-				'source1':'caesars',
-				'source2':'caesars',
-				'league':'nfl',
+				'source1':'draftkings',
+				'source2':'fliff',
+				'league':'ncaaf',
 				'value':'5.0',
 				'size1':'$1.00',
 				'size2':'$1.00',
-				'game date':'Thu Sep 17 2024',
-				'link1':'https://sports.ny.betmgm.com/en/sports/events/16300416?options=16300416-1169780634--941884641',
-				'link2':'https://ny.betrivers.com/?page=sportsbook#event/1020832141'}
+				'game date':'Thu Oct 2 2024',
+				'game time':'7:00 PM',
+				'link1':'https://sportsbook.draftkings.com/event/30525216?outcomes=0OU76901777O950_1',
+				'link2':'https://sports.getfliff.com/markets/225122_c_p_499_prematch'}
+	
+	# test_arb = {'market':'1st Half Total', 
+	# 			'bet1':'U 31.5', 
+	# 			'bet2':'O 31.5', 
+	# 			'odds1':'-350', 
+	# 			'odds2':'+360', 
+	# 			'game':'University of Central Florida vs University of Florida',
+	# 			'sport':'football',
+	# 			'source1':'betmgm',
+	# 			'source2':'draftkings',
+	# 			'league':'ncaaf',
+	# 			'value':'5.0',
+	# 			'size1':'$1.00',
+	# 			'size2':'$1.00',
+	# 			'game date':'Thu Oct 2 2024',
+	# 			'link1':'https://sports.ny.betmgm.com/en/sports/events/16386113?options=16386113-1177728158--921076886',
+	# 			'link2':'https://sportsbook.draftkings.com/event/31101393?outcomes=0OU76902173O3150_1'}
 	
 	# https://sports.ny.betmgm.com/en/sports/events/2:6539594?options=2:6539594-166576979-566138501
 	# https://ny.betrivers.com/?page=sportsbook#event/1021042593
@@ -1252,7 +1272,7 @@ if __name__ == "__main__":
 	# then it switches to manual false (auto only)
 	# if manual not enabled, then turn off audio notification bc nobody there to hear it
 	# and sometimes want sound off while still running
-	test = False
+	test = True
 	manual_picks = True
 
 	# post to mobile for mobile manual action

@@ -1752,6 +1752,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
                             print('Error Placing Max Bet')
 
+                    # Navigate to bet page to confirm bet placed
                     #aria-label="Navigate to My Bets"
                     my_bets_btn = driver.find_element('xpath', '//button[@aria-label="Navigate to My Bets"]')
                     my_bets_btn.click()
@@ -1762,8 +1763,13 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 #time.sleep(100)
                 # if odds changed for better then approve and place
                 # else close and go to next pick
+
+        elif website_name == 'draftkings':
+            place_bet_btn = 'dk-place-bet-button__primary-text'
+
+
     
-        # Navigate to bet page to confirm bet placed
+        
         
     # Close Window after placing bet
     # Close Window before going to next pick
@@ -1814,8 +1820,15 @@ def add_bet_to_betslip(final_outcome, driver, website_name):
         remove_old_bets(driver, website_name)
 
     except:
-        print('Error pressing outcome button! ' + website_name)
+        print('Error clicking outcome button! Try again. ' + website_name)
+
+        # refind outcome btn?
+        # from read market odds
+        # no bc outcome not found for valid reason 
+        # due to previous error closed window
+        #final_outcome = reader.read_final_outcome(driver, website_name)
         click_outcome_btn(final_outcome, driver)
+        #return final_outcome
 
     #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
@@ -2531,8 +2544,8 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     if bet_limit1 == 0:
         return 
     
-
-    bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num=2)
+    side_num = 2
+    bet_limit_data = find_bet_limit(arb, driver, cookies_file, saved_cookies, pick_type, test, side_num)
     if bet_limit_data is None:
         return
     
@@ -2557,7 +2570,7 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
 
 
     print('Done Placing Both Bets Auto Arb, so close windows')
-    close_bet_windows(driver, side_num=2, test=test, bet_dict=arb)
+    close_bet_windows(driver, side_num, test, arb)
 
     #print('arb: ' + str(arb))
     

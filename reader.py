@@ -1250,11 +1250,18 @@ def load_listed_bets(driver, website_name, max_retries=10):
 
 	listed_bets = None
 
-	bet_element = {}
+	# get all bet cards on init load
+	# but they may not have filled in data
+	# so confirm lines loaded
+	# first get all loading bets
+	# then check all loaded lines
+	bet_element = line_element = None
 	if website_name == 'betmgm':
 		bet_element = ('tag name', 'bs-digital-single-bet-pick')
+		line_element = ('class name', 'betslip-digital-pick__line-0-container')
 	elif website_name == 'draftkings':
 		bet_element = ('class name', 'single-card')
+		line_element = ('class name', 'single-card-header__text-top-outcome-label')
 
 	#straights_section = None
 	loading = True
@@ -1269,7 +1276,8 @@ def load_listed_bets(driver, website_name, max_retries=10):
 
 			#listed_line = listed_bets[0].find_element('class name', 'betslip-digital-pick__line-0-container')
 			for listed_bet in listed_bets:
-				listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container')
+				#print('listed_bet: ' + listed_bet.get_attribute('innerHTML'))
+				listed_bet.find_element(line_element[0], line_element[1])
 			
 			loading = False
 			print('Done Loading listed bets')
@@ -1301,37 +1309,67 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 	print('website_name: ' + str(website_name))
 	print('listed_bets: ' + str(listed_bets))
 
-	listed_line_element = None
+	listed_line_element = listed_market_element = listed_odds_element = remove_btn_element = None
 	if website_name == 'betmgm':
-		listed_line_element = (('class name', 'betslip-digital-pick__line-0-container'), ('tag name', 'span'))
-
+		listed_line_element = [('class name', 'betslip-digital-pick__line-0-container'), ('tag name', 'span')]
+		listed_market_element = ('class name', 'betslip-digital-pick__line-1')
+		listed_odds_element = [('tag name', 'bs-digital-pick-odds'), ('tag name', 'div')]
+		remove_btn_element = ('tag name', 'bs-digital-pick-remove-button')
+	elif website_name == 'draftkings':
+		listed_line_element = [('class name', 'single-card-header__text-top-outcome-label')]
+		listed_market_element = ('class name', 'single-card-header__offer-label')
+		listed_odds_element = [('class name', 'sportsbook-odds')]
+		remove_btn_element = ('tag name', 'dk-betslip-card-container__dynamic-ex')
 
 	found_market = False
 	for listed_bet in listed_bets:
+		#print('listed_bet: ' + listed_bet.get_attribute('innerHTML'))
 		# Under 1.5
-		listed_line = listed_bet.find_element(listed_line_element[0], listed_line_element[1])
-		if len(listed_line_element) > 1:
-			for element in listed_line_element[1:]:
-				listed_line = listed_line.find_element(element[0], element[1])
-		listed_line = listed_line.get_attribute('innerHTML').lower()
-		print('\ninit listed_line: ' + listed_line)
+		try:
+			listed_line_identifier = listed_line_element[0][0]
+			listed_line_class_name = listed_line_element[0][1]
+			# print('listed_line_identifier: ' + listed_line_identifier)
+			# print('listed_line_class_name: ' + listed_line_class_name)
+			listed_line = listed_bet.find_element(listed_line_identifier, listed_line_class_name)
+			print('listed_line part 1: ' + listed_line.get_attribute('innerHTML'))
+			if len(listed_line_element) > 1:
+				for element in listed_line_element[1:]:
+					listed_line = listed_line.find_element(element[0], element[1])
+					print('listed_line part: ' + listed_line)
+			# dk: over<span class="betslip-points"><span class="betslip-points-display">&nbsp;9.5</span></span>
+			if website_name == 'draftkings':
+				listed_line_title = listed_line.get_attribute('innerHTML').lower().split('<')[0] # 'over'
+				listed_line_points = listed_line.find_element('class name', 'betslip-points-display').get_attribute('innerHTML')
+				listed_line_points = re.sub('&nbsp;', ' ', listed_line_points)
+				listed_line = listed_line_title + listed_line_points
+			else:
+				listed_line = listed_line.get_attribute('innerHTML').lower()
+			print('init listed_line: ' + listed_line)
+		except:
+			print('Failed to get listed line')
+			time.sleep(1000)
 
 		# convert listed line to standard format 
 		# bc cannot always convert standard input to source format
 		# if extra letters such as
 		# pittsburgh u +0.5 -> pittsburgh +0.5
 		listed_line = converter.convert_bet_line_to_standard_format(listed_line)
-		print('listed_line: ' + listed_line)
+		print('standard listed_line: ' + listed_line)
 
 		#  Masyn Winn (STL): Hits 
-		listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
-		print('init listed_market: ' + listed_market)
+		listed_market = listed_bet.find_element(listed_market_element[0], listed_market_element[1]).get_attribute('innerHTML').lower().strip()
+		print('\ninit listed_market: ' + listed_market)
 
 		# listed_line: ca independiente avellaneda (0.5)
 		# init listed_market: 2way handicap (-0.5) -> spread
 
 		# odds
-		listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
+		#listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
+		listed_odds = listed_bet.find_element(listed_odds_element[0][0], listed_odds_element[0][1])
+		if len(listed_odds_element) > 1:
+			for element in listed_odds_element[1:]:
+				listed_odds = listed_odds.find_element(element[0], element[1])
+		listed_odds = listed_odds.get_attribute('innerHTML').lower()
 		print('listed_odds: ' + listed_odds)
 
 		if listed_odds != '':
@@ -1361,21 +1399,31 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 			# match name and market
 			else:
 
-				# Masyn Winn (STL): Hits 
+				# Betmgm: Masyn Winn (STL): Hits 
 				# if no '):', then not player market so not match
 				if re.search('\):', listed_market):
-					listed_name	 = listed_market.split(' (')[0]
+					listed_name	= listed_market.split(' (')[0]
 					listed_market = listed_market.split(': ')[1]
-					print('listed_name: ' + listed_name)
-					print('listed_market: ' + listed_market)
 
-					# bases (hits only)
-					# remove (...)
-					listed_market = re.sub(' \(.+\)', '', listed_market)
+				# Draftkings: Masyn Winn Hits
+				else:
+					listed_name	= listed_market.split(market_title)[0].strip() # 'Masyn Winn'
+					listed_market = listed_market.split(listed_name)[1].strip() # 'Hits O/U'
+					# hits o/u -> hits
+					listed_market = re.sub(' o/u', '', listed_market) 
 
-					#if listed_name == input_name and listed_market == input_market:
-					if determiner.determine_matching_player_outcome(listed_name, listed_market, input_name, input_market):
-						found_market = True
+				print('listed_name: ' + listed_name)
+				print('listed_market: ' + listed_market)
+				
+				# bases (hits only)
+				# remove (...)
+				listed_market = re.sub(' \(.+\)', '', listed_market)
+
+				#if listed_name == input_name and listed_market == input_market:
+				if determiner.determine_matching_player_outcome(listed_name, listed_market, player_name, player_market):
+					found_market = True
+
+
 			
 
 		# ca independiente avellaneda (0.5) -> independiente +0.5
@@ -1388,9 +1436,12 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 		else:
 			# remove old bet
 			print('Remove Old Pick from Slip')
-			remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
+			remove_btn = listed_bet.find_element(remove_btn_element[0], remove_btn_element[1])
 			remove_btn.click()
 			time.sleep(1)
+
+	return actual_odds, final_outcome
+
 
 def check_logged_out_popup(driver):
 	print('\n===Check Logged Out Popup===\n')
@@ -2023,11 +2074,11 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
 
 			# ===Load Listed Bets===
-			listed_bets = load_listed_bets(driver)
+			listed_bets = load_listed_bets(driver, website_name)
 
 			# ===Find Matching Market + Line===
 			# ===Remove Old Picks from Betslip===
-			actual_odds, final_outcome = find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market)
+			actual_odds, final_outcome = find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market, website_name)
 
 			
 
@@ -2049,10 +2100,15 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			#writer.click_outcome_btn(final_outcome, driver, website_name)
 			# adding to betslip still gets wrong reading when glitch
 			# so click wager field to see if causes odds change
+			# does NOT cause odds to change so need to login
+			login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
+			if login_result == 'fail':
+				writer.close_bet_windows(driver, side_num, test, bet_dict)
+				return
 			# last in list
-			wager_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container').find_element('tag name', 'input')
+			wager_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container')#.find_element('tag name', 'input')
 			if len(wager_fields) > 0:
-				wager_field = wager_fields[-1]
+				wager_field = wager_fields[-1].find_element('tag name', 'input')
 				wager_field.clear()
 			# last in list
 			all_betslip_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
@@ -5472,7 +5528,11 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 				# restart monitor website fcn from the top
 				return 'reboot'
 			elif re.search('Connection refused', e_str):
-				print('\nConnection refused in Read Prematch Arb Data')
+				print('\nConnection refused in Read Prematch EV Data')
+				print('Exit')
+				exit()
+			elif re.search('no such window', e_str):
+				print('\nNo such window in Read Prematch EV Data')
 				print('Exit')
 				exit()
 
@@ -5868,6 +5928,10 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 				return 'reboot'
 			elif re.search('Connection refused', e_str):
 				print('\nConnection refused in Read Prematch Arb Data')
+				print('Exit')
+				exit()
+			elif re.search('no such window', e_str):
+				print('\nNo such window in Read Prematch Arb Data')
 				print('Exit')
 				exit()
 			

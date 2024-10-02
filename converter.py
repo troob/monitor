@@ -139,6 +139,55 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             names = bet_line.split(' ', 1)
             bet_line = names[0][0] + '. ' + names[1]
 
+    elif website_name == 'draftkings':
+
+        # special case player props not o/u but yes only
+        # so player name is bet line
+        # football anytime td scorer has player name as line
+        if re.search('- touchdowns', market):
+            player_name = market.split(' - ')[0]
+            bet_line = player_name
+
+        elif market == 'total sets':
+            # u 2.5 -> 2 sets
+            # o 2.5 -> 3 sets
+            bet_data = bet_line.split()
+            direction = bet_data[0]
+            line_val = bet_data[1]
+            if direction == 'o':
+                bet_line = '3 sets'
+            else:
+                bet_line = '2 sets'
+
+        # totals and player props are over/unders
+        elif re.search('total| - ', market):
+            bet_data = bet_line.split()
+            direction = bet_data[0]
+            line_val = bet_data[1]
+            if re.search('first inning', market):
+                if direction == 'o':
+                    bet_line = 'yes'
+                else:
+                    bet_line = 'no'
+            else:
+                if direction == 'o':
+                    bet_line = 'over ' + line_val
+                else:
+                    bet_line = 'under ' + line_val
+
+        elif sport == 'soccer' and market == 'spread':
+            # +0.5 -> (0.5)
+            # remove + sign?
+            # no bc need +/- to indicate cutoff
+            #bet_line = re.sub('\+', '', bet_line)
+            bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
+            bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
+
+        elif sport in solo_sports:
+            # josh kelly -> j. kelly
+            names = bet_line.split(' ', 1)
+            bet_line = names[0][0] + '. ' + names[1]
+
 
         
 
@@ -415,6 +464,28 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif market == 'total sets':
 
                 market_title = 'how many sets will be played in the match?'
+
+    elif website_name == 'draftkings':
+
+        if sport == 'baseball':
+
+            if market == 'spread':
+                market_title = 'run line'
+
+            elif market == 'bases':
+                market_title = 'total bases'
+
+        elif sport == 'football':
+
+            # Team Total
+            # eagles total -> eagles team total points
+            # auburn university total -> auburn team total points
+            if re.search('\stotal', market):
+                
+                team_name = market.split(' total')[0]
+                team_name = re.sub(' university|university of ', '', team_name)
+                market_title = team_name + ' team total points'
+
 
 
     print('market_title: ' + market_title)
