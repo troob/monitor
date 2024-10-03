@@ -1272,7 +1272,7 @@ if __name__ == "__main__":
 	# then it switches to manual false (auto only)
 	# if manual not enabled, then turn off audio notification bc nobody there to hear it
 	# and sometimes want sound off while still running
-	test = True
+	test = False
 	manual_picks = True
 
 	# post to mobile for mobile manual action

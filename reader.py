@@ -1094,6 +1094,68 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 					team_name = converter.convert_market_to_team_name(market, league, sport)
 					market_title = 'total touchdowns by ' + team_name
 
+		# === Hockey ===
+		elif sport == 'hockey':
+
+			if market == 'moneyline':
+				section_idx = 2
+				market_title = 'moneyline - inc ot and shootout'
+
+			elif market == 'spread':
+				section_idx = 2
+				market_title = 'puck line - inc ot and shootout'
+
+			elif market == 'total':
+				section_idx = 2
+				market_title = 'total goals - inc ot and shootout'
+
+			elif re.search('1st period|first period', market):
+				section_idx = 3
+
+				if market == '1st period moneyline 3 way':
+					market_title = 'period 1 (3-way)'
+				elif market == '1st period moneyline':
+					market_title = 'moneyline - period 1'
+				elif market == '1st period total':
+					market_title = 'total goals - period 1'
+				elif re.search('total', market):
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total goals by ' + team_name + ' - period 1'
+
+			elif re.search('2nd period', market):
+				section_idx = 3
+
+				if market == '2nd period moneyline 3 way':
+					market_title = 'period 2 (3-way)'
+				elif market == '2nd period moneyline':
+					market_title = 'moneyline - period 2'
+				elif market == '2nd period total':
+					market_title = 'total goals - period 2'
+				elif re.search('total', market):
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total goals by ' + team_name + ' - period 2'
+
+			elif re.search('3rd period', market):
+				section_idx = 3
+
+				if market == '3rd period moneyline 3 way':
+					market_title = 'period 3 (3-way)'
+				elif market == '3rd period moneyline':
+					market_title = 'moneyline - period 3'
+				elif market == '3rd period total':
+					market_title = 'total goals - period 3'
+				elif re.search('total', market):
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total goals by ' + team_name + ' - period 3'
+
+			# Team Total
+			elif re.search('\stotal', market):
+				section_idx = 2
+
+				# new jersey devils -> nj devils
+				team_name = converter.convert_market_to_team_name(market, league, sport)
+				market_title = 'total goals by ' + team_name + ' - inc ot and shootout'
+
 
 		# === Soccer ===
 		# all current soccer valid props in section 0
@@ -2101,7 +2163,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# adding to betslip still gets wrong reading when glitch
 			# so click wager field to see if causes odds change
 			# does NOT cause odds to change so need to login
-			login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
+			login_result = writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
 			if login_result == 'fail':
 				writer.close_bet_windows(driver, side_num, test, bet_dict)
 				return
@@ -6074,19 +6136,19 @@ def open_safari_website(url, size=(1250,1144), position=(0,0), first_window=Fals
 	return driver
 
 
-def login_website(driver):
-	print('\n===Login Website===\n')
+# def login_website(driver):
+# 	print('\n===Login Website===\n')
 
-	login_dialog = driver.find_element('id', 'radix-:rb:')
-	print("login_dialog: " + login_dialog.get_attribute('innerHTML'))
+# 	login_dialog = driver.find_element('id', 'radix-:rb:')
+# 	print("login_dialog: " + login_dialog.get_attribute('innerHTML'))
 
 
-def open_sportsbook(url):
+# def open_sportsbook(url):
 
-	driver = open_react_website(url)
+# 	driver = open_react_website(url)
 
-	# login
-	login_website(driver)
+# 	# login
+# 	login_website(driver)
 
 # sometimes the bet link only goes to game page 
 # so scroll to section, open it, and parse
