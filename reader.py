@@ -477,6 +477,7 @@ def read_market_odds(market, market_element, bet_dict):
 	# Chicago Cubs +1.5
 	# U 0.5, O 0.5
 	bet_outcome = bet_dict['bet'].lower()
+	print('bet_outcome: ' + bet_outcome)
 	if source == 'betrivers':
 		# if market has team name in it
 		#team_markets = ['moneyline', 'run line', 'spread']
@@ -491,7 +492,8 @@ def read_market_odds(market, market_element, bet_dict):
 			if not re.search(' - ', market) and sport in team_sports:
 				bet_outcome_line = ''
 				bet_outcome_name = bet_outcome
-				if market == 'spread':
+				# include all spreads for all periods of game
+				if re.search('spread', market):
 					# we know not player prop 
 					# so look for -[0-9] or +[0-9] for spread
 					bet_outcome_name = re.split(' -[0-9]| \+[0-9]', bet_outcome)[0]
@@ -969,7 +971,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 				section_title = ''
 
-				passing_markets = ['passing yards', 'passing touchdowns', 'passing attempts', 'passing completions']
+				passing_markets = ['passing yards', 'passing touchdowns', 'passing attempts', 'passing completions', 'passing interceptions']
 				receiving_markets = ['receiving yards', 'longest reception', 'receptions made']
 				rushing_markets = ['rushing yards', 'rushing attempts', 'longest rush']
 				kicking_markets = ['kicking points', 'field goals']
@@ -1301,10 +1303,12 @@ def check_bet_available(driver, website_name):
 
 	try:
 		driver.find_element('class name', notice_class)#.find_element('tag name', 'button')
-		print('No')
+		print('No\n')
 	except:
 		bet_available = True
-		print('Yes')
+		print('Yes\n')
+
+	return bet_available
 
 
 def load_listed_bets(driver, website_name, max_retries=10):
@@ -1324,10 +1328,12 @@ def load_listed_bets(driver, website_name, max_retries=10):
 	elif website_name == 'draftkings':
 		bet_element = ('class name', 'single-card')
 		line_element = ('class name', 'single-card-header__text-top-outcome-label')
+		listed_odds_element = [('class name', 'sportsbook-odds')]
 
 	#straights_section = None
 	loading = True
 	load_retries = 0
+	refresh = False
 	while loading:
 		try:
 			# straight bet section
@@ -1341,8 +1347,36 @@ def load_listed_bets(driver, website_name, max_retries=10):
 				#print('listed_bet: ' + listed_bet.get_attribute('innerHTML'))
 				listed_bet.find_element(line_element[0], line_element[1])
 			
-			loading = False
-			print('Done Loading listed bets')
+				# ensure all bets have odds filled in
+				# not glitch 0.00
+				# wait 3 seconds before trying refresh
+				odds_retries = 0
+				listed_odds = None
+				while odds_retries < max_retries:
+					listed_odds = listed_bet.find_element(listed_odds_element[0][0], listed_odds_element[0][1])
+					if len(listed_odds_element) > 1:
+						for element in listed_odds_element[1:]:
+							listed_odds = listed_odds.find_element(element[0], element[1])
+					listed_odds = listed_odds.get_attribute('innerHTML')
+					#listed_odds = re.sub('−', '-', listed_odds) # special character
+					print('listed_odds: ' + listed_odds)
+
+					if listed_odds == '0.00':
+						odds_retries += 1
+						time.sleep(1)
+					else:
+						break
+
+				# if odds still 0.00 after loading, refresh
+				if listed_odds == '0.00':
+					print('Refresh Page')
+					refresh = True
+					driver.refresh()
+					break
+
+			if not refresh:
+				loading = False
+				print('Done Loading listed bets')
 
 		except KeyboardInterrupt:
 			loading = False
@@ -1362,14 +1396,18 @@ def load_listed_bets(driver, website_name, max_retries=10):
 
 	return listed_bets
 
-def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market, website_name):
+def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market, website_name, driver, max_retries=3):
 	print('\n===Find Matching Bet===\n')
+	print('market: ' + str(market))
 	print('market_title: ' + str(market_title))
 	print('bet_line: ' + str(bet_line))
 	print('player_name: ' + str(player_name))
 	print('player_market: ' + str(player_market))
 	print('website_name: ' + str(website_name))
-	print('listed_bets: ' + str(listed_bets))
+	#print('listed_bets: ' + str(listed_bets))
+	print('\nOutput: match = bool\n')
+
+	actual_odds = final_outcome = None
 
 	listed_line_element = listed_market_element = listed_odds_element = remove_btn_element = None
 	if website_name == 'betmgm':
@@ -1381,7 +1419,7 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 		listed_line_element = [('class name', 'single-card-header__text-top-outcome-label')]
 		listed_market_element = ('class name', 'single-card-header__offer-label')
 		listed_odds_element = [('class name', 'sportsbook-odds')]
-		remove_btn_element = ('tag name', 'dk-betslip-card-container__dynamic-ex')
+		remove_btn_element = ('class name', 'dk-betslip-card-container__dynamic-ex')
 
 	found_market = False
 	for listed_bet in listed_bets:
@@ -1418,7 +1456,8 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 		listed_line = converter.convert_bet_line_to_standard_format(listed_line)
 		print('standard listed_line: ' + listed_line)
 
-		#  Masyn Winn (STL): Hits 
+		# MGM: Masyn Winn (STL): Hits 
+		# DK: utep: team total points
 		listed_market = listed_bet.find_element(listed_market_element[0], listed_market_element[1]).get_attribute('innerHTML').lower().strip()
 		print('\ninit listed_market: ' + listed_market)
 
@@ -1426,13 +1465,21 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 		# init listed_market: 2way handicap (-0.5) -> spread
 
 		# odds
+		# glitch causes 0.00 so refresh
+		# try max retries 3 times
+		# odds_retries = 0
+		# listed_odds = ''
+		#while odds_retries < max_retries:
 		#listed_odds = listed_bet.find_element('tag name', 'bs-digital-pick-odds').find_element('tag name', 'div').get_attribute('innerHTML').strip()
 		listed_odds = listed_bet.find_element(listed_odds_element[0][0], listed_odds_element[0][1])
 		if len(listed_odds_element) > 1:
 			for element in listed_odds_element[1:]:
 				listed_odds = listed_odds.find_element(element[0], element[1])
 		listed_odds = listed_odds.get_attribute('innerHTML').lower()
+		listed_odds = re.sub('−', '-', listed_odds) # special character
 		print('listed_odds: ' + listed_odds)
+
+		# already ensured odds not 0.00 while loading
 
 		if listed_odds != '':
 
@@ -1445,8 +1492,9 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 				# 	listed_market = 'spread'
 
 
-				listed_market = re.sub(':','',listed_market)
-				print('listed_market: ' + listed_market)
+				# use colon to match team name abbrev and market separate
+				# listed_market = re.sub(':','',listed_market)
+				# print('listed_market: ' + listed_market)
 
 				# match result - early payout
 				# remove early payout
@@ -1469,7 +1517,7 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 
 				# Draftkings: Masyn Winn Hits
 				else:
-					listed_name	= listed_market.split(market_title)[0].strip() # 'Masyn Winn'
+					listed_name	= listed_market.split(player_market)[0].strip() # 'Masyn Winn'
 					listed_market = listed_market.split(listed_name)[1].strip() # 'Hits O/U'
 					# hits o/u -> hits
 					listed_market = re.sub(' o/u', '', listed_market) 
@@ -1883,6 +1931,8 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 						market_keyword = 'pass attempts'
 					elif market_keyword == 'passing completions':
 						market_keyword = 'pass completions'
+					elif market_keyword == 'passing interceptions':
+						market_keyword = 'pass interceptions'
 					elif market_keyword == 'longest completion':
 						market_keyword = 'longest completed pass'
 					elif market_keyword == 'receptions made':
@@ -1921,6 +1971,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 								break
 							except:
 								print('Error clicking Section')
+								writer.close_logged_out_popup(driver)
 								driver.execute_script("arguments[0].scrollIntoView(true);", section)
 								retries += 1
 								time.sleep(1)
@@ -2127,7 +2178,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 				print('player_name: ' + player_name)
 				print('player_market: ' + player_market)
 
-				player_market = converter.convert_market_to_source_format(input_market, sport, game, website_name)
+				player_market = converter.convert_market_to_source_format(player_market, sport, game, website_name)
 			
 			else:
 				market_title = converter.convert_market_to_source_format(market, sport, game, website_name)
@@ -2140,7 +2191,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 
 			# ===Find Matching Market + Line===
 			# ===Remove Old Picks from Betslip===
-			actual_odds, final_outcome = find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market, website_name)
+			actual_odds, final_outcome = find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market, website_name, driver)
 
 			
 
@@ -2158,6 +2209,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# confirm actual odds
 			# click outcome to add to slip to confirm odds
 			# bc glitch causes odds change when slip open
+			writer.clear_betslip(driver)
 			writer.add_bet_to_betslip(final_outcome, driver, website_name)
 			#writer.click_outcome_btn(final_outcome, driver, website_name)
 			# adding to betslip still gets wrong reading when glitch
@@ -5760,7 +5812,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 					# if len(arb_data) <= 3:
 					# 	print('No Market')
 					# 	break
-
+					market = None
 					try:
 						#market_idx = val_idx + 3
 						# poor source format sometimes includes _ and all caps for football player markets (source will probably fix soon???)
@@ -5773,6 +5825,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources=[], max_ret
 							market = player_name + ' - ' + player_market
 						#print('market: ' + str(market))
 						market = converter.convert_name_to_standard_format(market)
+						
 					except:
 						print('No Market')
 						continue

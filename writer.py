@@ -319,7 +319,9 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
     #print('\nOutput: Logged In\n')
 
     email = os.environ['EMAIL']
-    token = os.environ[website_name.upper()]
+    token = ''
+    if website_name.upper() in os.environ.keys():
+        token = os.environ[website_name.upper()]
 
     
     logged_in = False
@@ -663,53 +665,63 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
         print('Login DK')
 
         login_btn = None
-        need_login = False
+        need_login = True
         # check logged in by account dropdown
         # data-test-id="account-dropdown"
         # OR check not logged in by login btn
         try:
             login_btn = driver.find_element('class name', 'login-duration-time')
             print('login_btn: ' + login_btn.get_attribute('innerHTML'))
-            need_login = True
-        except:
-            print('No login btn, so Already Logged In.')
+            #need_login = True
 
-        if need_login:
             try:
                 print('Go to Login Page')
                 login_btn.click()
             except:
-                print('\nAlready Logged In DK\n')
-                return
-        else:
-            print('\nAlready Logged In DK\n')
-            return
+                print('\nFailed to Click Login button. Already Logged In DK\n')
+                need_login = False
+                #return
 
-        submit_btn = None
-        login_page = False
-        while not login_page:
-            try:
-                # id login-submit
-                submit_btn = driver.find_element('id', 'login-submit')
-                print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
-                login_page = True
-            except:
-                print('Loading Login Page...')
-                time.sleep(1)
+        except:
+            print('No login btn. Already Logged In DK.')
+            need_login = False
+            #return
 
-        submit_btn.click()
+        
+        
+        # if do not need login
+        # check if need recheck location
+        if not need_login:
+            recheck_location(driver)
 
-        # if still loading, not logged in
-        logged_in = False
-        while not logged_in:
-            try:
-                # logged in if betslip
-                driver.find_element('id', 'dom_betslip')
-                logged_in = True
-                print('\nLogin Success\n')
-            except:
-                print('Loading Login...')
-                time.sleep(1)
+        else: # Login
+
+            submit_btn = None
+            login_page = False
+            while not login_page:
+                try:
+                    # id login-submit
+                    submit_btn = driver.find_element('id', 'login-submit')
+                    print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+                    login_page = True
+                except:
+                    print('Loading Login Page...')
+                    time.sleep(1)
+
+            # assuming info already entered
+            submit_btn.click()
+
+            # if still loading, not logged in
+            logged_in = False
+            while not logged_in:
+                try:
+                    # logged in if betslip
+                    driver.find_element('id', 'dom_betslip')
+                    logged_in = True
+                    print('\nLogin Success\n')
+                except:
+                    print('Loading Login...')
+                    time.sleep(1)
                 
 
 
@@ -729,23 +741,26 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
 
         
 
-def clear_betslip(driver):
+def clear_betslip(driver, website_name='betrivers'):
     print('\n===Clear Betslip===\n')
     # Require that betslip is empty
     # So look for betslip html to see if open
     # if open, click clear all
-    try:
-        clear_btn = driver.find_element('class name', 'mod-KambiBC-betslip__clear-btn')
-        clear_btn.click()
-        print('Cleared Betslip')
-    except:
+
+    if website_name == 'betrivers':
         try:
-            remove_pick_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
-            for remove_pick_btn in remove_pick_btns:
-                remove_pick_btn.click()
-                print('Removed Pick')
+            clear_btn = driver.find_element('class name', 'mod-KambiBC-betslip__clear-btn')
+            clear_btn.click()
+            print('Cleared Betslip')
         except:
-            print('Betslip Empty')
+            try:
+                remove_pick_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+                for remove_pick_btn in remove_pick_btns:
+                    remove_pick_btn.click()
+                    print('Removed Pick')
+            except:
+                print('Betslip Empty')
+
 
 def wager_remaining_funds(driver, website_name):
     print('\n===Wager Remaining Funds===\n')
@@ -1205,7 +1220,9 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 # depends on source and market
                 # for betrivers, $300 is max 
                 # so if less than 300 available then need to set limits diff by market
-                bet_size = determiner.determine_source_limit(website_name)
+                market = bet_dict['market']
+                odds = bet_dict['actual odds']
+                bet_size = determiner.determine_source_limit(website_name, market, odds)
                 # if website_name == 'betrivers':
                 #     max_bet = 400
 
@@ -1571,6 +1588,8 @@ def click_outcome_btn(outcome_btn, driver):
 def add_bet_to_betslip(final_outcome, driver, website_name):
     print('\n===Add Bet to Betslip===\n')
 
+    #clear_betslip(driver)
+
     try:
         # final_outcome: 
         # <div data-touch-feedback="true" 
@@ -1601,10 +1620,21 @@ def add_bet_to_betslip(final_outcome, driver, website_name):
     #print('final_outcome after click: ' + final_outcome.get_attribute('outerHTML'))      
 
 
-def recheck_location(driver, place_bet_btn, website_name):
+# draftkings
+def recheck_location(driver):#, place_bet_btn):#, website_name):
     print('\n===Recheck Location===\n')
-    
-    place_bet_btn.click()
+
+    try:
+        place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
+        place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
+        print('place_bet_btn_text: ' + place_bet_btn_text)
+        if place_bet_btn_text == 'recheck location':
+            #recheck_location(driver, place_bet_btn, website_name)
+            place_bet_btn.click()
+
+    except:
+        print('No Place Bet Btn')
+        return    
 
     loading = True
     while loading:
@@ -1635,59 +1665,6 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     num_windows = len(driver.window_handles)
     print('num_windows: ' + str(num_windows))
 
-    # change to side window
-    # if side_num == 2 and num_windows > 3:
-    #     driver.switch_to.window(driver.window_handles[3])
-    #     print('Changed to Window 4')
-    # else:
-    #     driver.switch_to.window(driver.window_handles[2])
-    #     print('Changed to Window 3')
-
-    # num_monitor_windows = 2
-    # if test:
-    #     num_monitor_windows = 1
-    # num_full_auto_windows = num_monitor_windows + 2
-    # print('num_full_auto_windows: ' + str(num_full_auto_windows))
-    
-    # window_idx = num_monitor_windows
-    # if side_num == 2 and bet_dict['actual odds1'] != '':
-    #     print('Both Arb Sides Open')
-    #     # if both sides open for full auto arb,
-    #     # idx = num_monitors+1
-    #     # problem is cannot count windows bc counts manual windows opened
-    #     # so instead look if actual odds 1 populated
-    #     #if bet_dict['actual odds1'] != '':
-    #         # both sides auto open
-    #         # so window idx = num_monitors+1
-    #     window_idx = num_monitor_windows + 1
-
-        # always last window? or does it depend if manual windows open???
-        # change to 1 or 2 more than monitor windows
-        # depends if both arb sides open
-        # side2_window_idx = num_monitor_windows + 1
-        # driver.switch_to.window(driver.window_handles[side2_window_idx])
-        # print('Changed to Arb Side 2, Window 4')
-    #else: # side 1
-        # always idx = num_monitors
-
-
-        # either last or 2nd to last window
-        # when manual windows open it counts those at end
-        # so not always last, but always 1 more than monitor windows?
-        # last window if only 1 side open
-        # if len(driver.window_handles) < num_full_auto_windows:
-        #     side1_window_idx = num_monitor_windows + 1
-        #     driver.switch_to.window(driver.window_handles[side1_window_idx])
-        #     print('Changed to Arb Side 1, Window 4')
-
-        # # second to last window if both sides open
-        # else:
-        #     side1_window_idx = num_monitor_windows
-        #     driver.switch_to.window(driver.window_handles[side1_window_idx])
-        #     print('Changed to Arb Side 1, Window 3')
-
-    
-
 
     # if bet dict has bet1/bet2 then we know arb
     # so set single bet vals in dict
@@ -1695,7 +1672,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         bet_key = 'bet' + str(side_num)
         source_key = 'source' + str(side_num)
         odds_key = 'odds' + str(side_num)
-        actual_odds_key = 'odds' + str(side_num)
+        actual_odds_key = 'actual odds' + str(side_num)
         link_key = 'link' + str(side_num)
         size_key = 'size' + str(side_num)
         outcome_key = 'outcome' + str(side_num)
@@ -1713,14 +1690,6 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     # switch to bet window returns None if cannot find final outcome
     # so no need to switch twice 
     # if final outcome fails after this then move on to next bet
-    # window_idx = switch_to_bet_window(bet_dict, driver, test, side_num)
-    # # print('Switch to Window Idx: ' + str(window_idx))
-    # # driver.switch_to.window(driver.window_handles[window_idx])
-    # if window_idx is None:
-    #     print('window_idx none, Close Bet Windows\n')
-    #     close_bet_windows(driver, side_num, test)
-    #     return bet_limit
-    
     print('Change Window to Bet: ' + str(side_num))
     driver.switch_to.window(bet_dict['window'])
     
@@ -2062,24 +2031,26 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         # eg big markets like moneyline, especially likely odds
 
         # check for Recheck Location in place bet btn
-        place_bet_btn = None
-        try:
-            place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
-            place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
-            print('place_bet_btn_text: ' + place_bet_btn_text)
-            if place_bet_btn_text == 'recheck location':
-                recheck_location(driver, place_bet_btn, website_name)
+        # place_bet_btn = None
+        # try:
+        #     place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
+        #     place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
+        #     print('place_bet_btn_text: ' + place_bet_btn_text)
+        #     if place_bet_btn_text == 'recheck location':
+        #         recheck_location(driver, place_bet_btn, website_name)
 
-        except:
-            print('No Place Bet Btn')
-            return
+        # except:
+        #     print('No Place Bet Btn')
+        #     return
+
+        place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
 
         attempted_bet = False
         while not attempted_bet:
             place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
             print('place_bet_btn_text: ' + place_bet_btn_text)
 
-            if re.search('accept', place_btn_text):
+            if re.search('accept', place_bet_btn_text):
                 # accept odds for now until we check other side of arb
                 place_bet_btn.click()
 
@@ -2101,12 +2072,12 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             loading = True
             while loading:
                 try:
-                    alert_msg = driver.find_element('class name', 'alert-content__message').get_attribute('innerHTML').lower() # Wager too high
+                    alert_msg = driver.find_element('class name', 'dk-action-required__title').get_attribute('innerHTML').lower() # Wager too high
                     print('alert_msg: ' + alert_msg)
                     loading = False
                     print('Done Loading placed bet to find limit')
 
-                    if re.search('limit', alert_msg):
+                    if re.search('too high', alert_msg):
                         attempted_bet = True
                         print('Attempted Bet')
                 except KeyboardInterrupt:
@@ -2116,12 +2087,17 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                     time.sleep(1)
 
         # after attempted bet to find limit
-        bet_limit = wager_field.get_attribute('value').split('$')[1] # or getText()
+        wager_field = driver.find_element('class name', 'betslip-wager-box__input')
+        bet_limit = wager_field.get_attribute('value')#.split('$')[1] # or getText()
         print('bet_limit: ' + bet_limit)
 
         # $100.00 -> 100.00
         payout = driver.find_element('class name', 'betslip-regular-payout__label-value').get_attribute('innerHTML').split('$')[1]
         print('payout: ' + payout)
+
+        # do we need to click leave in betslip
+        # to see odds changes? is it glitchy?
+        # class dk-betslip-tertiary-button__wrapper
 
 
     # Do not close window after finding limit
@@ -2185,7 +2161,7 @@ def place_arb_bet(driver, arb, side_num, test):
     wager_field.clear()
     wager_field.send_keys(bet_size)
     print('Entered Bet ' + str(side_num) + ': ' + bet_size)
-    time.sleep(1)
+    time.sleep(0.5)
     # click bet side
     placed_bet = False
     bet_placed_key = 'placed' + str(side_num)
@@ -2282,6 +2258,8 @@ def place_arb_bet(driver, arb, side_num, test):
                             driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
                         elif source == 'betrivers':
                             driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                        elif source == 'draftkings':
+                            driver.find_element('class name', 'receipt')
                         
                         loading = False
                         print('Done Loading')

@@ -398,7 +398,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			bet1_dict['odds'] = arb['odds1']
 			bet1_dict['source'] = arb['source1']
 			bet1_dict['link'] = arb['link1']
-			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
+			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'], bet1_dict['market'], bet1_dict['odds'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
 			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type='ev', test=test)
 			if actual_odds_data == 'reboot':
@@ -428,7 +428,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				bet1_dict['odds'] = arb['odds1']
 				bet1_dict['source'] = arb['source1']
 				bet1_dict['link'] = arb['link1']
-				bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'])
+				bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'], bet1_dict['market'], bet1_dict['odds'])
 
 				# side num defines placement of window
 				# actual_odds1, final_outcome1, cookies_file, saved_cookies = 
@@ -447,6 +447,13 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			arb['actual odds1'] = actual_odds1
 			arb['outcome1'] = final_outcome1
 
+			# check if still valid odds before needing to check side 2
+			if not test and not determiner.determine_valid_arb_odds(arb):
+				print('Arb Odds Changed to Invalid: ' + actual_odds1 + ', ' + actual_odds2)
+				print('\nClose Arb Windows\n')
+				writer.close_bet_windows(driver, side_num, test, arb)
+				continue
+
 			# even if first side changed, 
 			# need to check second side to make sure invalid
 			if arb_source2 in enabled_sources:
@@ -456,7 +463,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 				bet2_dict['odds'] = arb['odds2']
 				bet2_dict['source'] = arb['source2']
 				bet2_dict['link'] = arb['link2']
-				bet2_dict['size'] = determiner.determine_source_limit(bet2_dict['source'])
+				bet2_dict['size'] = determiner.determine_source_limit(bet2_dict['source'], bet2_dict['market'], bet2_dict['odds'])
 
 				# actual_odds2, final_outcome2, cookies_file, saved_cookies
 				side_num = 2
@@ -1145,12 +1152,12 @@ if __name__ == "__main__":
 	
 	# Fully Auto
 	
-	test_arb = {'market':'Auburn University Total', 
+	test_arb = {'market':'Baylor University Total', 
 				'bet1':'O 9.5', 
 				'bet2':'U 9.5', 
-				'odds1':'-350', 
+				'odds1':'-270', 
 				'odds2':'+360', 
-				'game':'Auburn University vs University of Georgia',
+				'game':'Baylor University vs Iowa State University',
 				'sport':'football',
 				'source1':'draftkings',
 				'source2':'fliff',
@@ -1158,9 +1165,9 @@ if __name__ == "__main__":
 				'value':'5.0',
 				'size1':'$1.00',
 				'size2':'$1.00',
-				'game date':'Thu Oct 2 2024',
+				'game date':'Thu Oct 4 2024',
 				'game time':'7:00 PM',
-				'link1':'https://sportsbook.draftkings.com/event/30525216?outcomes=0OU76901777O950_1',
+				'link1':'https://sportsbook.draftkings.com/event/31101349?outcomes=0OU76901715O950_1',
 				'link2':'https://sports.getfliff.com/markets/225122_c_p_499_prematch'}
 	
 	# test_arb = {'market':'1st Half Total', 

@@ -59,8 +59,16 @@ def convert_name_to_standard_format(name):
     name = re.sub('ó', 'o', name)
     name = re.sub('ú', 'u', name)
     
+    # if market contains 'University' and ' - ' 
+    # then remove ' - ' to differentiate player props
+    # only player props should have ' - ' in market
+    if re.search('University', name):
+        name = re.sub(' - ', ' ', name)
+
     # remove university of
     name = re.sub('university of | university', '', name)
+
+    
 
     return name
 
@@ -475,16 +483,61 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif market == 'bases':
                 market_title = 'total bases'
 
+            # first 3 innings moneyline -> 1st 3 innings
+            elif re.search('innings? moneyline', market):
+
+                market_title = re.sub('first', '1st', market)
+                market_title = re.sub(' moneyline', '', market_title)
+
+            elif re.search('innings? total', market):
+
+                market_title = market + ' runs'
+
+            elif re.search('innings? .+ total', market):
+                # first inning milwaukee brewers total
+                # mil brewers: team total runs - 1st inning
+                #parts = re.split('innings? ',market)
+                team_part = re.split('innings? ',market)[1] # 'milwaukee brewers total'
+                inning_part = market.split(team_part)[0].strip() #parts[0] # 'first inning'
+                if re.search('first', inning_part): # # '1st inning'
+                    inning_part = re.sub('first', '1st', inning_part)
+                #team_part = parts[1] # 'milwaukee brewers total'
+                team_name = team_part.split(' total')[0] # 'milwaukee brewers'
+                team_abbrev = convert_team_name_to_abbrev(team_name) # 'mil brewers'
+                market_title = team_abbrev + ' team total runs - ' + inning_part
+
         elif sport == 'football':
+
+            
+            # 1st Half Philadelphia Eagles Total -> Philadelphia Eagles points 1st half
+            if re.search('half|quarter .+ total', market):
+                #parts = market.split('half ')
+                team_part = re.split('half |quarter ', market)[1] # 'Philadelphia Eagles Total'
+                
+                period_part = market.split(team_part)[0].strip() # '1st half'
+                
+                team_name = team_part.split('total')[0] # 'Philadelphia Eagles '
+
+                market_title = team_name + 'points ' + period_part
 
             # Team Total
             # eagles total -> eagles team total points
             # auburn university total -> auburn team total points
-            if re.search('\stotal', market):
+            elif re.search('\stotal', market):
                 
                 team_name = market.split(' total')[0]
                 team_name = re.sub(' university|university of ', '', team_name)
                 market_title = team_name + ' team total points'
+
+            # 1st half spread/moneyline -> spread/moneyline 1st half
+            elif re.search('half|quarter', market):
+
+                # last word
+                market_data = market.rsplit(' ', 1)
+                overall_market = market_data[1] # 'spread' 
+                period = market_data[0] # '1st half'
+
+                market_title = overall_market + ' ' + period #re.sub(' spread', '', market)
 
 
 
