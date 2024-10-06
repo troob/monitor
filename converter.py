@@ -53,6 +53,7 @@ def round_ev_bet_size(ev):
 
 def convert_name_to_standard_format(name):
 
+    # cannot simply remove . bc sometimes needed if decimal in title
     name = re.sub(' jr\.?| ii+| \(.+\)|amp;', '', name)
     name = re.sub('á|ã', 'a', name)
     name = re.sub('é|ê', 'e', name)
@@ -67,8 +68,6 @@ def convert_name_to_standard_format(name):
 
     # remove university of
     name = re.sub('university of | university', '', name)
-
-    
 
     return name
 
@@ -386,7 +385,7 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
             
             # 1st Half Philadelphia Eagles Total -> Philadelphia Eagles 1st half points
-            elif re.search('half|quarter .+ total', market):
+            elif re.search('half .+ total|quarter .+ total', market):
                 #parts = market.split('half ')
                 team_part = re.split('half |quarter ', market)[1] # 'Philadelphia Eagles Total
                 
@@ -474,6 +473,7 @@ def convert_market_to_source_format(market, sport, game, website_name):
                 market_title = 'how many sets will be played in the match?'
 
     elif website_name == 'draftkings':
+        print('Source 3 DK')
 
         if sport == 'baseball':
 
@@ -507,30 +507,37 @@ def convert_market_to_source_format(market, sport, game, website_name):
                 market_title = team_abbrev + ' team total runs - ' + inning_part
 
         elif sport == 'football':
-
+            print('Football')
             
-            # 1st Half Philadelphia Eagles Total -> Philadelphia Eagles points 1st half
-            if re.search('half|quarter .+ total', market):
-                #parts = market.split('half ')
-                team_part = re.split('half |quarter ', market)[1] # 'Philadelphia Eagles Total'
-                
-                period_part = market.split(team_part)[0].strip() # '1st half'
-                
-                team_name = team_part.split('total')[0] # 'Philadelphia Eagles '
+            # 1st Half Philadelphia Eagles Total -> phi Eagles team total points - 1st half
+            if re.search('half .+ total|quarter .+ total', market):
+                print('Part Team Total')
 
-                market_title = team_name + 'points ' + period_part
-
-            # Team Total
-            # eagles total -> eagles team total points
-            # auburn university total -> auburn team total points
-            elif re.search('\stotal', market):
+                # 'Philadelphia Eagles Total'
+                team_part = re.split('half |quarter ', market)[1] 
                 
-                team_name = market.split(' total')[0]
-                team_name = re.sub(' university|university of ', '', team_name)
-                market_title = team_name + ' team total points'
+                # '1st half'
+                period_part = market.split(team_part)[0].strip() 
+                
+                # 'Philadelphia Eagles'
+                team = team_part.split(' total')[0] 
+                team = convert_name_to_standard_format(team)
 
-            # 1st half spread/moneyline -> spread/moneyline 1st half
+                # 'philadelphia', 'eagles'
+                if league != 'ncaaf':
+                    location, name = convert_team_to_loc_and_name(team)
+
+                    # 'phi'
+                    loc_abbrev = convert_team_loc_to_abbrev(location) 
+
+                    # phi Eagles team total points - 1st half
+                    market_title = loc_abbrev + ' ' 
+
+                market_title += name + ' team total points - ' + period_part
+
+            # 1st half spread/moneyline/total -> spread/moneyline/total 1st half
             elif re.search('half|quarter', market):
+                print('Part Total/Spread/Moneyline')
 
                 # last word
                 market_data = market.rsplit(' ', 1)
@@ -540,9 +547,61 @@ def convert_market_to_source_format(market, sport, game, website_name):
                 market_title = overall_market + ' ' + period #re.sub(' spread', '', market)
 
 
+            # Team Total
+            # philadelphia eagles total -> phi eagles team total points
+            # auburn university total -> auburn team total points
+            elif re.search('\stotal', market):
+                print('Team Total')
+                
+                # 'Philadelphia Eagles'
+                team = market.split(' total')[0]
+                #team_name = re.sub(' university|university of ', '', team_name)
+                team = convert_name_to_standard_format(team)
+
+                # 'philadelphia', 'eagles'
+                location, name = convert_team_to_loc_and_name(team)
+
+                # 'phi'
+                loc_abbrev = convert_team_loc_to_abbrev(location) 
+                
+                market_title = ''
+                if loc_abbrev != '':
+                    market_title = loc_abbrev + ' ' 
+                market_title += name + ' team total points'
+
+            
+
 
     print('market_title: ' + market_title)
     return market_title
+
+# extract team loc from bet
+# by separating team name
+def convert_full_team_name(bet_outcome, market):
+    print('\n===Convert Bet to Team Loc===\n')
+    print('Input: bet_outcome = team name = ' + bet_outcome)
+
+    # convert_team_to_loc_and_name
+    # only sox has 2 names in team
+    # white sox and blue bombers is 2 words
+    multi_names = ['sox', 'blue']
+    split_num = 1
+    for multi_name in multi_names:
+        if multi_name in bet_outcome:
+            split_num = 2
+            break
+    print('split_num: ' + str(split_num))
+
+    # moneyline outcome is just team name
+    # but other bets like spread have +1.5 to split off
+    if re.search('spread', market):
+        split_num += 1
+
+    team_loc = bet_outcome.rsplit(' ', split_num)[0]
+    #team_loc = bet_outcome.split()[0]
+
+    print('team_loc: ' + team_loc)
+    return team_loc
 
 # extract team loc from bet
 # by separating team name
@@ -604,6 +663,9 @@ def convert_name_format(name, name_format=None):
     print('name: ' + name)
     return name
 
+# if university or state then loc is team name
+# but problem is university names can have any name
+# so need to know league
 def convert_team_to_loc_and_name(team):
     print('\n===Convert Team to Loc and Name===\n')
     print('Input: team = kansas city royals or chicago white sox = ' + team)
@@ -611,10 +673,13 @@ def convert_team_to_loc_and_name(team):
 
     # only sox has 2 names in team
     # white sox is 2 words
-    multi_name = 'sox'
+    #multi_name = 'sox'
+    multi_names = ['sox', 'blue']
     split_num = 1
-    if multi_name in team:
-        split_num = 2
+    for multi_name in multi_names:
+        if multi_name in team:
+            split_num = 2
+            break
     print('split_num: ' + str(split_num))
 
     team_data = team.rsplit(' ', split_num)
@@ -1736,8 +1801,8 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
     #print('abbrev: ' + abbrev)
     return abbrev
 
-def convert_team_name_to_abbrev(team_name):
-    #print('\n===Convert Team Name to Abbrev: ' + team_name + '===\n')
+def convert_team_name_to_loc_abbrev(team_name):
+    #print('\n===Convert Team Name to Loc Abbrev: ' + team_name + '===\n')
     
     abbrev = ''
 

@@ -1101,15 +1101,15 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 			if market == 'moneyline':
 				section_idx = 2
-				market_title = 'moneyline - inc ot and shootout'
+				market_title = 'moneyline - inc. ot and shootout'
 
 			elif market == 'spread':
 				section_idx = 2
-				market_title = 'puck line - inc ot and shootout'
+				market_title = 'puck line - inc. ot and shootout'
 
 			elif market == 'total':
 				section_idx = 2
-				market_title = 'total goals - inc ot and shootout'
+				market_title = 'total goals - inc. ot and shootout'
 
 			elif re.search('1st period|first period', market):
 				section_idx = 3
@@ -1156,7 +1156,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 				# new jersey devils -> nj devils
 				team_name = converter.convert_market_to_team_name(market, league, sport)
-				market_title = 'total goals by ' + team_name + ' - inc ot and shootout'
+				market_title = 'total goals by ' + team_name + ' - inc. ot and shootout'
 
 
 		# === Soccer ===
@@ -1299,7 +1299,7 @@ def check_bet_available(driver, website_name):
 	if website_name == 'betmgm':
 		notice_class = 'modal-body'
 	elif website_name == 'draftkings':
-		notice_class = '404'
+		notice_class = 'sportsbook-four-oh-four__wrapper'
 
 	try:
 		driver.find_element('class name', notice_class)#.find_element('tag name', 'button')
@@ -1425,29 +1425,32 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 	for listed_bet in listed_bets:
 		#print('listed_bet: ' + listed_bet.get_attribute('innerHTML'))
 		# Under 1.5
-		try:
-			listed_line_identifier = listed_line_element[0][0]
-			listed_line_class_name = listed_line_element[0][1]
-			# print('listed_line_identifier: ' + listed_line_identifier)
-			# print('listed_line_class_name: ' + listed_line_class_name)
-			listed_line = listed_bet.find_element(listed_line_identifier, listed_line_class_name)
-			print('listed_line part 1: ' + listed_line.get_attribute('innerHTML'))
-			if len(listed_line_element) > 1:
-				for element in listed_line_element[1:]:
-					listed_line = listed_line.find_element(element[0], element[1])
-					print('listed_line part: ' + listed_line)
-			# dk: over<span class="betslip-points"><span class="betslip-points-display">&nbsp;9.5</span></span>
-			if website_name == 'draftkings':
-				listed_line_title = listed_line.get_attribute('innerHTML').lower().split('<')[0] # 'over'
+		#try:
+		listed_line_identifier = listed_line_element[0][0]
+		listed_line_class_name = listed_line_element[0][1]
+		# print('listed_line_identifier: ' + listed_line_identifier)
+		# print('listed_line_class_name: ' + listed_line_class_name)
+		listed_line = listed_bet.find_element(listed_line_identifier, listed_line_class_name)
+		print('listed_line part 1: ' + listed_line.get_attribute('innerHTML'))
+		if len(listed_line_element) > 1:
+			for element in listed_line_element[1:]:
+				listed_line = listed_line.find_element(element[0], element[1])
+				print('listed_line part: ' + listed_line)
+		# dk: over<span class="betslip-points"><span class="betslip-points-display">&nbsp;9.5</span></span>
+		if website_name == 'draftkings':
+			listed_line_title = listed_line.get_attribute('innerHTML').lower().split('<')[0] # 'over'
+			listed_line_points = ''
+			# is moneyline only market without points part???
+			if not re.search('moneyline', market):
 				listed_line_points = listed_line.find_element('class name', 'betslip-points-display').get_attribute('innerHTML')
 				listed_line_points = re.sub('&nbsp;', ' ', listed_line_points)
-				listed_line = listed_line_title + listed_line_points
-			else:
-				listed_line = listed_line.get_attribute('innerHTML').lower()
-			print('init listed_line: ' + listed_line)
-		except:
-			print('Failed to get listed line')
-			time.sleep(1000)
+			listed_line = listed_line_title + listed_line_points
+		else:
+			listed_line = listed_line.get_attribute('innerHTML').lower()
+		print('init listed_line: ' + listed_line)
+		# except:
+		# 	print('Failed to get listed line')
+		# 	time.sleep(1000)
 
 		# convert listed line to standard format 
 		# bc cannot always convert standard input to source format
@@ -1971,8 +1974,12 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 								break
 							except:
 								print('Error clicking Section')
-								writer.close_logged_out_popup(driver)
-								driver.execute_script("arguments[0].scrollIntoView(true);", section)
+								# either close popup or scroll to coords
+								closed_popup = writer.close_logged_out_popup(driver)
+								if not closed_popup:
+									coordinates = section.location_once_scrolled_into_view
+									print('coordinates: ' + str(coordinates))
+									driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
 								retries += 1
 								time.sleep(1)
 						
@@ -6527,6 +6534,9 @@ def read_league_odds(league):
 def open_dynamic_website(url, max_retries=3):
 	print('\n===Open Dynamic Website===\n')
 
+	# ensure chrome closed before opening auto window
+	# or else fails
+
 
 	# retries = 0
 	# while retries < max_retries:
@@ -6534,15 +6544,22 @@ def open_dynamic_website(url, max_retries=3):
 
 	driver = open_react_website(url)
 
-	#if re.search('oddsview', url):
+	arb_btn = pre_btn = ev_btn = None
+
+	# monitor client
+	if re.search('slack', url):
+		print('Slack')
 
 	# each specific website needs to extract nav buttons
 	# that show on all pages or only get used once to init
-	website = open_oddsview_website(driver)
-	driver = website[0]
-	arb_btn = website[1]
-	pre_btn = website[2]
-	ev_btn = website[3]
+	elif re.search('oddsview', url):
+		website = open_oddsview_website(driver)
+		driver = website[0]
+		arb_btn = website[1]
+		pre_btn = website[2]
+		ev_btn = website[3]
+	else:
+		print('ERROR: Unknown Website: ' + url)
 
 	return driver, arb_btn, pre_btn, ev_btn
 

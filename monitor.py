@@ -15,6 +15,8 @@ import numpy as np # convert img to array
 
 import copy # need to save init raw dict so no duplicates
 
+from selenium import common #.exceptions.SessionNotCreatedException
+import subprocess# import check_output
 
 # TEST
 test = False
@@ -799,6 +801,9 @@ def monitor_arb_type(first_live_time, last_pre_time):
 # 		if notify_arb is not None:
 # 			notify_arbs.append(notify_arb)
 
+# FAIL
+# def get_pid(name):
+#     return int(subprocess.check_output(["pidof","-s",name], shell=True))
 
 # open website once 
 # and then loop over it 
@@ -1136,6 +1141,12 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 			print('\nConnectionResetError in Monitor Website, outer loop')
 			print('Exit')
 			exit()
+		except common.exceptions.SessionNotCreatedException:
+			print('Chrome Window Already Opened. Need to Close All Chrome Windows Before Starting Monitor.')
+			# Mac
+			
+			# Windows
+			#subprocess.call("TASKKILL /F /IM chrome.exe", shell=True)
 
 		# COMMENT OUT to see specific errors
 		# except Exception as e:
@@ -1152,20 +1163,20 @@ if __name__ == "__main__":
 	
 	# Fully Auto
 	
-	test_arb = {'market':'Baylor University Total', 
+	test_arb = {'market':'University Total', 
 				'bet1':'O 9.5', 
 				'bet2':'U 9.5', 
 				'odds1':'-270', 
 				'odds2':'+360', 
 				'game':'Baylor University vs Iowa State University',
 				'sport':'football',
-				'source1':'draftkings',
+				'source1':'caesars',
 				'source2':'fliff',
 				'league':'ncaaf',
 				'value':'5.0',
 				'size1':'$1.00',
 				'size2':'$1.00',
-				'game date':'Thu Oct 4 2024',
+				'game date':'Thu Oct 6 2024',
 				'game time':'7:00 PM',
 				'link1':'https://sportsbook.draftkings.com/event/31101349?outcomes=0OU76901715O950_1',
 				'link2':'https://sports.getfliff.com/markets/225122_c_p_499_prematch'}
@@ -1216,11 +1227,11 @@ if __name__ == "__main__":
 				'odds':'-110', 
 				'game':'University of Kentucky vs University of Mississipi',
 				'sport':'football',
-				'source':'draftkings',
+				'source':'fanatics',
 				'league':'ncaaf',
 				'value':'5.0',
 				'size':'$3.00',
-				'game date':'Thu Sep 28 2024',
+				'game date':'Thu Oct 6 2024',
 				'game time':'12:00 PM',
 				'link':'https://sportsbook.draftkings.com/event/31063256?outcomes=0OU76795728O2850_1'}
 	# test_ev = {'market':'Spread', 
@@ -1293,3 +1304,6 @@ if __name__ == "__main__":
 
 	#manual_arbs = False # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
 	monitor_website(url, manual_picks, send_mobile, test, test_ev, test_arb)
+
+	# Server GUI
+	# show list of active users

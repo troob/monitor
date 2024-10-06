@@ -33,22 +33,27 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-
+# also idle popup
 def close_logged_out_popup(driver):
     print('\n===Close Logged Out Popup===\n')
+
+    closed_popup = False
 
     # class modal-window
     # data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"
     # class btn-modal-close
     if reader.check_logged_out_popup(driver):
         try:
-            close_popup_btn = driver.find_element('class name', 'modal-window').find_element('class name', 'btn-modal-close')
+            close_popup_btn = driver.find_element('class name', 'close-modal-button') #driver.find_element('class name', 'modal-window').find_element('class name', 'btn-modal-close')
             print('Found Close Popup Btn')
             close_popup_btn.click()
             time.sleep(0.5)
             print('Closed Logged Out Popup')
+            closed_popup = True
         except Exception as e:
             print('Error Closing Logged Out Popup')
+
+    return closed_popup
 
 
 # input EV or Arb with side num
@@ -2130,6 +2135,7 @@ def place_arb_bet(driver, arb, side_num, test):
     print('window_handle: ' + window_handle)
     driver.switch_to.window(window_handle)
     print('Changed to Bet ' + str(side_num))# + ': Window ' + str(window_idx))
+    
     # enter bet 1
     wager_field_key = 'wager field' + str(side_num)
     source_key = 'source' + str(side_num)
@@ -2161,7 +2167,8 @@ def place_arb_bet(driver, arb, side_num, test):
     wager_field.clear()
     wager_field.send_keys(bet_size)
     print('Entered Bet ' + str(side_num) + ': ' + bet_size)
-    time.sleep(0.5)
+    time.sleep(0.1)
+
     # click bet side
     placed_bet = False
     bet_placed_key = 'placed' + str(side_num)
@@ -2243,12 +2250,19 @@ def place_arb_bet(driver, arb, side_num, test):
             try:
                 print('Place Bet')
                 place_btn.click()
+                # betrivers glitch needs 2 clicks
+                if source == 'betrivers':
+                    try:
+                        place_btn.click()
+                    except:
+                        print('Failed to Click Place Bet 2nd Time')
+
                 print('Clicked Place Bet')
                 #time.sleep(3)
                 # confirm placed bet 1
                 
                 start_time = datetime.today()
-                
+                receipt_btn = None
                 loading = True
                 while loading:
                     try:
@@ -2257,7 +2271,7 @@ def place_arb_bet(driver, arb, side_num, test):
                         if source == 'betmgm':
                             driver.find_element('tag name', 'bs-digital-result-state').find_element('class name', 'result-summary__actions').find_element('tag name', 'button')
                         elif source == 'betrivers':
-                            driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                            receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
                         elif source == 'draftkings':
                             driver.find_element('class name', 'receipt')
                         
@@ -2278,6 +2292,13 @@ def place_arb_bet(driver, arb, side_num, test):
                 placed_bet = True
                 arb[bet_placed_key] = placed_bet
 
+                # only betrivers close receipt bc keep window open
+                # do all other windows auto close receipt when window closes
+                # or does receipt appear still when new window opens in same source???
+                if receipt_btn is not None:
+                    print('Close Receipt')
+                    receipt_btn.click()
+
             except Exception as e:
                 print('Failed to Click Place Bet Btn: ', e)
 
@@ -2288,6 +2309,11 @@ def place_arb_bet(driver, arb, side_num, test):
 
                 # check bet closed
                 bet_open = False
+
+                # if only suspended, 
+                # then keep window open until becomes available again
+                # so need to keep control on suspended window
+                # for 1 minute??? and then check back every minute???
 
         
     print('\nPlaced Arb Bet: ' + str(side_num) + '\n')
