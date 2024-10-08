@@ -318,9 +318,9 @@ def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
 
 
 # Assume already on webpage
-def login_website(website_name, driver, cookies_file, saved_cookies, url):
+def login_website(website_name, driver, cookies_file='', saved_cookies=[], url=''):
     print('\n===Login Website===\n')
-    print('Input: web name: ' + website_name)
+    print('Input: website_name: ' + website_name)
     #print('\nOutput: Logged In\n')
 
     email = os.environ['EMAIL']
@@ -331,7 +331,58 @@ def login_website(website_name, driver, cookies_file, saved_cookies, url):
     
     logged_in = False
 
-    if website_name == 'betrivers':
+    if website_name == 'slack':
+
+        try:
+            driver.find_element('class name', 'p-account_switcher')
+            print('\nAlready Logged In Slack\n')
+            return
+        except:
+            print('\nLogin Slack\n')
+
+        # starts on login page
+        # wait for tester to submit email
+        submitted = False
+        while not submitted: 
+            
+            # check not submitted if email field
+            try:
+                driver.find_element('id','signup_email')
+            except:
+                print('Submitted Email')
+                submitted = True
+
+        #time.sleep(1000)
+
+        # if still loading, not logged in
+        logged_in = opened_slack = False
+        while not logged_in:
+
+            # 1. Account Btn
+            try:
+                # logged in if account bbtn or messages?
+                driver.find_element('class name', 'p-account_switcher')
+                logged_in = True
+                print('\nLogin Success\n')
+            except:
+                print('Loading Login...')
+                
+                # either slack link OR account btn
+                # 2. Slack Link
+                # may encounter open slack link
+                if not opened_slack:
+                    try:
+                        open_slack_link = driver.find_element('xpath', '//a[@data-qa="ssb_redirect_open_in_browser"]')
+                        print('Click Open Slack Link')
+                        open_slack_link.click()
+                        print('Clicked Open Slack Link')
+                        opened_slack = True
+                    except:
+                        print('Loading Open Slack Link...')
+
+
+
+    elif website_name == 'betrivers':
         # look for my account menu btn
         # betrivers always requires login new window so may not need this for betrivers
         # unless leave open window for certain predefined time period
@@ -1580,11 +1631,28 @@ def click_outcome_btn(outcome_btn, driver):
     try:
         outcome_btn.click()
     except:
-        coordinates = outcome_btn.location_once_scrolled_into_view
-        print('coordinates: ' + str(coordinates))
-        driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
-        #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
-        outcome_btn.click()
+        try:
+            coordinates = outcome_btn.location_once_scrolled_into_view
+            print('coordinates: ' + str(coordinates))
+            driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
+            #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
+        except Exception as e:
+            print('ERROR: Cannot find outcome button! ', e)
+
+            close_logged_out_popup(driver)
+            # try again
+            try:
+                coordinates = outcome_btn.location_once_scrolled_into_view
+                print('coordinates: ' + str(coordinates))
+                driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
+            except Exception as e:
+                print('ERROR: Still cannot find outcome button! ', e)
+
+
+        try:
+            outcome_btn.click()
+        except Exception as e:
+            print('ERROR: Cannot click outcome button! ', e)
     
     time.sleep(0.5)
     print('Clicked Outcome Button')

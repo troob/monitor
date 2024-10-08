@@ -75,8 +75,8 @@ new_pick_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-valid_sports = ['baseball', 'football']#,'hockey', 'basketball] # big markets to stay subtle
-valid_leagues = ['mlb', 'nfl', 'ncaaf'] # 10/8, 10/22
+valid_sports = ['baseball', 'football', 'hockey']#, 'basketball] # big markets to stay subtle
+valid_leagues = ['mlb', 'nfl', 'ncaaf', 'nhl'] # 10/22
 
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 
@@ -860,34 +860,37 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 			# so I can see live diff leagues and markets isolated
 			# Window 2: Live Big Markets
 			# OR TEST: see EVs 
+			# oddsview  needs multiple windows
+			# slack will have main + betrivers
+			if re.search('odds', url):
 
-			# === COMMENT OUT FOR TEST ===
-			if not test:
-				driver.switch_to.new_window()
-				driver.get(url)
-				time.sleep(1)
-				# init manual window by selecting filter
+				# === COMMENT OUT FOR TEST ===
+				if not test:
+					driver.switch_to.new_window()
+					driver.get(url)
+					time.sleep(1)
+					# init manual window by selecting filter
 
-				# # # Window 3: Live Small Markets
-				# # driver.switch_to.new_window()
-				# # driver.get(url)
-				# # time.sleep(1)
+					# # # Window 3: Live Small Markets
+					# # driver.switch_to.new_window()
+					# # driver.get(url)
+					# # time.sleep(1)
 
 
-				# === Bet Window ===
-				# Betrivers window should stay open bc logs out when closed
-				driver.switch_to.new_window(type_hint='window')
-				size = driver.get_window_size() # get size of window 1 to determine window 2 x
-				# side num refers to side of arb
-				window2_x = size['width'] + 1 # why +1???
-				driver.set_window_position(window2_x, 0)
-				betrivers_url = 'https://ny.betrivers.com/?page=sportsbook&feed=featured#home'
-				driver.get(betrivers_url)
-				time.sleep(1)
-				betrivers_window_handle = driver.current_window_handle
-				print('betrivers_window_handle: ' + betrivers_window_handle)
+					# === Bet Window ===
+					# Betrivers window should stay open bc logs out when closed
+					driver.switch_to.new_window(type_hint='window')
+					size = driver.get_window_size() # get size of window 1 to determine window 2 x
+					# side num refers to side of arb
+					window2_x = size['width'] + 1 # why +1???
+					driver.set_window_position(window2_x, 0)
+					betrivers_url = 'https://ny.betrivers.com/?page=sportsbook&feed=featured#home'
+					driver.get(betrivers_url)
+					time.sleep(1)
+					betrivers_window_handle = driver.current_window_handle
+					print('betrivers_window_handle: ' + betrivers_window_handle)
 
-			driver.switch_to.window(driver.window_handles[0])
+				driver.switch_to.window(driver.window_handles[0])
 
 			# display all select elements
 			# None Here which makes sense bc not shown in html
@@ -969,7 +972,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 					elif arb_type == 'pre':
 						# if on live-page, click pre btn
 						# all arbs read this loop, incuding invalid picks
-						arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, sources)
+						arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url, sources)
 						#arb_dict = reader.read_prematch_arb_dict(driver, pre_btn, arb_btn, sources)
 					# live_arb_data = arb_data[0]
 					# prematch_arb_data = arb_data[1]
@@ -1277,8 +1280,16 @@ if __name__ == "__main__":
 	# diff from read react website bc we keep site open and loop read data
 	# oodsview was free but now charges
 	# So instead scrape sites directly
-	url = 'https://www.oddsview.com/odds'
+	#url = 'https://www.oddsview.com/odds'
 	#url = 'https://sportsbook.draftkings.com'
+
+	# user interface first goes to login bc needs email
+	# if first time user, go to signup page
+	# and then goes to slack channel
+	#url = 'user login' 
+	url = 'https://ball-aep6514.slack.com/'
+	
+
 	# cannot do arbs fast enough if absent 
 	# bc phone too slow and cannot see both sides at same time
 	# so if absent, arbs with fully auto enabled get placed
@@ -1290,8 +1301,9 @@ if __name__ == "__main__":
 	# then it switches to manual false (auto only)
 	# if manual not enabled, then turn off audio notification bc nobody there to hear it
 	# and sometimes want sound off while still running
-	test = False
 	manual_picks = True
+
+	test = False
 
 	# post to mobile for mobile manual action
 	# need desktop for arb so no need to ever send arb for mobile manual action
