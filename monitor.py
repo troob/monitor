@@ -8,8 +8,8 @@ from slack_sdk import WebClient
 
 from datetime import datetime
 
-import pyautogui # screenshot
-import cv2 # computer vision, screen record
+# import pyautogui # screenshot
+# import cv2 # computer vision, screen record
 from multiprocessing import Process # run while recording
 import numpy as np # convert img to array
 
@@ -834,15 +834,22 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 			# first_live_time = todays_schedule[1] # first game start
 			# last_pre_time = todays_schedule[2] # last game start
 
-			# get website driver all elements
-			# and specific navigation buttons which remain on screen the whole time
-			# no matter which page you navigate to
-			website = reader.open_dynamic_website(url)
-			# need to switch bt live and prematch on same page
-			driver = website[0]
-			arb_btn = website[1]
-			pre_btn = website[2]
-			ev_btn = website[3]
+			# some websites can be monitored without dynamic clicks
+			# direct from API
+			driver = arb_btn = pre_btn = ev_btn = None
+			if re.search('slack', url):
+				print('Read Slack Channels')
+
+			else:
+				# get website driver all elements
+				# and specific navigation buttons which remain on screen the whole time
+				# no matter which page you navigate to
+				website = reader.open_dynamic_website(url)
+				# need to switch bt live and prematch on same page
+				driver = website[0]
+				arb_btn = website[1]
+				pre_btn = website[2]
+				ev_btn = website[3]
 
 
 
@@ -1280,14 +1287,16 @@ if __name__ == "__main__":
 	# diff from read react website bc we keep site open and loop read data
 	# oodsview was free but now charges
 	# So instead scrape sites directly
-	#url = 'https://www.oddsview.com/odds'
+	url = 'https://www.oddsview.com/odds'
 	#url = 'https://sportsbook.draftkings.com'
 
 	# user interface first goes to login bc needs email
 	# if first time user, go to signup page
 	# and then goes to slack channel
+	# use slack api bc cannot read from page bc scroll fails
+	# and dynamic load fails
 	#url = 'user login' 
-	url = 'https://ball-aep6514.slack.com/'
+	#url = 'https://ball-aep6514.slack.com/'
 	
 
 	# cannot do arbs fast enough if absent 
