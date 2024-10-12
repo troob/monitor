@@ -52,8 +52,12 @@ def round_ev_bet_size(ev):
     return rounded_bet_size
 
 def convert_name_to_standard_format(name):
+    #print('\n===Convert Name to Standard Format: ' + name + '===\n')
 
     # cannot simply remove . bc sometimes needed if decimal in title
+    if not re.search('[0-9]', name):
+        name = re.sub('\.', '', name)
+
     name = re.sub(' jr\.?| ii+| \(.+\)|amp;', '', name)
     name = re.sub('á|ã', 'a', name)
     name = re.sub('é|ê', 'e', name)
@@ -69,6 +73,7 @@ def convert_name_to_standard_format(name):
     # remove university of
     name = re.sub('university of | university', '', name)
 
+    #print('name: ' + name)
     return name
 
 # remove extra letters from name, such as the 'u' in 'pittsburgh u'
@@ -102,7 +107,8 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
         # special case player props not o/u but yes only
         # so player name is bet line
         # football anytime td scorer has player name as line
-        if re.search('- touchdowns', market):
+        # hockey anytime goalscorer
+        if re.search('- touchdowns|- goals', market):
             player_name = market.split(' - ')[0]
             bet_line = player_name
 
@@ -201,11 +207,12 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
     print('source bet_line: ' + bet_line)
     return bet_line
 
-def convert_market_to_source_format(market, sport, game, website_name):
+def convert_market_to_source_format(market, sport, game, league, website_name):
     print('\n===Convert Market to Source Format===\n')
     print('market: ' + market)
     print('sport: ' + sport)
     print('game: ' + game)
+    print('league: ' + league)
     print('website_name: ' + website_name)
     print('\nOutput: market_title = string\n')
 
@@ -360,6 +367,10 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
                 market_title = 'total tackles and assists'
 
+            elif market == 'first to score':
+
+                market_title = 'team to score first'
+
             # 1st half totals is only market with abbrev
             # others spell out first
 
@@ -399,6 +410,21 @@ def convert_market_to_source_format(market, sport, game, website_name):
             elif re.search('total', market):
                 
                 market_title += ' points'
+
+
+        elif sport == 'hockey':
+
+            if market == 'moneyline':
+
+                market_title = 'money line'
+
+            elif market == 'total':
+
+                market_title = 'totals'
+
+            elif market == 'goals':
+
+                market_title = 'anytime goalscorer'
 
 
         elif sport == 'soccer':
@@ -472,6 +498,11 @@ def convert_market_to_source_format(market, sport, game, website_name):
 
                 market_title = 'how many sets will be played in the match?'
 
+            elif market == 'game spread':
+
+                market_title = 'who will win the most games in the match? (player spread)'
+                
+
     elif website_name == 'draftkings':
         print('Source 3 DK')
 
@@ -503,37 +534,50 @@ def convert_market_to_source_format(market, sport, game, website_name):
                     inning_part = re.sub('first', '1st', inning_part)
                 #team_part = parts[1] # 'milwaukee brewers total'
                 team_name = team_part.split(' total')[0] # 'milwaukee brewers'
-                team_abbrev = convert_team_name_to_abbrev(team_name) # 'mil brewers'
+                team_abbrev = team_name #convert_team_name_to_abbrev(team_name) # 'mil brewers'
                 market_title = team_abbrev + ' team total runs - ' + inning_part
 
         elif sport == 'football':
             print('Football')
+
+            if market == 'first to score':
+
+                market_title = '1st to score'
             
             # 1st Half Philadelphia Eagles Total -> phi Eagles team total points - 1st half
-            if re.search('half .+ total|quarter .+ total', market):
+            elif re.search('half .+ total|quarter .+ total', market):
                 print('Part Team Total')
 
                 # 'Philadelphia Eagles Total'
+                # 'Northwestern University Total'
+                # 'University of Maryland Total'
                 team_part = re.split('half |quarter ', market)[1] 
+                print('team_part: ' + team_part)
                 
                 # '1st half'
                 period_part = market.split(team_part)[0].strip() 
+                print('period_part: ' + period_part)
                 
                 # 'Philadelphia Eagles'
+                # 'Northwestern'
+                # 'Maryland'
                 team = team_part.split(' total')[0] 
                 team = convert_name_to_standard_format(team)
+                print('team: ' + team)
 
-                # 'philadelphia', 'eagles'
-                if league != 'ncaaf':
+                if league == 'nfl':
+                    # 'philadelphia', 'eagles'
                     location, name = convert_team_to_loc_and_name(team)
 
                     # 'phi'
                     loc_abbrev = convert_team_loc_to_abbrev(location) 
 
-                    # phi Eagles team total points - 1st half
-                    market_title = loc_abbrev + ' ' 
+                    # phi Eagles
+                    team = loc_abbrev + ' ' + name
 
-                market_title += name + ' team total points - ' + period_part
+                # phi Eagles team total points - 1st half
+                # northwestern team total points - 1st half
+                market_title += team + ' team total points - ' + period_part
 
             # 1st half spread/moneyline/total -> spread/moneyline/total 1st half
             elif re.search('half|quarter', market):

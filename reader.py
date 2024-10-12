@@ -72,9 +72,10 @@ def read_betslip_odds(driver, website_name):
 
 	# last in list
 	all_actual_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
+	actual_odds = None
 	if len(all_actual_odds) > 0:
 		actual_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
-	print('actual_odds: ' + actual_odds)
+	print('actual_odds: ' + str(actual_odds))
 
 	print('\nbetslip_odds: ' + str(betslip_odds) + '\n')
 	return betslip_odds	
@@ -636,6 +637,8 @@ def read_market_odds(market, market_element, bet_dict):
 
 def read_section_idx(section_title, sections, default=0):
 	print('\n===Read Section Idx: ' + section_title + '===\n')
+	print('Input: num_sections: ' + str(len(sections)))
+	print('\nOutput: section_idx = int\n')
 
 	section_idx = default
 
@@ -963,6 +966,15 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			elif market == 'total':
 				market_title = 'total points'
 
+			elif market == 'first to score':
+				market_title = 'first team to score'
+				# if player props available
+				# if league == 'nfl':
+				# 	section_idx = 8
+				section_idx = 2
+				section_title = 'Game Firsts'
+				section_idx = read_section_idx(section_title, sections, section_idx)
+
 
 			# Player Props
 			# so loop thru sections to match innertext
@@ -1108,21 +1120,24 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 		# === Hockey ===
 		elif sport == 'hockey':
+			print('Hockey')
 
 			if market == 'moneyline':
 				section_idx = 2
-				market_title = 'moneyline - inc. ot and shootout'
+				market_title = 'moneyline - inc ot and shootout'
 
 			elif market == 'spread':
 				section_idx = 2
-				market_title = 'puck line - inc. ot and shootout'
+				market_title = 'puck line - inc ot and shootout'
 
 			elif market == 'total':
 				section_idx = 2
-				market_title = 'total goals - inc. ot and shootout'
+				market_title = 'total goals - inc ot and shootout'
 
 			elif re.search('1st period|first period', market):
+				section_title = 'Period 1'
 				section_idx = 3
+				section_idx = read_section_idx(section_title, sections, section_idx)
 
 				if market == '1st period moneyline 3 way':
 					market_title = 'period 1 (3-way)'
@@ -1135,7 +1150,9 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 					market_title = 'total goals by ' + team_name + ' - period 1'
 
 			elif re.search('2nd period', market):
+				section_title = 'Period 2'
 				section_idx = 3
+				section_idx = read_section_idx(section_title, sections, section_idx)
 
 				if market == '2nd period moneyline 3 way':
 					market_title = 'period 2 (3-way)'
@@ -1148,7 +1165,9 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 					market_title = 'total goals by ' + team_name + ' - period 2'
 
 			elif re.search('3rd period', market):
+				section_title = 'Period 3'
 				section_idx = 3
+				section_idx = read_section_idx(section_title, sections, section_idx)
 
 				if market == '3rd period moneyline 3 way':
 					market_title = 'period 3 (3-way)'
@@ -1166,7 +1185,65 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 				# new jersey devils -> nj devils
 				team_name = converter.convert_market_to_team_name(market, league, sport)
-				market_title = 'total goals by ' + team_name + ' - inc. ot and shootout'
+				market_title = 'total goals by ' + team_name + ' - inc ot and shootout'
+
+			elif re.search('powerplay', market):
+				section_title = 'Game Props'
+				section_idx = 6
+					
+			# Player Props
+			# if pitcher props NA we do not know section idx
+			# so loop thru sections or search by id
+			elif re.search(' - ', market):
+				print('Player Prop')
+
+				market_data = market.split(' - ')
+				#player_name = re.sub(' jr\.?| ii+','',market_data[0])
+				player_name = converter.convert_name_to_standard_format(market_data[0])
+				player_market = market_data[1]
+				print('player_name: ' + player_name)
+				print('player_market: ' + player_market)
+
+				# market title is player name formatted to source
+				# first last -> last, first
+				market_title = converter.convert_name_format(player_name)
+
+				section_title = ''
+
+				# put default sections as well as check for section number redundancy bc sometimes error not all sections
+				if player_market == 'goals': 
+					# if bet_line == 1:
+					section_title = 'Goal Scorer'
+					section_idx = 3
+					# if bet_line > 1:
+					# section_title = 'Player Multi Goals'
+					# section_idx = 4
+				elif player_market == 'points':
+					section_title = 'Player Points'
+					section_idx = 4
+				elif player_market == 'shots':
+					section_title = 'Player Shots'
+					section_idx = 5
+				
+				else:
+					print('Unkown Player Market! Need to add! ' + player_market)
+
+				print('Section Title: ' + section_title + '\n')
+
+				section_idx = read_section_idx(section_title, sections, section_idx)
+				# for s_idx in range(len(sections)):
+				# 	section = sections[s_idx]
+				# 	# get title
+				# 	# remove &nbsp;
+				# 	section_title_element = section.find_element('class name', 'CollapsibleContainer__Title-sc-14bpk80-9').get_attribute('innerHTML').split('&')[0]
+				# 	print('Section Title Element: ' + section_title_element)					
+
+				# 	if section_title == section_title_element:
+				# 		print('Found Player Section')
+				# 		section_idx = s_idx
+				# 		break
+
+				print('\nChecked All Sections\n')
 
 
 		# === Soccer ===
@@ -1180,6 +1257,9 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 
 			elif market == 'total':
 				market_title = 'total goals'
+
+			elif market == 'btts':
+				market_title = 'both teams to score'
 
 			# overall half total
 			elif re.search('half total', market):
@@ -1451,9 +1531,15 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 			listed_line_title = listed_line.get_attribute('innerHTML').lower().split('<')[0] # 'over'
 			listed_line_points = ''
 			# is moneyline only market without points part???
-			if not re.search('moneyline', market):
+			# no, also touchdowns/goalscorer
+			# any where bet line is a name
+			# so attempt to add points if available
+			# or else continue with single part
+			try:
 				listed_line_points = listed_line.find_element('class name', 'betslip-points-display').get_attribute('innerHTML')
 				listed_line_points = re.sub('&nbsp;', ' ', listed_line_points)
+			except:
+				print('No Listed Line Points')
 			listed_line = listed_line_title + listed_line_points
 		else:
 			listed_line = listed_line.get_attribute('innerHTML').lower()
@@ -1573,7 +1659,8 @@ def check_logged_out_popup(driver):
 	# data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"
 	# class btn-modal-close
 	try:
-		driver.find_element('xpath', '//div[@data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"]')
+		#driver.find_element('xpath', '//div[@data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"]')
+		driver.find_element('class name', 'close-modal-button')
 		print('Found Logged Out Popup')
 
 		return True
@@ -1586,7 +1673,7 @@ def check_logged_out_popup(driver):
 	
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False):
+def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False, manual_picks=True):
 	print('\n===Read Actual Odds===\n')
 	print('Input: bet_dict = ' + str(bet_dict))
 	print('\nOutput: actual_odds = x\n')
@@ -1609,63 +1696,63 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 		print('Close Fanduel Windows before Opening New Window!')
 		return
 	
-	try:
-		# if betrivers, use window already open bc logged in
-		# other sources keep logged in for time even if window closed
-		# betrivers logs out too quickly immediately when window closed
-		if website_name == 'betrivers':
-			print('Switch to Betrivers Window')
-			print('betrivers_window_handle: ' + betrivers_window_handle)
-			driver.switch_to.window(betrivers_window_handle)
-		else:
-			print('Switch to New Window')
-			driver.switch_to.new_window(type_hint='window')
-		
+	# if betrivers, use window already open bc logged in
+	# other sources keep logged in for time even if window closed
+	# betrivers logs out too quickly immediately when window closed
+	if website_name == 'betrivers':
+		print('Switch to Betrivers Window')
+		print('betrivers_window_handle: ' + betrivers_window_handle)
+		driver.switch_to.window(betrivers_window_handle)
+	else:
+		print('Switch to New Window')
+		driver.switch_to.new_window(type_hint='window')
+	
+	if manual_picks:
 		size = driver.get_window_size() # get size of window 1 to determine window 2 x
 		# side num refers to side of arb
 		window2_x = size['width'] * side_num + 1 # why +1???
 		driver.set_window_position(window2_x, 0)
-		url = bet_dict['link']
-		# Must navigate to page before adding cookies
-		driver.get(url)
-		cookies_file = 'data/cookies.json'
-		saved_cookies = ''#add_cookies(driver, website_name, cookies_file)
-		#time.sleep(2) # wait to load. sometimes fails at 1 sec
-		#save_cookies(driver, website_name, cookies_file, saved_cookies)
+	url = bet_dict['link']
+	# Must navigate to page before adding cookies
+	driver.get(url)
+	cookies_file = 'data/cookies.json'
+	saved_cookies = ''#add_cookies(driver, website_name, cookies_file)
+	#time.sleep(2) # wait to load. sometimes fails at 1 sec
+	#save_cookies(driver, website_name, cookies_file, saved_cookies)
 
-		num_windows = len(driver.window_handles)
-		print('num_windows: ' + str(num_windows))
+	num_windows = len(driver.window_handles)
+	print('num_windows: ' + str(num_windows))
 
-		#cur_window_idx = read_cur_window_idx(driver)
-		cur_window_handle = driver.current_window_handle
-		# save window idx to dict
-		# detect arb if 2 sides
-		if 'bet2' in bet_dict.keys():
-			if side_num == 1:
-				bet_dict['window1'] = cur_window_handle
-			else:
-				bet_dict['window2'] = cur_window_handle
+	#cur_window_idx = read_cur_window_idx(driver)
+	cur_window_handle = driver.current_window_handle
+	# save window idx to dict
+	# detect arb if 2 sides
+	if 'bet2' in bet_dict.keys():
+		if side_num == 1:
+			bet_dict['window1'] = cur_window_handle
 		else:
-			bet_dict['window'] = cur_window_handle
+			bet_dict['window2'] = cur_window_handle
+	else:
+		bet_dict['window'] = cur_window_handle
 
-		
-		
-		section_idx = 0
+	
+	
+	section_idx = 0
 
-		final_outcome = None
-		
-		market = bet_dict['market'].lower()
-		print('market: ' + market)
-		bet_line = bet_dict['bet'].lower()
-		print('bet_line: ' + bet_line)
-		sport = bet_dict['sport']
-		print('sport: ' + sport)
-		league = bet_dict['league']
-		print('league: ' + league)
-		game = bet_dict['game'].lower()
-		print('game: ' + game)
+	final_outcome = None
+	
+	market = bet_dict['market'].lower()
+	print('market: ' + market)
+	bet_line = bet_dict['bet'].lower()
+	print('bet_line: ' + bet_line)
+	sport = bet_dict['sport']
+	print('sport: ' + sport)
+	league = bet_dict['league']
+	print('league: ' + league)
+	game = bet_dict['game'].lower()
+	print('game: ' + game)
 
-		#try:
+	try:
 
 		if website_name == 'betmgm':
 
@@ -1710,7 +1797,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			if not re.search(' - ', market):
 				# spread -> run line spread
 				# total -> totals
-				market_title = converter.convert_market_to_source_format(market, sport, game, website_name)
+				market_title = converter.convert_market_to_source_format(market, sport, game, league, website_name)
 			else:
 				market_data = market.split(' - ')
 				input_name = market_data[0]
@@ -1718,7 +1805,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 				print('input_name: ' + input_name)
 				print('input_market: ' + input_market)
 
-				input_market = converter.convert_market_to_source_format(input_market, sport, game, website_name)
+				input_market = converter.convert_market_to_source_format(input_market, sport, game, league, website_name)
 
 			bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
 
@@ -1880,8 +1967,12 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 				
 				game_available = True
 				# sometimes only 1 section valid for ncaaf football
-				while len(sections) < section_idx and game_available:# and not game_available:# and section_retries < max_retries:
-					print('Get Sections')
+				# section may not be available first load but then become available next load
+				# so check twice
+				# is there a better way to tell done loading???
+				inner_section_retries = 0
+				while len(sections) < section_idx and game_available and inner_section_retries < max_retries:
+					print('\nGet Sections')
 					sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
 					print('num sections: ' + str(len(sections)))
 					# if home page, close window
@@ -1901,6 +1992,23 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 							print('Game Page: Get Sections\n')
 							game_available = True
 
+							# we know game page
+							# so if 0 sections, refresh page and reload sections
+							# try getting sections again after another second of loading while checking if game page
+							sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+							if len(sections) == 0:
+								print('0 Sections. Refresh and Reload Sections.')
+								driver.refresh()
+								time.sleep(1)
+								while True:
+									sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+									print('num sections: ' + str(len(sections)))
+									if len(sections) == 0:
+										time.sleep(1)
+									else:
+										break
+
+
 					# Game NA
 					#if len(sections) < 2:
 					if not game_available:
@@ -1913,8 +2021,13 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 					# get new sections if stale element
 					try:
 						market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
-					except:
-						print('Error Reading Market Section, Get New Sections')
+					except Exception as e:
+						print('Error Reading Market Section, Get New Sections: ', e)
+
+					inner_section_retries += 1
+					# may need to refresh page on 3rd try
+					# or just if num sections 0 on game page we know refresh
+
 
 				market_keyword = ''
 				if re.search(' - ', market):
@@ -1952,6 +2065,13 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 						market_keyword = 'receptions'
 					elif market_keyword == 'threes':
 						market_keyword = '3-point'
+					elif market_keyword == 'goals':
+						market_keyword = 'goal'
+					else:
+						# remove s last letter
+						# goals -> goal
+						#if market_keyword[-1] == 's':
+						market_keyword = re.sub('s$', '', market_keyword)
 
 					market_keyword = re.sub(' and ', ' & ', market_keyword)
 
@@ -2199,10 +2319,10 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 				print('player_name: ' + player_name)
 				print('player_market: ' + player_market)
 
-				player_market = converter.convert_market_to_source_format(player_market, sport, game, website_name)
+				player_market = converter.convert_market_to_source_format(player_market, sport, game, league, website_name)
 			
 			else:
-				market_title = converter.convert_market_to_source_format(market, sport, game, website_name)
+				market_title = converter.convert_market_to_source_format(market, sport, game, league, website_name)
 
 			# ===Convert Bet Line to Source Format===
 			bet_line = converter.convert_bet_line_to_source_format(bet_line, market, sport, website_name)
@@ -2223,10 +2343,18 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 		# Next level: accept different as long as still less than fair odds
 		# if EV, close if gone or odds got worse
 		actual_odds = determiner.determine_valid_actual_odds(actual_odds, pick_odds, pick_type, driver, side_num, test, bet_dict)
-		
+
 		if actual_odds is not None and website_name == 'betrivers':
+			# if side 2, we have side 1 actual odds
+			# so check if valid arb odds before doublechecking odds
+			# if side_num == 2:
+			# 	bet_dict['actual odds2'] = actual_odds
+			# 	if not determiner.determine_valid_arb_odds(bet_dict):
+			# 		print('Arb Odds Changed to Invalid, so no need to double check betrivers odds')
+			# if not determiner.determine_odds_confirmed():
+				
 			# double check betrivers
-			print('Double Check Betrivers Odds')
+			print('\n===Double Check Betrivers Odds===\n')
 			# confirm actual odds
 			# click outcome to add to slip to confirm odds
 			# bc glitch causes odds change when slip open
@@ -2236,15 +2364,25 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# adding to betslip still gets wrong reading when glitch
 			# so click wager field to see if causes odds change
 			# does NOT cause odds to change so need to login
+			# need to type in wager field to see if odds glitch changes
+			# last in list
+			# at this point only 1 item in betslip
+			# w/ 2 fields: wager and win
+			bet_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container')#.find_element('tag name', 'input')
+			if len(bet_fields) > 0:
+				wager_field = bet_fields[0].find_element('tag name', 'input')
+				try:
+					wager_field.send_keys(0) # see if typing 0 initiates change
+					wager_field.clear()
+				except:
+					print('ERROR: Failed to Type in Wager Field')
+
+			# if odds still same, see if login causes change
 			login_result = writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
 			if login_result == 'fail':
 				writer.close_bet_windows(driver, side_num, test, bet_dict)
 				return
-			# last in list
-			wager_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container')#.find_element('tag name', 'input')
-			if len(wager_fields) > 0:
-				wager_field = wager_fields[-1].find_element('tag name', 'input')
-				wager_field.clear()
+			
 			# last in list
 			all_betslip_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
 			betslip_odds = None
@@ -2257,22 +2395,18 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# 	actual_odds = None # invalid indicator
 			# 	writer.close_bet_windows(driver, side_num, test, bet_dict)
 	
-	# except:
-	# 	print('Error while reading actual odds')
-	# 	writer.close_bet_windows(driver, side_num)
-
 	except KeyboardInterrupt:
-		print('\nKeyboard Interrupt in Read Prematch Arb Data')
+		print('\nKeyboard Interrupt in Read Actual Odds')
 		print('Exit')
 		exit()
 
 	except ConnectionResetError:
-		print('\nConnectionResetError in Read Prematch Arb Data')
+		print('\nConnectionResetError in Read Actual Odds')
 		print('Exit')
 		exit()
 
 	except Exception as e:
-		print('Unknown Error: ', e)
+		print('Unknown Error while reading actual odds: ', e)
 		e_str = str(e)
 		#print('e_str: ' + e_str)
 		if re.search('invalid session id', e_str):
@@ -5681,8 +5815,8 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 # so can use for either but need to press btn first
 # use input arb type to know which btn to press
 def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[], max_retries=3):
-	print('\n===Read Prematch Arb Data===\n')
-	print('\nOutput: prematch_arb_data = [{%, $, ...}, ...]\n')
+	# print('\n===Read Prematch Arb Data===\n')
+	# print('\nOutput: prematch_arb_data = [{%, $, ...}, ...]\n')
 
 	prematch_arb_data = []
 	#prematch_arb_dict = {}
@@ -5697,494 +5831,498 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 
 	retries = 0
 
-	# while retries < max_retries:
+	while retries < max_retries:
 
-	# 	# Comment out try block to pinpoint exact error
-	# 	try:
+		# Comment out try block to pinpoint exact error
+		try:
 
-	# starting from oddsview start screen
-	# starts on live, best odds
-	# click prematch
-	# click arb
-	# retry in case of error
-	# problem is login dialog box blocks btns 
-	# after a minute on page
-	# try:
-	# 	pre_btn.click()
-	# 	arb_btn.click()
-	# 	time.sleep(1)
-	# except:
-	# 	print('Error clicking pre or arb btn')
+			# starting from oddsview start screen
+			# starts on live, best odds
+			# click prematch
+			# click arb
+			# retry in case of error
+			# problem is login dialog box blocks btns 
+			# after a minute on page
+			# try:
+			# 	pre_btn.click()
+			# 	arb_btn.click()
+			# 	time.sleep(1)
+			# except:
+			# 	print('Error clicking pre or arb btn')
 
-	# click_retries = 0
-	# while click_retries < max_retries:
-	#try:
-	# print('pre_btn: ' + pre_btn.get_attribute('outerHTML'))
-	# print('arb_btn: ' + arb_btn.get_attribute('outerHTML'))
-	#pre_btn.click()
-	if re.search('odds', url):
-		driver.execute_script("arguments[0].click();", pre_btn)
-	arb_btn.click()
-	time.sleep(0.1)
+			# click_retries = 0
+			# while click_retries < max_retries:
+			#try:
+			# print('pre_btn: ' + pre_btn.get_attribute('outerHTML'))
+			# print('arb_btn: ' + arb_btn.get_attribute('outerHTML'))
+			#pre_btn.click()
+			if re.search('odds', url):
+				driver.execute_script("arguments[0].click();", pre_btn)
+			arb_btn.click()
+			time.sleep(0.1)
 
-		#break # exit loop after clicking to continue
-	# except:
-	# 	print('Error clicking pre or arb btn')
-		#click_retries += 1
+				#break # exit loop after clicking to continue
+			# except:
+			# 	print('Error clicking pre or arb btn')
+				#click_retries += 1
 
-	# if click_retries == 3:
-	# 	return None
+			# if click_retries == 3:
+			# 	return None
 
-	if re.search('odds', url):
+			if re.search('odds', url):
 
-		# arb table changes so wait to call table each monitor loop
-		prematch_arb_table = driver.find_elements('tag name', 'table')[-1]
-		#print('prematch_arb_table: ' + prematch_arb_table.get_attribute('innerHTML'))
+				# arb table changes so wait to call table each monitor loop
+				prematch_arb_table = driver.find_elements('tag name', 'table')[-1]
+				#print('prematch_arb_table: ' + prematch_arb_table.get_attribute('innerHTML'))
 
 
-		arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
-		#print('\nArbs:')
-		# skip header row
-		# only take rows that have nested rows
-		num = 1
-		#for idx in range(1, len(arb_rows)):
-		for arb in arb_rows[1:]:
-			#arb = arb_rows[idx]
-			#print('arb: ' + str(arb))
-			arb_str = ''
-			try:
-				arb_str = arb.get_attribute('innerHTML')
-			except:
-				print('No Arb')
-				break # break not continue, bc no arbs will loop thru all rows
+				arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+				#print('\nArbs:')
+				# skip header row
+				# only take rows that have nested rows
+				num = 1
+				#for idx in range(1, len(arb_rows)):
+				for arb in arb_rows[1:]:
+					#arb = arb_rows[idx]
+					#print('arb: ' + str(arb))
+					arb_str = ''
+					try:
+						arb_str = arb.get_attribute('innerHTML')
+					except:
+						print('No Arb')
+						break # break not continue, bc no arbs will loop thru all rows
 
-			if re.search('<tr ', arb_str):
-				#print("\nArb " + str(num) + ": " + arb_str)
-				num += 1
+					if re.search('<tr ', arb_str):
+						#print("\nArb " + str(num) + ": " + arb_str)
+						num += 1
 
-				arb_data = []
-				try:
-					arb_data = arb.find_elements('tag name', 'td')
-					# TEST: print arb data to find idxs
-					# for ad_idx in range(len(arb_data)):
-					# 	ad = arb_data[ad_idx].get_attribute('innerHTML')
-					# 	print('ad ' + str(ad_idx) + ': ' + str(ad))
-				except:
-					print('No Arb Data')
-					continue
+						arb_data = []
+						try:
+							arb_data = arb.find_elements('tag name', 'td')
+							# TEST: print arb data to find idxs
+							# for ad_idx in range(len(arb_data)):
+							# 	ad = arb_data[ad_idx].get_attribute('innerHTML')
+							# 	print('ad ' + str(ad_idx) + ': ' + str(ad))
+						except:
+							print('No Arb Data')
+							continue
 
-				# find val first and all other relative to it
-				# re.search('%')
-				val_idx = 1
-				value = arb_data[val_idx].get_attribute('innerHTML').split('%')[0] #.get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
-				#print('value: ' + str(value))
+						# find val first and all other relative to it
+						# re.search('%')
+						val_idx = 1
+						value = arb_data[val_idx].get_attribute('innerHTML').split('%')[0] #.get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+						#print('value: ' + str(value))
 
-				# read all arbs and then split into test and valid later
-				# if float(value) < min_value or float(value) > max_value:
-				# 	continue
+						# read all arbs and then split into test and valid later
+						# if float(value) < min_value or float(value) > max_value:
+						# 	continue
 
-				# profit depends on limits
-				#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
-				# if len(arb_data) <= 2:
-				# 	print('No Game')
-				# 	break
+						# profit depends on limits
+						#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
+						# if len(arb_data) <= 2:
+						# 	print('No Game')
+						# 	break
 
-				#try:
-				game_idx = val_idx + 2
-				game_element = arb_data[game_idx]
-				game_data = game_element.find_elements('tag name', 'p')
-				# sport = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML')
-				# sport = sport.split('|')[1].strip().lower()
-				#print('Sport: ' + sport)
-				sport_data = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML').split('|')
-				#sport_data = sport_element.split('|')
-				sport = sport_data[0].strip().lower()
-				#print('sport: ' + str(sport))
-				league = sport_data[1].strip().lower()
-				#print('league: ' + str(league))
-				# Mon Jul 1, 4:00 AM -> Jul 1
-				# OR Today, 9:00 PM
-				# remove comma for csv
-				game_date_data = game_data[0].get_attribute('innerHTML').split(', ')
-				game_date = game_date_data[0]
-				#print('game_date: ' + str(game_date))
-				game_time = game_date_data[1]
-				#print('\ngame_time: ' + str(game_time))
+						#try:
+						game_idx = val_idx + 2
+						game_element = arb_data[game_idx]
+						game_data = game_element.find_elements('tag name', 'p')
+						# sport = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML')
+						# sport = sport.split('|')[1].strip().lower()
+						#print('Sport: ' + sport)
+						try:
+							sport_data = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML').split('|')
+						
+							#sport_data = sport_element.split('|')
+							sport = sport_data[0].strip().lower()
+							#print('sport: ' + str(sport))
+							league = sport_data[1].strip().lower()
+						except:
+							print('Error Getting Sport Data: ' + game_element.get_attribute('innerHTML'))
+						#print('league: ' + str(league))
+						# Mon Jul 1, 4:00 AM -> Jul 1
+						# OR Today, 9:00 PM
+						# remove comma for csv
+						game_date_data = game_data[0].get_attribute('innerHTML').split(', ')
+						game_date = game_date_data[0]
+						#print('game_date: ' + str(game_date))
+						game_time = game_date_data[1]
+						#print('\ngame_time: ' + str(game_time))
 
-				if game_date == 'Today':
-					#print('Today')
-					# Thu Aug 27 2024
-					game_date = datetime.today().strftime('%a %b %d %Y')
-				else:
-					game_date += ' ' + cur_yr
-				#print('game_date: ' + str(game_date) + '\n')
-				
-				game = game_data[1].get_attribute('innerHTML')
-				game = converter.convert_name_to_standard_format(game)
+						if game_date == 'Today':
+							#print('Today')
+							# Thu Aug 27 2024
+							game_date = datetime.today().strftime('%a %b %d %Y')
+						else:
+							game_date += ' ' + cur_yr
+						#print('game_date: ' + str(game_date) + '\n')
+						
+						game = game_data[1].get_attribute('innerHTML')
+						game = converter.convert_name_to_standard_format(game)
+							
+						# except:
+						# 	print('No Game')
+						# 	continue
+						#print('game: ' + str(game))
+						
+						# check same day game bc less suspicious
+						# if game not in todays_schedule:
+						# 	continue
+
+						# sometimes stale element so still len but no element
+						# if len(arb_data) <= 3:
+						# 	print('No Market')
+						# 	break
+						market = None
+						try:
+							#market_idx = val_idx + 3
+							# poor source format sometimes includes _ and all caps for football player markets (source will probably fix soon???)
+							# so make uniform here
+							market = arb_data[val_idx + 3].find_element('tag name', 'p').get_attribute('innerHTML')
+							if sport == 'football' and re.search(' - ', market):
+								market_data = market.split(' - ')
+								player_name = market_data[0]
+								player_market = re.sub('_', ' ', market_data[1]).title()
+								market = player_name + ' - ' + player_market
+							#print('market: ' + str(market))
+							market = converter.convert_name_to_standard_format(market)
+							
+						except:
+							print('No Market')
+							continue
+
+						bet1 = arb_data[val_idx + 5].find_element('tag name', 'div').get_attribute('innerHTML')
+						#print('bet1: ' + str(bet1))
+						bet2 = arb_data[val_idx + 6].find_element('tag name', 'div').get_attribute('innerHTML')
+						#print('bet2: ' + str(bet2))
+
+						bet1 = converter.convert_name_to_standard_format(bet1)
+						bet2 = converter.convert_name_to_standard_format(bet2)
+
+						size1 = arb_data[val_idx + 11].find_element('tag name', 'p').get_attribute('innerHTML')
+						#print('size1: ' + str(size1))
+						size2 = arb_data[val_idx + 12].find_element('tag name', 'p').get_attribute('innerHTML')
+						#print('size2: ' + str(size2))
+						
+						# nested elements
+						# bets element
+						# vals_element = arb_data[4]#.get_attribute('innerHTML')
+						# #print('vals_element: ' + str(vals_element.get_attribute('innerHTML')))
+						# # bet_sources = bets_element.find_elements('tag name', 'img')
+						# # for bet_source in bet_sources:
+						# # 	print('bet_source: ' + bet_source.get_attribute('innerHTML'))
+
+						# try:
+						# 	vals_data = vals_element.find_elements('tag name', 'tr')
+						# except:
+						# 	print('No Vals')
+						# 	continue
+						# # for td_idx in range(len(row_data)):
+						# # 	td = row_data[td_idx]
+						# # 	td_link = td.find_element('tag name', 'a').get_attribute('href')
+						# # 	print('td ' + str(td_idx) + ': ' + td_link)
+						
+						# # website defaults to nj so convert link to ny
+						# # NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# # NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
+						# # if len(arb_data) <= 13:
+						# # 	print('No Link')
+						# # 	continue
+						
+						# # link1_element = arb_data[13]
+						# # #print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
+						# # link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
+						# # if len(row_data) == 0:
+						# # 	print('No Links')
+						# # 	break
+						# try:
+						# 	# V2
+						# 	# link1 = row_data[0].find_element('tag name', 'a').get_attribute('href')
+						# 	# link1 = re.sub('nj', 'ny', link1)
+						# 	#print('link1: ' + link1)
+
+						# 	#V3
+						# 	size1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						# except:
+						# 	print('No Val 1')
+						# 	for row in vals_data:
+						# 		print('row: ' + row.get_attribute('innerHTML'))
+						# 	continue
+
+						# # link2_element = arb_data[14]
+						# # #print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
+						# # link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
+						# # if len(row_data) <= 1:
+						# # 	print('No Link 2')
+						# # 	break
+						# try:
+						# 	# link2 = row_data[1].find_element('tag name', 'a').get_attribute('href')
+						# 	# link2 = re.sub('nj', 'ny', link2)
+						# 	#print('link2: ' + link2)
+
+						# 	#V3
+						# 	size2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
+
+						# except:
+						# 	print('No Val 2')
+						# 	continue
+
+						# print('size1: ' + size1)
+						# print('size2: ' + size2)
+
+
+						links_element = arb_data[val_idx + 13]
+						links_data = links_element.find_elements('tag name', 'tr')
+
+						try:
+							link1 = links_data[0].find_element('tag name', 'a').get_attribute('href')
+							link1 = re.sub('nj', 'ny', link1)
+							#print('link1: ' + link1)
+
+						except:
+							print('No Link 1')
+							# for row in links_data:
+							# 	print('row: ' + row.get_attribute('innerHTML'))
+							continue
+
+						try:
+							link2 = links_data[1].find_element('tag name', 'a').get_attribute('href')
+							link2 = re.sub('nj', 'ny', link2)
+							#print('link2: ' + link2)
+
+						except:
+							print('No Link 2')
+							for row in links_data:
+								print('row: ' + row.get_attribute('innerHTML'))
+							continue
+						
+						
+						source1 = read_source_from_link(link1)
+						#print('bet1: ' + str(bet1))
+						# if bet1 not in sources:
+						# 	print('No bet1: ' + bet1)
+						# 	continue
+						
+						# if len(bet_sources) == 1:
+						# 	print('Only 1 Bet Source Found')
+						# 	break
+
+						source2 = read_source_from_link(link2)
+						#print('bet2: ' + str(bet2))
+						# if bet2 not in sources:
+						# 	print('No bet2: ' + bet2)
+						# 	continue
+						# bets = (bet1, bet2)
+						# print('bets: ' + str(bets))
+
+
+						# if bet1 == '' or bet2 == '':
+						# 	print('Unknown Bet source: ' + link1 + ', ' + link2)
+						# 	break
+						if source1 not in sources or source2 not in sources:
+							#print('Unavailable Bet source: ' + link1 + ', ' + link2)
+							continue
+
+
+
+						odds1 = arb_data[val_idx + 8].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						
+						# if len(arb_data) <= 9:
+						# 	# error so continue
+						# 	print('No odds2')
+						# 	break
+							
+						try:
+							odds2 = arb_data[val_idx + 9].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						except:
+							print('No odds2')
+							continue
+						# print('odds1: ' + odds1)
+						# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
+
+						# if source=betrivers, odds might not be correct
+						# so give 2 options:
+						# 1. if correct
+						# 2. adjusted down by 5 (bc seems most common error)
+
+
+
+						# V3 format
+						#odds_element = arb_data[5]
+						
+						
+						# game_date, 
+						#arb_row = [value, game, market, source1, source2, odds1, odds2, link1, link2, size1, size2, game_date, sport]
+						#print('arb_row: ' + str(arb_row))
+						arb_dict = {'value':value,
+									'game':game,
+									'market':market,
+									'bet1':bet1,
+									'bet2':bet2,
+									'source1':source1,
+									'source2':source2,
+									'odds1':odds1,
+									'odds2':odds2,
+									'link1':link1,
+									'link2':link2,
+									'size1':size1,
+									'size2':size2,
+									'game date':game_date,
+									'game time':game_time,
+									'sport':sport,
+									'league':league}
+
+						prematch_arb_data.append(arb_dict)
+
+
+						# test 1 to see why not equal
+						#break
+
+			elif re.search('slack', url):
+				print('Read Slack Prematch Arb Data')
+
+				# jump to most recent message
+				# try scroll to bottom
+				driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+				# OR click latest messages
+				# latest_msg = driver.find_element('class name', 'p-archives_banner__jump')
+				# latest_msg.click()
+				# OR click jump to date button
+				# jump_to_date_btn = driver.find_element('xpath', '//button[@aria-label="Jump to date"]')
+				# jump_to_date_btn.click()
+				# today_btn = driver.find_elements('class name', 'c-menu_item__button')[1]
+				# today_btn.click()
+
+				# class="p-message_pane
+				# msg_pane = driver.find_element('class name', 'p-message_pane')
+				# print('\nmsg_pane: ' + msg_pane.get_attribute('innerHTML'))
+				# class c-virtual_list
+				# msg_list = driver.find_element('class name', 'c-virtual_list')
+				# print('\nmsg_list: ' + msg_list.get_attribute('innerHTML'))
+
+				# list of msg header icons
+				# class="p-member_profile_hover_card"
+				init_msg_headers = driver.find_elements('class name', 'p-member_profile_hover_card')
+				print('num init_msg_headers: ' + str(len(init_msg_headers)))
+				# scroll to msg header to capture all data
+				# scroll to last header and look for earlier headers
+				all_msg_headers = init_msg_headers
+				for msg_header in all_msg_headers:
+					driver.execute_script("arguments[0].scrollIntoView(true);", msg_header)
+					print('Scrolled to Msg Header. Get New Msg Headers.')
+					new_msg_headers = driver.find_elements('class name', 'p-member_profile_hover_card')
+					print('num new_msg_headers: ' + str(len(new_msg_headers)))
+					for new_msg_header in new_msg_headers:
+						if new_msg_header not in all_msg_headers:
+							all_msg_headers.append(new_msg_header)
+
+					time.sleep(5)
+
+				# HOPE that Latest Message btn appears when new msg
+				# so click it
+				# and then all arbs in message will show
+				# so combine batch into 1 message???
+				# or can it do 1 at a time
+				# problem is latest message btn will bring to bottom
+				# and cant scroll up
+				# but maybe slack batches automatically msgs around same time???
+
+				# list of messages
+				# class="c-virtual_list__item"
+				#arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+				arb_rows = driver.find_elements('class name', 'c-virtual_list__item')
+				print('num list_items: ' + str(len(arb_rows)))
+
+				last_list_item = arb_rows[-1]
+				print('last_list_item: ' + last_list_item.get_attribute('innerHTML'))
+
+				arb_rows = reversed(arb_rows)
+
+				num = 1
+				# class c-mrkdwn__br blank empty fail
+				for arb in arb_rows:
+					#arb = arb_rows[idx]
+					print('\nArb ' + str(num) + ': ' + str(arb))
+					arb_str = ''
+					try:
+						arb_str = arb.get_attribute('innerHTML')
+						#print('arb_str: ' + arb_str)
+					except:
+						print('\nNo Arb\n')
+						break # break not continue, bc no arbs will loop thru all rows
 					
-				# except:
-				# 	print('No Game')
-				# 	continue
-				#print('game: ' + str(game))
-				
-				# check same day game bc less suspicious
-				# if game not in todays_schedule:
-				# 	continue
+					print("\nArb Str " + str(num) + ": " + arb_str)
+					num += 1
 
-				# sometimes stale element so still len but no element
-				# if len(arb_data) <= 3:
-				# 	print('No Market')
-				# 	break
-				market = None
-				try:
-					#market_idx = val_idx + 3
-					# poor source format sometimes includes _ and all caps for football player markets (source will probably fix soon???)
-					# so make uniform here
-					market = arb_data[val_idx + 3].find_element('tag name', 'p').get_attribute('innerHTML')
-					if sport == 'football' and re.search(' - ', market):
-						market_data = market.split(' - ')
-						player_name = market_data[0]
-						player_market = re.sub('_', ' ', market_data[1]).title()
-						market = player_name + ' - ' + player_market
-					#print('market: ' + str(market))
-					market = converter.convert_name_to_standard_format(market)
-					
-				except:
-					print('No Market')
-					continue
-
-				bet1 = arb_data[val_idx + 5].find_element('tag name', 'div').get_attribute('innerHTML')
-				#print('bet1: ' + str(bet1))
-				bet2 = arb_data[val_idx + 6].find_element('tag name', 'div').get_attribute('innerHTML')
-				#print('bet2: ' + str(bet2))
-
-				bet1 = converter.convert_name_to_standard_format(bet1)
-				bet2 = converter.convert_name_to_standard_format(bet2)
-
-				size1 = arb_data[val_idx + 11].find_element('tag name', 'p').get_attribute('innerHTML')
-				#print('size1: ' + str(size1))
-				size2 = arb_data[val_idx + 12].find_element('tag name', 'p').get_attribute('innerHTML')
-				#print('size2: ' + str(size2))
-				
-				# nested elements
-				# bets element
-				# vals_element = arb_data[4]#.get_attribute('innerHTML')
-				# #print('vals_element: ' + str(vals_element.get_attribute('innerHTML')))
-				# # bet_sources = bets_element.find_elements('tag name', 'img')
-				# # for bet_source in bet_sources:
-				# # 	print('bet_source: ' + bet_source.get_attribute('innerHTML'))
-
-				# try:
-				# 	vals_data = vals_element.find_elements('tag name', 'tr')
-				# except:
-				# 	print('No Vals')
-				# 	continue
-				# # for td_idx in range(len(row_data)):
-				# # 	td = row_data[td_idx]
-				# # 	td_link = td.find_element('tag name', 'a').get_attribute('href')
-				# # 	print('td ' + str(td_idx) + ': ' + td_link)
-				
-				# # website defaults to nj so convert link to ny
-				# # NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
-				# # NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
-				# # if len(arb_data) <= 13:
-				# # 	print('No Link')
-				# # 	continue
-				
-				# # link1_element = arb_data[13]
-				# # #print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
-				# # link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
-				# # if len(row_data) == 0:
-				# # 	print('No Links')
-				# # 	break
-				# try:
-				# 	# V2
-				# 	# link1 = row_data[0].find_element('tag name', 'a').get_attribute('href')
-				# 	# link1 = re.sub('nj', 'ny', link1)
-				# 	#print('link1: ' + link1)
-
-				# 	#V3
-				# 	size1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
-
-				# except:
-				# 	print('No Val 1')
-				# 	for row in vals_data:
-				# 		print('row: ' + row.get_attribute('innerHTML'))
-				# 	continue
-
-				# # link2_element = arb_data[14]
-				# # #print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
-				# # link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
-				# # if len(row_data) <= 1:
-				# # 	print('No Link 2')
-				# # 	break
-				# try:
-				# 	# link2 = row_data[1].find_element('tag name', 'a').get_attribute('href')
-				# 	# link2 = re.sub('nj', 'ny', link2)
-				# 	#print('link2: ' + link2)
-
-				# 	#V3
-				# 	size2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
-
-				# except:
-				# 	print('No Val 2')
-				# 	continue
-
-				# print('size1: ' + size1)
-				# print('size2: ' + size2)
-
-
-				links_element = arb_data[val_idx + 13]
-				links_data = links_element.find_elements('tag name', 'tr')
-
-				try:
-					link1 = links_data[0].find_element('tag name', 'a').get_attribute('href')
-					link1 = re.sub('nj', 'ny', link1)
-					#print('link1: ' + link1)
-
-				except:
-					print('No Link 1')
-					# for row in links_data:
-					# 	print('row: ' + row.get_attribute('innerHTML'))
-					continue
-
-				try:
-					link2 = links_data[1].find_element('tag name', 'a').get_attribute('href')
-					link2 = re.sub('nj', 'ny', link2)
-					#print('link2: ' + link2)
-
-				except:
-					print('No Link 2')
-					for row in links_data:
-						print('row: ' + row.get_attribute('innerHTML'))
-					continue
-				
-				
-				source1 = read_source_from_link(link1)
-				#print('bet1: ' + str(bet1))
-				# if bet1 not in sources:
-				# 	print('No bet1: ' + bet1)
-				# 	continue
-				
-				# if len(bet_sources) == 1:
-				# 	print('Only 1 Bet Source Found')
-				# 	break
-
-				source2 = read_source_from_link(link2)
-				#print('bet2: ' + str(bet2))
-				# if bet2 not in sources:
-				# 	print('No bet2: ' + bet2)
-				# 	continue
-				# bets = (bet1, bet2)
-				# print('bets: ' + str(bets))
-
-
-				# if bet1 == '' or bet2 == '':
-				# 	print('Unknown Bet source: ' + link1 + ', ' + link2)
-				# 	break
-				if source1 not in sources or source2 not in sources:
-					#print('Unavailable Bet source: ' + link1 + ', ' + link2)
-					continue
+					# inintal list only has 1 item
+					# so if new item then scroll up for more
+					arb_data = []
+					try:
+						# if no arb content scroll up for more???
+						arb_content = arb.find_element('class name', 'p-rich_text_section').get_attribute('innerHTML')
+						print('\narb_content: ' + arb_content)
+						arb_data = arb_content.split('<span aria-label="" class="c-mrkdwn__br" data-stringify-type="paragraph-break"></span>')
+						# TEST: print arb data to find idxs
+						for ad_idx in range(len(arb_data)):
+							ad = arb_data[ad_idx]
+							print('\nad ' + str(ad_idx) + ': ' + str(ad))
+					except:
+						print('\nNo Arb Data\n')
+						#continue
+						print('Scroll Up')
+						#driver.execute_script("window.scrollBy(1000, 1000);")
+						driver.execute_script("window.scrollBy(0, -document.body.scrollHeight);")
+						print('Scrolled Up')
+						time.sleep(1000)
 
 
 
-				odds1 = arb_data[val_idx + 8].find_element('tag name', 'p').get_attribute('innerHTML').strip()
-				
-				# if len(arb_data) <= 9:
-				# 	# error so continue
-				# 	print('No odds2')
-				# 	break
-					
-				try:
-					odds2 = arb_data[val_idx + 9].find_element('tag name', 'p').get_attribute('innerHTML').strip()
-				except:
-					print('No odds2')
-					continue
-				# print('odds1: ' + odds1)
-				# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
+					# find val first and all other relative to it
+					# re.search('%')
+					game_idx = 2
+					game = arb_data[game_idx].split('%')[0] #.get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+					print('game: ' + str(game))
 
-				# if source=betrivers, odds might not be correct
-				# so give 2 options:
-				# 1. if correct
-				# 2. adjusted down by 5 (bc seems most common error)
-
-
-
-				# V3 format
-				#odds_element = arb_data[5]
-				
-				
-				# game_date, 
-				#arb_row = [value, game, market, source1, source2, odds1, odds2, link1, link2, size1, size2, game_date, sport]
-				#print('arb_row: ' + str(arb_row))
-				arb_dict = {'value':value,
-							'game':game,
-							'market':market,
-							'bet1':bet1,
-							'bet2':bet2,
-							'source1':source1,
-							'source2':source2,
-							'odds1':odds1,
-							'odds2':odds2,
-							'link1':link1,
-							'link2':link2,
-							'size1':size1,
-							'size2':size2,
-							'game date':game_date,
-							'game time':game_time,
-							'sport':sport,
-							'league':league}
-
-				prematch_arb_data.append(arb_dict)
-
-
-				# test 1 to see why not equal
-				#break
-
-	elif re.search('slack', url):
-		print('Read Slack Prematch Arb Data')
-
-		# jump to most recent message
-		# try scroll to bottom
-		driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-		# OR click latest messages
-		# latest_msg = driver.find_element('class name', 'p-archives_banner__jump')
-		# latest_msg.click()
-		# OR click jump to date button
-		# jump_to_date_btn = driver.find_element('xpath', '//button[@aria-label="Jump to date"]')
-		# jump_to_date_btn.click()
-		# today_btn = driver.find_elements('class name', 'c-menu_item__button')[1]
-		# today_btn.click()
-
-		# class="p-message_pane
-		# msg_pane = driver.find_element('class name', 'p-message_pane')
-		# print('\nmsg_pane: ' + msg_pane.get_attribute('innerHTML'))
-		# class c-virtual_list
-		# msg_list = driver.find_element('class name', 'c-virtual_list')
-		# print('\nmsg_list: ' + msg_list.get_attribute('innerHTML'))
-
-		# list of msg header icons
-		# class="p-member_profile_hover_card"
-		init_msg_headers = driver.find_elements('class name', 'p-member_profile_hover_card')
-		print('num init_msg_headers: ' + str(len(init_msg_headers)))
-		# scroll to msg header to capture all data
-		# scroll to last header and look for earlier headers
-		all_msg_headers = init_msg_headers
-		for msg_header in all_msg_headers:
-			driver.execute_script("arguments[0].scrollIntoView(true);", msg_header)
-			print('Scrolled to Msg Header. Get New Msg Headers.')
-			new_msg_headers = driver.find_elements('class name', 'p-member_profile_hover_card')
-			print('num new_msg_headers: ' + str(len(new_msg_headers)))
-			for new_msg_header in new_msg_headers:
-				if new_msg_header not in all_msg_headers:
-					all_msg_headers.append(new_msg_header)
-
-			time.sleep(5)
-
-		# HOPE that Latest Message btn appears when new msg
-		# so click it
-		# and then all arbs in message will show
-		# so combine batch into 1 message???
-		# or can it do 1 at a time
-		# problem is latest message btn will bring to bottom
-		# and cant scroll up
-		# but maybe slack batches automatically msgs around same time???
-
-		# list of messages
-		# class="c-virtual_list__item"
-		#arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
-		arb_rows = driver.find_elements('class name', 'c-virtual_list__item')
-		print('num list_items: ' + str(len(arb_rows)))
-
-		last_list_item = arb_rows[-1]
-		print('last_list_item: ' + last_list_item.get_attribute('innerHTML'))
-
-		arb_rows = reversed(arb_rows)
-
-		num = 1
-		# class c-mrkdwn__br blank empty fail
-		for arb in arb_rows:
-			#arb = arb_rows[idx]
-			print('\nArb ' + str(num) + ': ' + str(arb))
-			arb_str = ''
-			try:
-				arb_str = arb.get_attribute('innerHTML')
-				#print('arb_str: ' + arb_str)
-			except:
-				print('\nNo Arb\n')
-				break # break not continue, bc no arbs will loop thru all rows
-			
-			print("\nArb Str " + str(num) + ": " + arb_str)
-			num += 1
-
-			# inintal list only has 1 item
-			# so if new item then scroll up for more
-			arb_data = []
-			try:
-				# if no arb content scroll up for more???
-				arb_content = arb.find_element('class name', 'p-rich_text_section').get_attribute('innerHTML')
-				print('\narb_content: ' + arb_content)
-				arb_data = arb_content.split('<span aria-label="" class="c-mrkdwn__br" data-stringify-type="paragraph-break"></span>')
-				# TEST: print arb data to find idxs
-				for ad_idx in range(len(arb_data)):
-					ad = arb_data[ad_idx]
-					print('\nad ' + str(ad_idx) + ': ' + str(ad))
-			except:
-				print('\nNo Arb Data\n')
-				#continue
-				print('Scroll Up')
-				#driver.execute_script("window.scrollBy(1000, 1000);")
-				driver.execute_script("window.scrollBy(0, -document.body.scrollHeight);")
-				print('Scrolled Up')
 				time.sleep(1000)
 
 
 
-			# find val first and all other relative to it
-			# re.search('%')
-			game_idx = 2
-			game = arb_data[game_idx].split('%')[0] #.get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
-			print('game: ' + str(game))
 
-		time.sleep(1000)
+			#print('prematch_arb_data:\n' + str(prematch_arb_data))
+			return prematch_arb_data
 
+		except KeyboardInterrupt:
+			print('\nKeyboard Interrupt in Read Prematch Arb Data')
+			print('Exit')
+			exit()
 
+		except ConnectionResetError:
+			print('\nConnectionResetError in Read Prematch Arb Data')
+			print('Exit')
+			exit()
 
-
-	#print('prematch_arb_data:\n' + str(prematch_arb_data))
-	return prematch_arb_data
-
-		# except KeyboardInterrupt:
-		# 	print('\nKeyboard Interrupt in Read Prematch Arb Data')
-		# 	print('Exit')
-		# 	exit()
-
-		# except ConnectionResetError:
-		# 	print('\nConnectionResetError in Read Prematch Arb Data')
-		# 	print('Exit')
-		# 	exit()
-
-		# except Exception as e:
-		# 	print('Unknown Error: ', e)
-		# 	e_str = str(e)
-		# 	#print('e_str: ' + e_str)
-		# 	if re.search('invalid session id', e_str) or re.search('disconnected', e_str):
-		# 		# reboot window
-		# 		# open dynamic window
-		# 		# restart monitor website fcn from the top
-		# 		return 'reboot'
-		# 	elif re.search('Connection refused', e_str):
-		# 		print('\nConnection refused in Read Prematch Arb Data')
-		# 		print('Exit')
-		# 		exit()
-		# 	elif re.search('no such window', e_str):
-		# 		print('\nNo such window in Read Prematch Arb Data')
-		# 		print('Exit')
-		# 		exit()
+		except Exception as e:
+			print('Unknown Error: ', e)
+			e_str = str(e)
+			#print('e_str: ' + e_str)
+			if re.search('invalid session id', e_str) or re.search('disconnected', e_str):
+				# reboot window
+				# open dynamic window
+				# restart monitor website fcn from the top
+				return 'reboot'
+			elif re.search('Connection refused', e_str):
+				print('\nConnection refused in Read Prematch Arb Data')
+				print('Exit')
+				exit()
+			elif re.search('no such window', e_str):
+				print('\nNo such window in Read Prematch Arb Data')
+				print('Exit')
+				exit()
 			
 
-		# 	retries += 1
-		# 	print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
+			retries += 1
+			print(f"Exception occurred. Retrying {retries}/{max_retries}...")#\n", e)#, e.getheaders(), e.gettext(), e.getcode())
 
 
 		

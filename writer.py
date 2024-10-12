@@ -726,7 +726,12 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
         # data-test-id="account-dropdown"
         # OR check not logged in by login btn
         try:
-            login_btn = driver.find_element('class name', 'login-duration-time')
+            # id="cta-wrapper"
+            # a data-test-id="Log In-cta-link"
+            # cta wrapper could also be shown if logged in
+            # so either use exact id
+            # or use cta wrapper and check btn says login
+            login_btn = driver.find_element('xpath', '//a[@data-test-id="Log In-cta-link"]') #('id', 'cta-wrapper').find_element('tag name', 'a')
             print('login_btn: ' + login_btn.get_attribute('innerHTML'))
             #need_login = True
 
@@ -942,9 +947,21 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
             bet_size = determiner.determine_limit(bet_dict, website_name, pick_type, test)
 
+            wager_field = None
             while not logged_in:
                 try:
-                    wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
+                    # wager field not always there if bet closed during login
+                    # so look for place bet btn
+                    try:
+                        wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
+                    except:
+                        print('ERROR: No Wager Field')
+
+                    try:
+                        driver.find_element('class name', 'place-button')
+                    except:
+                        print('ERROR: No Place Bet Button')
+
                     logged_in = True
                 except:
                     print('Not Logged In Yet')
@@ -1005,7 +1022,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                         place_bet_btn.click()
                         time.sleep(1)
                         print('Placed Bet to Find Limit')
-                        time.sleep(3) 
+                        #time.sleep(3) 
                     except:
                         print('Error: Failed to Click Place Bet Button! Check popup confirm number popup.')
 
@@ -1016,8 +1033,16 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             close_dialog_btn = confirm_dialog.find_element('class name', 'ds-button')
                             print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
                             close_dialog_btn.click()
-                            time.sleep(1)
+                            time.sleep(0.1)
                             print('Closed Confirm Popup')
+
+                            # Now try clicking plce bet again
+                            try:
+                                place_bet_btn.click()
+                                time.sleep(1)
+                            except:
+                                print('Failed to Click Place Bet After Closed Confirm Popup')
+
                         except:
                             print('No Confirm Popup')
 
@@ -2322,6 +2347,7 @@ def place_arb_bet(driver, arb, side_num, test):
                 if source == 'betrivers':
                     try:
                         place_btn.click()
+                        print('Clicked Place Bet Twice')
                     except:
                         print('Failed to Click Place Bet 2nd Time')
 
@@ -2347,6 +2373,13 @@ def place_arb_bet(driver, arb, side_num, test):
                         print('Done Loading')
                     except:
                         print('Loading bet receipt...')
+                        # check if bet placed
+                        if source == 'betrivers':
+                            try:
+                                place_btn.click()
+                                print('Clicked Place Bet Again')
+                            except:
+                                print('Failed to Click Place Again')
                         time.sleep(0.5)
 
                 end_time = datetime.today()
@@ -2938,6 +2971,9 @@ def write_ev_to_post(ev, client, send_mobile):
     game_date = ev['game date']
     game_time = ev['game time']
 
+    sport = ev['sport']
+    league = ev['league']
+
     # Format Message
     # Top part 4 lines of msg shows in notification preview 
     # so show useful info to decide if need to see more
@@ -2956,12 +2992,13 @@ def write_ev_to_post(ev, client, send_mobile):
 
     #ev_num = str(ev_idx + 1)
     props_str = '\n===EV===\n'
-    props_str += '\n' + source + ' ' + odds + '. \n\n'
+    props_str += '\n' + source + ' ' + odds + ' - \n\n'
     props_str += game + ' - \n\n'
     props_str += market + ', ' + bet + ' - \n\n'
     #props_str += bet + ' - \n\n'
     props_str += size + ' - \n\n'
     props_str += value + '%' + ' - \n\n'
+    props_str += sport + ', ' + league + ' - \n\n'
     props_str += game_date + ', ' + game_time + ' - \n\n'
     props_str += link + '\n\n'
 

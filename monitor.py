@@ -53,6 +53,7 @@ todays_date = datetime.today().date()
 # BUT other ppl are not limited so we need different channels
 # for limited sources, require higher profit to be worth it
 limited_sources = ['betmgm', 'fanatics', 'betrivers']
+# all valid sources
 sources = ['fanduel','fliff','draftkings','betrivers','caesars', 'fanatics', 'betmgm']
 big_market_min = 0.5 # sharper big market but can put more down
 # on slow days, need to accept player props at 0.4 on unlimited sources
@@ -268,7 +269,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 		if ev_source in enabled_sources:
 
 			#actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(ev_row, driver, betrivers_window_handle, pick_time_group, pick_type, test=test)
+			actual_odds_data = reader.read_actual_odds(ev_row, driver, betrivers_window_handle, pick_time_group, pick_type, test=test, manual_picks=manual_picks)
 			if actual_odds_data == 'reboot':
 				return 'reboot'
 			actual_odds = actual_odds_data[0]
@@ -402,7 +403,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			bet1_dict['link'] = arb['link1']
 			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'], bet1_dict['market'], bet1_dict['odds'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type='ev', test=test)
+			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type='ev', test=test, manual_picks=manual_picks)
 			if actual_odds_data == 'reboot':
 				return 'reboot'
 			actual_odds1 = actual_odds_data[0]
@@ -434,7 +435,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# side num defines placement of window
 				# actual_odds1, final_outcome1, cookies_file, saved_cookies = 
-				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test)
+				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test, manual_picks=manual_picks)
 				if actual_odds_data == 'reboot':
 					return 'reboot'
 				actual_odds1 = actual_odds_data[0]
@@ -469,7 +470,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# actual_odds2, final_outcome2, cookies_file, saved_cookies
 				side_num = 2
-				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test)
+				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test, manual_picks=manual_picks)
 				if actual_odds_data == 'reboot':
 					return 'reboot'
 				actual_odds2 = actual_odds_data[0]
@@ -886,11 +887,14 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 					# === Bet Window ===
 					# Betrivers window should stay open bc logs out when closed
-					driver.switch_to.new_window(type_hint='window')
-					size = driver.get_window_size() # get size of window 1 to determine window 2 x
-					# side num refers to side of arb
-					window2_x = size['width'] + 1 # why +1???
-					driver.set_window_position(window2_x, 0)
+					if manual_picks:
+						driver.switch_to.new_window(type_hint='window')
+						size = driver.get_window_size() # get size of window 1 to determine window 2 x
+						# side num refers to side of arb
+						window2_x = size['width'] + 1 # why +1???
+						driver.set_window_position(window2_x, 0)
+					else:
+						driver.switch_to.new_window()
 					betrivers_url = 'https://ny.betrivers.com/?page=sportsbook&feed=featured#home'
 					driver.get(betrivers_url)
 					time.sleep(1)
