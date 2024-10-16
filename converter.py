@@ -8,30 +8,62 @@ import math
 
 
 def round_to_base(x, base=5):
-    return base * round(x/base)
+    return base * round_half_up(x/base)
 
-def round_arb_bet_size(arb, side_num):
-    print('\n===Round Arb Bet Size===\n')
+# specifically for arb bets???
+# what is different than ev bets???
+# nothing i can think of
+# just depends on source and scale
+def round_bet_size(init_bet_size, source):
+    print('\n===Round Bet Size===\n')
+    print('init_bet_size: ' + str(init_bet_size))
+    print('source: ' + str(source) + '\n')
 
-    size_key = 'size' + side_num
-    init_size_str = arb[size_key]
-    print('init_size_str: ' + init_size_str)
+    # size_key = 'size' + side_num
+    # init_size_str = arb[size_key]
+    # print('init_size_str: ' + init_size_str)
+    #init_size_float = float(re.sub('\$','',init_size_str))
 
-    init_size_float = float(re.sub('\$','',init_size_str))
-
-    scale = '1' #-99
-    if init_size_float > 999:
-        scale = '1000' #-9999'
-    elif init_size_float > 99:
-        scale = '100' #-999'
-    print('scale: ' + scale)
+    # fully limited sources round to nearest 0.10
+    # partly limited sources round to whole number
+    # unlimited sources round to nearest 5, 10, 50, 100
+    fully_limited_sources = ['betmgm', 'betrivers', 'fanatics']
+    partly_limited_sources = ['draftkings', 'fanduel']
+    unlimited_sources = ['caesars', 'espn']
 
     # scale is used to tell whether to round to 50 if <1000 or 100 if >1000
+    # scale = 1 #-99
+    # use base to round to nearest 5 or 50
     
-    rounded_bet_size = round_to_base(init_size_float, base=5)
+    if source in fully_limited_sources:
 
-    print('rounded_bet_size: ' + rounded_bet_size)
+        rounded_bet_size = round_half_up(init_bet_size, decimals=1)
+
+    elif source in partly_limited_sources:
+
+        rounded_bet_size = round_half_up(init_bet_size)
+    
+    elif source in unlimited_sources:
+
+        # cant have base 0 bc divide by 0
+        # if init num < 5, round up to 5
+        if init_bet_size <= 5:
+            rounded_bet_size = 5
+
+        else:
+            base = 5
+            # round to nearest 50
+            if init_bet_size >= 1000:
+                # scale = 1000 #-9999'
+                base = 50
+            print('base: ' + str(base))
+
+            rounded_bet_size = round_to_base(init_bet_size, base)
+
+    print('rounded_bet_size: ' + rounded_bet_size + '\n')
     return rounded_bet_size
+
+
 
 # based on scale and source
 # round to nearest 5
@@ -91,23 +123,84 @@ def convert_bet_line_to_standard_format(listed_line):
 
     return bet_line
 
+# init bet line unless need to change
+# spreads are usually same except soccer handicaps on betmgm
 def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
     print('\n===Convert Bet Line to Source Format===\n')
     print('Input: bet_line = ' + bet_line)
-    print('Input: market = ' + market)
-    print('\nOutput: source bet_line = string\n')
+    print('Input: market = ' + market + '\n')
+    #print('Output: source bet_line = string\n')
 
     # universal rule for university sports
     bet_line = re.sub('university of | university', '', bet_line)
 
     # abbrev player name
+    # solo sports do not have spreads?
+    # no bc tennis set and game spread
     solo_sports = ['boxing', 'mma', 'tennis']
     if website_name == 'betmgm':
-
+        
         # special case player props not o/u but yes only
         # so player name is bet line
         # football anytime td scorer has player name as line
         # hockey anytime goalscorer
+        if re.search('- touchdowns|- goals', market):
+            player_name = market.split(' - ')[0]
+            bet_line = player_name
+
+        elif market == 'total sets':
+            # u 2.5 -> 2 sets
+            # o 2.5 -> 3 sets
+            bet_data = bet_line.split()
+            direction = bet_data[0]
+            line_val = bet_data[1]
+            if direction == 'o':
+                bet_line = '3 sets'
+            else:
+                bet_line = '2 sets'
+
+        # to win at least 1 set
+        # elif bet_line == 'yes' or bet_line == 'no':
+        #     print('Same Bet Line')
+
+        # totals and player props are over/unders
+        elif re.search('total| - ', market):
+            bet_data = bet_line.split()
+            direction = bet_data[0]
+            line_val = bet_data[1]
+            if re.search('first inning', market):
+                if direction == 'o':
+                    bet_line = 'yes'
+                else:
+                    bet_line = 'no'
+            else:
+                if direction == 'o':
+                    bet_line = 'over ' + line_val
+                else:
+                    bet_line = 'under ' + line_val
+
+        elif sport == 'soccer' and market == 'spread':
+            # +0.5 -> (0.5)
+            # remove + sign?
+            # no bc need +/- to indicate cutoff
+            #bet_line = re.sub('\+', '', bet_line)
+            bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
+            bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
+
+        elif sport in solo_sports and not re.search('spread', market):
+            # ensure player name
+            #if bet_line != 'yes' and bet_line != 'no':
+            #if not re.search('^yes$|^no$', bet_line):
+            # josh kelly -> j kelly
+            names = bet_line.split(' ', 1)
+            if len(names) > 1:
+                bet_line = names[0][0] + ' ' + names[1]
+
+    elif website_name == 'draftkings':
+
+        # special case player props not o/u but yes only
+        # so player name is bet line
+        # football anytime td scorer has player name as line
         if re.search('- touchdowns|- goals', market):
             player_name = market.split(' - ')[0]
             bet_line = player_name
@@ -147,64 +240,16 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
             bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
             bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
 
-        elif sport in solo_sports:
-            # josh kelly -> j. kelly
+        elif sport in solo_sports and not re.search('spread', market):
+            # josh kelly -> j kelly
             names = bet_line.split(' ', 1)
-            bet_line = names[0][0] + '. ' + names[1]
-
-    elif website_name == 'draftkings':
-
-        # special case player props not o/u but yes only
-        # so player name is bet line
-        # football anytime td scorer has player name as line
-        if re.search('- touchdowns', market):
-            player_name = market.split(' - ')[0]
-            bet_line = player_name
-
-        elif market == 'total sets':
-            # u 2.5 -> 2 sets
-            # o 2.5 -> 3 sets
-            bet_data = bet_line.split()
-            direction = bet_data[0]
-            line_val = bet_data[1]
-            if direction == 'o':
-                bet_line = '3 sets'
-            else:
-                bet_line = '2 sets'
-
-        # totals and player props are over/unders
-        elif re.search('total| - ', market):
-            bet_data = bet_line.split()
-            direction = bet_data[0]
-            line_val = bet_data[1]
-            if re.search('first inning', market):
-                if direction == 'o':
-                    bet_line = 'yes'
-                else:
-                    bet_line = 'no'
-            else:
-                if direction == 'o':
-                    bet_line = 'over ' + line_val
-                else:
-                    bet_line = 'under ' + line_val
-
-        elif sport == 'soccer' and market == 'spread':
-            # +0.5 -> (0.5)
-            # remove + sign?
-            # no bc need +/- to indicate cutoff
-            #bet_line = re.sub('\+', '', bet_line)
-            bet_line = re.sub(r' \+(.+)', ' \((1)\)', bet_line)
-            bet_line = re.sub(r' (-.+)', ' \((1)\)', bet_line)
-
-        elif sport in solo_sports:
-            # josh kelly -> j. kelly
-            names = bet_line.split(' ', 1)
-            bet_line = names[0][0] + '. ' + names[1]
+            if len(names) > 1:
+                bet_line = names[0][0] + ' ' + names[1]
 
 
         
 
-    print('source bet_line: ' + bet_line)
+    print('source bet_line: ' + bet_line + '\n')
     return bet_line
 
 def convert_market_to_source_format(market, sport, game, league, website_name):
@@ -213,8 +258,8 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
     print('sport: ' + sport)
     print('game: ' + game)
     print('league: ' + league)
-    print('website_name: ' + website_name)
-    print('\nOutput: market_title = string\n')
+    print('website_name: ' + website_name + '\n')
+    #print('\nOutput: market_title = string\n')
 
     market_title = market
 
@@ -402,9 +447,10 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
                 
                 period_part = market.split(team_part)[0] # '1st half '
                 
-                team_name = team_part.split('total')[0] # 'Philadelphia Eagles '
+                team_name = team_part.split(' total')[0] # 'Philadelphia Eagles'
+                team_name = convert_name_to_standard_format(team_name)
 
-                market_title = team_name + period_part + ' points'
+                market_title = team_name + ' ' + period_part + ' points'
 
             # eagles total -> eagles total points
             elif re.search('total', market):
@@ -488,7 +534,8 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
                 # player 1 to win at least 1 set
                 players = game.split(' vs ')
                 player_num = '1'
-                if player_name == players[1]:
+                # betmgm does opposite to oddsview player order
+                if player_name == players[0]:
                     player_num = '2'
 
                 market_title = 'player ' + player_num + ' to win at least 1 set'
@@ -504,7 +551,10 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
                 
 
     elif website_name == 'draftkings':
-        print('Source 3 DK')
+        #print('Source 3 DK')
+
+        # convert ' and ' to ' + ' for all
+        market_title = re.sub(' and ', ' \+ ', market)
 
         if sport == 'baseball':
 
@@ -538,11 +588,15 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
                 market_title = team_abbrev + ' team total runs - ' + inning_part
 
         elif sport == 'football':
-            print('Football')
+            #print('Football')
 
             if market == 'first to score':
 
                 market_title = '1st to score'
+
+            elif market == 'touchdowns':
+
+                market_title = 'anytime td scorer'
             
             # 1st Half Philadelphia Eagles Total -> phi Eagles team total points - 1st half
             elif re.search('half .+ total|quarter .+ total', market):
@@ -577,7 +631,7 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
 
                 # phi Eagles team total points - 1st half
                 # northwestern team total points - 1st half
-                market_title += team + ' team total points - ' + period_part
+                market_title = team + ' team total points - ' + period_part
 
             # 1st half spread/moneyline/total -> spread/moneyline/total 1st half
             elif re.search('half|quarter', market):
@@ -616,7 +670,7 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
             
 
 
-    print('market_title: ' + market_title)
+    print('market_title: ' + market_title + '\n')
     return market_title
 
 # extract team loc from bet
@@ -1151,6 +1205,7 @@ def convert_month_abbrev_to_num(game_mth_abbrev):
     #print('game_mth_num: ' + str(game_mth_num))
     return game_mth_num
 
+# default whole number
 def round_half_up(n, decimals=0):
     multiplier = 10**decimals
     nr = math.floor(n * multiplier + 0.5) / multiplier

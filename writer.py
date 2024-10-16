@@ -33,6 +33,20 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
+def display_dict_items(dict):
+    print('\nDict Items:')
+
+    for key, val in dict.items():
+        print(key + ': ' + val)
+
+    print('\n==========\n')
+
+def display_bet_details(bet_dict):
+    print('\nBet Details:')
+
+    for key, val in bet_dict.items():
+        print(key + ': ' + str(val))
+
 # also idle popup
 def close_logged_out_popup(driver):
     print('\n===Close Logged Out Popup===\n')
@@ -245,14 +259,14 @@ def remove_old_bets(driver, website_name):
 def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
     print('\n===Close Bet Windows===\n')
     print('side_num: ' + str(side_num) + '\n')
-    print('bet_dict: ' + str(bet_dict))
+    #print('bet_dict: ' + str(bet_dict))
 
     # get total num windows before closing first window
     # need to know how many monitor windows to know how many arb windows
     # so assume 2 monitor windows: 1 auto, 1 manual
     windows = driver.window_handles
     init_num_windows = len(windows)
-    print('init num_windows: ' + str(init_num_windows))
+    #print('init num_windows: ' + str(init_num_windows))
 
     num_monitor_windows = 2
     if test:
@@ -275,14 +289,14 @@ def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
     if source != 'betrivers':
         driver.close()
 
-    print('Closed Last Bet Window')
+    #print('Closed Last Bet Window')
     updated_windows = driver.window_handles
-    print('updated num_windows: ' + str(len(updated_windows)))
+    #print('updated num_windows: ' + str(len(updated_windows)))
 
    
     num_full_auto_windows = num_monitor_windows + 2
-    print('num_full_auto_windows: ' + str(num_full_auto_windows))
-    print('init num_windows: ' + str(init_num_windows))
+    #print('num_full_auto_windows: ' + str(num_full_auto_windows))
+    #print('init num_windows: ' + str(init_num_windows))
 
     # if side 2, both windows open
     # so also close side 1 window
@@ -313,7 +327,7 @@ def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
     # send back to main window
     driver.switch_to.window(windows[0])
 
-    print('\n===Closed Bet Windows===\n')
+    #print('\n===Closed Bet Windows===\n')
 
 
 
@@ -916,14 +930,17 @@ def close_popups(driver, website_name):
 
 def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type='ev', test=True, max_retries=3):
     print('\n===Place Bet===\n')
-    print('Input: bet_dict = ' + str(bet_dict))
+    #print('Input: bet_dict = ' + str(bet_dict) + '\n')
     
     place_bet = True
 
     website_name = bet_dict['source']
-    print('website_name = ' + website_name)
+    print('website_name: ' + website_name)
 
     url = bet_dict['link']
+
+    init_odds = bet_dict['odds']
+    print('init_odds: ' + init_odds)
 
     # wait to load if not clearing betslip???
 
@@ -992,9 +1009,9 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                     #print('placeholder: ' + placeholder)
                     if not placeholder == '':
                         wager_field.clear()
-                        time.sleep(1)
+                        time.sleep(0.2)
                     wager_field.send_keys(bet_size)
-                    time.sleep(1)
+                    time.sleep(0.2)
                     #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
                     # except:
                     #     print('Error: No Wager Field. Check Bet Locked???')
@@ -1054,7 +1071,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                                 close_dialog_btn = loc_dialog.find_element('class name', 'close')
                                 print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
                                 close_dialog_btn.click()
-                                time.sleep(1)
+                                time.sleep(0.2)
                                 print('Closed Location Popup')
                             except:
                                 print('No Location Popup')
@@ -1170,6 +1187,18 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
                 # For EV, place at limit
                 if not test and place_bet:
+                    # Double Check odds before placing final bet
+                    new_odds = reader.read_betslip_odds(driver, website_name)
+                    # if new odds changed
+                    # for ev, close
+                    # for arb, check still valid
+                    
+                    if new_odds != init_odds:
+                        print('init_odds: ' + init_odds)
+                        print('Odds Changed')
+                        close_bet_windows(driver, test=test, bet_dict=bet_dict)
+                        return
+
                     place_bet_btn = driver.find_element('class name', 'place-button')
                     print('place_bet_btn: ' + place_bet_btn.get_attribute('innerHTML'))
                     place_bet_btn.click()
@@ -1699,6 +1728,16 @@ def add_bet_to_betslip(final_outcome, driver, website_name):
             click_outcome_btn(final_outcome, driver)
         else:
             print('Outcome Button Already Clicked')
+            # problem is if just closed then registers as still clicked
+            # so check if betslip open
+            # problem is rare event so avoid wasting time
+            # checking each time
+            # instead wait for error to check and reclick outcome btn
+            try:
+                driver.find_element('class name', 'mod-KambiBC-stake-input__container')
+            except:
+                click_outcome_btn(final_outcome, driver)
+
 
         # always remove old bets after clicking bet 
         # bc glitch may not show betslip until outcome clicked
@@ -1754,14 +1793,16 @@ def recheck_location(driver):#, place_bet_btn):#, website_name):
 def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, test, side_num):
     print('\n===Find Bet Limit===\n')
     print('Input: side_num: ' + str(side_num))
-    print('Input: bet_dict = {...} = ' + str(bet_dict))
-    print('\nOutput: bet_limit = float\n')
+    #print('Input: bet_dict = {...} = ' + str(bet_dict) + '\n')
+    #print('\nOutput: bet_limit = float\n')
+
+    display_bet_details(bet_dict)
 
     bet_limit = payout = 0
 
     # why does num windows return 3 when actuall 4 windows???
     num_windows = len(driver.window_handles)
-    print('num_windows: ' + str(num_windows))
+    #print('num_windows: ' + str(num_windows))
 
 
     # if bet dict has bet1/bet2 then we know arb
@@ -1788,7 +1829,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     # switch to bet window returns None if cannot find final outcome
     # so no need to switch twice 
     # if final outcome fails after this then move on to next bet
-    print('Change Window to Bet: ' + str(side_num))
+    print('\nChange Window to Bet: ' + str(side_num) + '\n')
     driver.switch_to.window(bet_dict['window'])
     
     website_name = bet_dict['source']
@@ -1800,7 +1841,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
 
     final_outcome = None
     try:
-        print('final_outcome = ' + str(bet_dict['outcome'].get_attribute('outerHTML')))
+        #print('final_outcome = ' + str(bet_dict['outcome'].get_attribute('outerHTML')))
         final_outcome = bet_dict['outcome']
         print('Final Outcome Up-to-Date')
     except Exception as e:
@@ -1898,7 +1939,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             place_bet_btn.click()
             time.sleep(1)
             print('Placed Bet to Find Limit')
-            time.sleep(3) 
+            time.sleep(1) 
 
             # wait to finish loading
             loading = True
@@ -2128,19 +2169,6 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         # if unsure then use lowest conservative limit
         # eg big markets like moneyline, especially likely odds
 
-        # check for Recheck Location in place bet btn
-        # place_bet_btn = None
-        # try:
-        #     place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
-        #     place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
-        #     print('place_bet_btn_text: ' + place_bet_btn_text)
-        #     if place_bet_btn_text == 'recheck location':
-        #         recheck_location(driver, place_bet_btn, website_name)
-
-        # except:
-        #     print('No Place Bet Btn')
-        #     return
-
         place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
 
         attempted_bet = False
@@ -2194,8 +2222,13 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         print('payout: ' + payout)
 
         # do we need to click leave in betslip
-        # to see odds changes? is it glitchy?
+        # to see odds changes? is it glitchy? YES
+        # also important so place bet can click btn
+        # and we can diff bt odds change vs wager change
         # class dk-betslip-tertiary-button__wrapper
+        betslip_btn = driver.find_element('class name', 'dk-betslip-tertiary-button__wrapper')
+        betslip_btn.click()
+        print('Clicked Leave in Betslip')
 
 
     # Do not close window after finding limit
@@ -2269,6 +2302,11 @@ def place_arb_bet(driver, arb, side_num, test):
     valid_odds = True
     bet_open = True
     if not test:
+        # MAYBE New place bet btn at this point
+        # bc found limit
+        # so now need to accept and place
+        # but some interface may have some btn
+        # so try same and if fails get new
         place_btn_key = 'place btn' + str(side_num)
         print('place_btn_key: ' + place_btn_key)
         place_btn = arb[place_btn_key]
@@ -2291,8 +2329,14 @@ def place_arb_bet(driver, arb, side_num, test):
             # case 2a betrivers: how to tell if glitch odds changed?
             # - compare to init odds
             # case 3, side 2 odds changed, approve and place
+            # try:
             place_btn_text = place_btn.get_attribute('innerHTML').lower()
+            # except Exception as e:
+            #     print('Failed to Click Place Bet Button! ', e)
+            #     place_btn = reader.find_place_bet_button(driver, source)
+            #     place_btn_text = place_btn.get_attribute('innerHTML').lower()
             print('place_btn_text: ' + place_btn_text)
+            
             # new_odds = determiner.determine_odds_changed(driver, source)
             # if new_odds is not None:
             #     actual_odds_key = 'actual odds' + str(side_num)
@@ -2396,9 +2440,11 @@ def place_arb_bet(driver, arb, side_num, test):
                 # only betrivers close receipt bc keep window open
                 # do all other windows auto close receipt when window closes
                 # or does receipt appear still when new window opens in same source???
-                if receipt_btn is not None:
-                    print('Close Receipt')
-                    receipt_btn.click()
+                # keep receipt open for side 1 until side 2 placed, to compare
+                # and if side 2, closing receipt is not needed bc window closed
+                # if receipt_btn is not None:
+                #     print('Close Receipt')
+                #     receipt_btn.click()
 
             except Exception as e:
                 print('Failed to Click Place Bet Btn: ', e)
@@ -2423,7 +2469,12 @@ def place_arb_bet(driver, arb, side_num, test):
 
 def place_bets_simultaneously(driver, arb, test):
     print('\n===Place Bets Simultaneously===\n')
-    print('Input: arb = {...} = ' + str(arb) + '\n')
+    #print('Input: arb = {...} = ' + str(arb) + '\n')
+
+    # display updated details since before finding limits
+    # like bet size
+    # and actual odds
+    display_bet_details(arb)
 
     bet1_placed = bet2_placed = False
     while not bet1_placed or not bet2_placed:
@@ -2453,10 +2504,10 @@ def place_bets_simultaneously(driver, arb, test):
 # so it can be updated without affecting init log
 def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
     print('\n===Place Arb Bets===\n')
-    print('Input: arb = {...} = ' + str(arb) + '\n')
+    #print('Input: arb = {...} = ' + str(arb) + '\n')
 
     num_windows = len(driver.window_handles)
-    print('num_windows: ' + str(num_windows))
+    #print('num_windows: ' + str(num_windows))
 
     # bet1
     # bet_dict = {'market':arb['market'], 
@@ -2550,7 +2601,7 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
 # no need to send mobile
 def write_arb_to_post(arb, client):#, post=False):
     print('\n===Write Arb to Post===\n')
-    print('arb = {val:x, ...} = ' + str(arb)) 
+    #print('arb = {val:x, ...} = ' + str(arb)) 
 
     props_str = ''
     
@@ -2928,7 +2979,7 @@ def write_arb_to_post(arb, client):#, post=False):
 
 def write_ev_to_post(ev, client, send_mobile):
     print('\n===Write EV to Post===\n')
-    print('ev: ' + str(ev))
+    #print('ev: ' + str(ev))
 
     props_str = ''
 
@@ -2971,8 +3022,8 @@ def write_ev_to_post(ev, client, send_mobile):
     game_date = ev['game date']
     game_time = ev['game time']
 
-    sport = ev['sport']
-    league = ev['league']
+    sport = ev['sport'].title()
+    league = ev['league'].title()
 
     # Format Message
     # Top part 4 lines of msg shows in notification preview 

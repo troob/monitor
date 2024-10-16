@@ -47,6 +47,79 @@ import determiner # determine matching outcome
 import sys, select # user input with timeout
 
 
+# assume starting point: bet not added to betslip
+# so add to betslip and see if same odds
+# betrivers has specific glitch which changes odds after opening
+# but no others have this problem
+# others just need to simply read betslip odds
+def double_check_odds(driver, website_name, final_outcome=None, cookies_file=None, saved_cookies=None, url=None, side_num=None, test=None, bet_dict=None):
+	print('\n===Double Check Odds===\n')
+	print('website_name: ' + website_name)
+
+	if website_name == 'betrivers':
+		# confirm actual odds
+		# click outcome to add to slip to confirm odds
+		# bc glitch causes odds change when slip open
+		writer.clear_betslip(driver)
+		writer.add_bet_to_betslip(final_outcome, driver, website_name)
+		#writer.click_outcome_btn(final_outcome, driver, website_name)
+		# adding to betslip still gets wrong reading when glitch
+		# so click wager field to see if causes odds change
+		# does NOT cause odds to change so need to login
+		# need to type in wager field to see if odds glitch changes
+		# last in list
+		# at this point only 1 item in betslip
+		# w/ 2 fields: wager and win
+		typed_wager = False
+		while not typed_wager:
+			bet_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container')#.find_element('tag name', 'input')
+			if len(bet_fields) > 0:
+				wager_field = bet_fields[0].find_element('tag name', 'input')
+				try:
+					wager_field.send_keys(0) # see if typing 0 initiates change
+					wager_field.clear()
+					typed_wager = True
+				except:
+					print('ERROR: Failed to Type in Wager Field')
+					final_outcome.click()
+
+		# if odds still same, see if login causes change
+		login_result = writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
+		if login_result == 'fail':
+			writer.close_bet_windows(driver, side_num, test, bet_dict)
+			return
+		
+		# last in list
+		all_betslip_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
+		betslip_odds = None
+		if len(all_betslip_odds) > 0:
+			betslip_odds = all_betslip_odds[-1].get_attribute('innerHTML') # read from betslip
+
+	
+	elif website_name == 'betmgm':
+		# simply read betslip odds
+		# assume only 1 in betslip
+		betslip_odds = read_betslip_odds(driver, website_name)
+	
+	print('betslip_odds: ' + str(betslip_odds))
+	return betslip_odds
+
+
+def find_place_bet_button(driver, source):
+	print('\n===Find Place Bet Button===\n')
+
+	place_bet_button = None
+
+	place_btn_element = None
+	if source == 'draftkings':
+		place_btn_element = ('class name', 'dk-place-bet-button__primary-text')
+
+	if place_btn_element is not None:
+		place_bet_button = driver.find_element(place_btn_element[0], place_btn_element[1])
+
+	return place_bet_button
+
+
 
 def reload_section(driver, market, sport, league, website_name, pick_time_group):
 	print('\n===Reload Section===\n')
@@ -58,26 +131,26 @@ def reload_section(driver, market, sport, league, website_name, pick_time_group)
 
 	return section
 
+# read most recent bet added to betslip
+# need to make sure only bet if not multibet
 def read_betslip_odds(driver, website_name):
 	print('\n===Read Betslip Odds===\n')
-	print('website_name: ' + website_name)
+	print('website_name: ' + website_name + '\n')
 
 	betslip_odds = None
 
 	odds_element = None
 	if website_name == 'betmgm':
-		odds_element = ('class name', 'mod-KambiBC-betslip-outcome__odds')
+		odds_element = ('class name', 'betslip-pick-odds__value')
 	elif website_name == 'betrivers':
 		odds_element = ('class name', 'mod-KambiBC-betslip-outcome__odds')
 
 	# last in list
-	all_actual_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
-	actual_odds = None
-	if len(all_actual_odds) > 0:
-		actual_odds = all_actual_odds[-1].get_attribute('innerHTML') # read from betslip
-	print('actual_odds: ' + str(actual_odds))
+	all_betslip_odds = driver.find_elements(odds_element[0], odds_element[1])
+	if len(all_betslip_odds) > 0:
+		betslip_odds = all_betslip_odds[-1].get_attribute('innerHTML') # read from betslip
 
-	print('\nbetslip_odds: ' + str(betslip_odds) + '\n')
+	print('betslip_odds: ' + str(betslip_odds) + '\n')
 	return betslip_odds	
 
 # read input with timeout
@@ -175,10 +248,10 @@ def read_current_data(todays_date):
 def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=''):
 	print('\n===Read Outcome Label===\n')
 	#print('Input: outcome: ' + outcome.get_attribute('innerHTML'))
-	print('Input: market = ' + market)
+	#print('Input: market = ' + market)
 	# print('sport: ' + sport)
 	# print('team_sports: ' + str(team_sports))
-	print('\nOutput: outcome_label = example\n')
+	#print('\nOutput: outcome_label = example\n')
 
 	outcome_label = outcome_odds = ''
 
@@ -206,7 +279,7 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 		
 
 		outcome_label = parts[1].get_attribute('innerHTML').lower()
-		print('init outcome_label: ' + outcome_label)
+		#print('init outcome_label: ' + outcome_label)
 		
 		# Moneyline
 		# First inning team total says yes/no bc only option to score or not
@@ -240,18 +313,30 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 				# remove ole from ole miss
 				outcome_label = re.sub('^ole ', '', outcome_label)
 
-		# all others, except home runs bc no outcome label, bc yes/no list
+		# all others, except some single markets bc no outcome label, bc yes/no list
 		# spread or total, except first inning total bc yes/no
 		#elif # Home Run button shows only odds bc it is yes/no list
-		elif not re.search('home', market): # market == 'run line': or total
+		#elif not re.search('home', market): # market == 'run line': or total
 		# if re.search('spread|total') and not re.search('first'):
-			# Run Line / Spread
+		# any outcome which does NOT have label in single div element
+		# NOT home runs, hockey points, hockey shots
+		#elif not determiner.determine_single_column_market(market, sport):
+		else:
+			# Spread / Total
 			# label = div 1 + div 2
 			part1 = parts[1].get_attribute('innerHTML').lower()
 			#print('\npart1: ' + part1)
-			part2 = parts[2].get_attribute('innerHTML') # symbols/numbers dont lower
-			#print('part2: ' + part2)
-			outcome_label = part1 + ' ' + part2
+			outcome_label = part1
+
+			# if part 1 already has outcome label full
+			# eg over 2.5
+			# then do not need part 2
+			# check for number in part 1
+			if not re.search('[0-9]', part1):
+
+				part2 = parts[2].get_attribute('innerHTML') # symbols/numbers dont lower
+				#print('part2: ' + part2)
+				outcome_label += ' ' + part2
 
 		
 		if sport == 'tennis' and re.search('spread', market):
@@ -281,19 +366,20 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 
 		outcome_odds = parts[-1].get_attribute('innerHTML')
 		
-	print('\noutcome_label: ' + outcome_label)
-	print('outcome_odds: ' + outcome_odds)
+	# print('\noutcome_label: ' + outcome_label)
+	# print('outcome_odds: ' + outcome_odds + '\n')
 	return outcome_label, outcome_odds
 
-def read_player_market_odds(player_name, participants, market_element, bet_dict):
+def read_player_market_odds(player_name, participants, market_element, bet_dict, offer_label=''):
 	print('\n===Read Player Market Odds===\n')
-	print('Input: player_name = example name = ' + player_name)
+	print('Input: player_name = ' + player_name + '\n')
 	#print('Input: market_element = <...> = ' + market_element.get_attribute('innerHTML'))
-	print('Input: bet_dict = {...} = ' + str(bet_dict))
+	#print('Input: bet_dict = {...} = ' + str(bet_dict))
 
 	market_odds = None
 
 	market = bet_dict['market'].lower()
+	print('market: ' + market)
 
 	# === Convert Bet Outcome to Source Format === 
 	# Chicago Cubs +1.5
@@ -326,25 +412,15 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 		columns = column = None
 		try:
 			columns = market_element.find_elements('class name', 'KambiBC-outcomes-list__column')
-			# for column in columns:
-			# 	print('column: ' + column.get_attribute('innerHTML'))
-
-			# idx = 0
-			# if len(columns) == 3:
-			# 	idx += 1
-
-			# need either column to determine when new player
-			#over_column = columns[-2].get_attribute('innerHTML')
-			# under_column = columns[1]
-
-			# look for participant in over column to get cutoff idx?
-			# no bc not outcome
-			# instead see if num is less than prev bc always in order
-
-			if direction == 'o':
-				column = columns[-2]
-			else:
+			
+			# hockey goals has format:
+			# first, last, any
+			# offer label: goal scorer
+			if direction == 'u' or offer_label == 'goal scorer': # under or hockey goal
 				column = columns[-1]
+
+			else: # over except hockey goals
+				column = columns[-2]
 
 		except:
 			print('Single Column')
@@ -464,15 +540,15 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict)
 					break
 	
 
-	time.sleep(1)
+	time.sleep(0.5)
 
 	return market_odds, final_outcome
 
 def read_market_odds(market, market_element, bet_dict):
 	print('\n===Read Market Odds===\n')
-	print('Input: market = example = ' + market)
+	print('Input: market = ' + market)
 	#print('Input: market_element = <...> = ' + market_element.get_attribute('innerHTML'))
-	print('Input: bet_dict = {...} = ' + str(bet_dict))
+	print('Input: bet_dict = {...} = ' + str(bet_dict) + '\n')
 
 	market_odds = None
 
@@ -488,7 +564,7 @@ def read_market_odds(market, market_element, bet_dict):
 	# Chicago Cubs +1.5
 	# U 0.5, O 0.5
 	bet_outcome = bet_dict['bet'].lower()
-	print('bet_outcome: ' + bet_outcome)
+	print('init bet_outcome: ' + bet_outcome)
 	if source == 'betrivers':
 		# if market has team name in it
 		#team_markets = ['moneyline', 'run line', 'spread']
@@ -567,8 +643,8 @@ def read_market_odds(market, market_element, bet_dict):
 		# if home runs, only outcome odds, no label
 		# so get row idx in list
 
-		print('\noutcome_label: ' + outcome_label)
-		print('bet_outcome: ' + bet_outcome)
+		# print('\noutcome_label: ' + outcome_label)
+		# print('bet_outcome: ' + bet_outcome)
 		# sometimes betrivers uses shorthand so velez instead of velez sarsfield
 		# so search for label in outcome
 		#if outcome_label == bet_outcome:
@@ -600,7 +676,7 @@ def read_market_odds(market, market_element, bet_dict):
 			alt_btn = market_element.find_element('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
 			print('alt_btn: ' + alt_btn.get_attribute('innerHTML'))
 			alt_btn.click()
-			time.sleep(1)
+			time.sleep(0.5)
 
 			# get altered market element
 			#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
@@ -612,8 +688,8 @@ def read_market_odds(market, market_element, bet_dict):
 
 				outcome_label, outcome_odds = read_outcome_label(outcome, market, sport, team_sports)
 
-				print('\noutcome_label: ' + outcome_label)
-				print('bet_outcome: ' + bet_outcome)
+				# print('\noutcome_label: ' + outcome_label)
+				# print('bet_outcome: ' + bet_outcome)
 
 				#if outcome_label == bet_outcome:
 				if determiner.determine_matching_outcome(outcome_label, bet_outcome):
@@ -631,14 +707,14 @@ def read_market_odds(market, market_element, bet_dict):
 		except:
 			print('No Alt List')
 
-	time.sleep(1)
+	time.sleep(0.5)
 
 	return market_odds, final_outcome
 
 def read_section_idx(section_title, sections, default=0):
 	print('\n===Read Section Idx: ' + section_title + '===\n')
-	print('Input: num_sections: ' + str(len(sections)))
-	print('\nOutput: section_idx = int\n')
+	print('Input: num_sections: ' + str(len(sections)) + '\n')
+	#print('Output: section_idx = int\n')
 
 	section_idx = default
 
@@ -651,7 +727,7 @@ def read_section_idx(section_title, sections, default=0):
 		print('section_title_element: ' + section_title_element)					
 
 		if section_title == section_title_element:
-			print('Found Section')
+			print('\nFound Section\n')
 			section_idx = s_idx
 			break
 
@@ -660,10 +736,10 @@ def read_section_idx(section_title, sections, default=0):
 
 def read_market_section(market, sport, league, website_name, sections, pick_time_group):
 	print('\n===Read Market Section===\n')
-	print('Input: market = example = ' + market)
-	print('Input: sport = example = ' + sport)
-	print('Input: website_name = example = ' + website_name)
-	print('\nOutput: market_title='', section_idx=0\n')
+	print('Input: market = ' + market)
+	print('Input: sport = ' + sport)
+	print('Input: website_name = ' + website_name + '\n')
+	print('Output: market_title='', section_idx=0\n')
 
 	# Tennis
 	# Total Games
@@ -1453,7 +1529,7 @@ def load_listed_bets(driver, website_name, max_retries=10):
 
 					if listed_odds == '0.00':
 						odds_retries += 1
-						time.sleep(1)
+						time.sleep(0.5)
 					else:
 						break
 
@@ -1478,7 +1554,7 @@ def load_listed_bets(driver, website_name, max_retries=10):
 			# closing and reopen does not always work either
 			# so give up and move on after 3 tries
 			print('Loading listed bets...')
-			time.sleep(1)
+			time.sleep(0.5)
 			if load_retries == max_retries:
 				loading = False
 				print('Error: Failed to Load listed bets during read actual odds! ' + website_name)
@@ -1610,7 +1686,8 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 
 				# Betmgm: Masyn Winn (STL): Hits 
 				# if no '):', then not player market so not match
-				if re.search('\):', listed_market):
+				# could be typo space bt ') :'
+				if re.search('\)\s*:', listed_market):
 					listed_name	= listed_market.split(' (')[0]
 					listed_market = listed_market.split(': ')[1]
 
@@ -1620,6 +1697,13 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 					listed_market = listed_market.split(listed_name)[1].strip() # 'Hits O/U'
 					# hits o/u -> hits
 					listed_market = re.sub(' o/u', '', listed_market) 
+
+					# if listed market blank now, 
+					# use init listed market to test match
+					# but how to get listed name?
+					# assume 2 words? usually works but not enough
+					if listed_market == '':
+						print('\nERROR: blank unknown listed market title for ' + player_market + '\n')
 
 				print('listed_name: ' + listed_name)
 				print('listed_market: ' + listed_market)
@@ -1647,7 +1731,7 @@ def find_matching_bet(listed_bets, market, market_title, bet_line, player_name, 
 			print('Remove Old Pick from Slip')
 			remove_btn = listed_bet.find_element(remove_btn_element[0], remove_btn_element[1])
 			remove_btn.click()
-			time.sleep(1)
+			time.sleep(0.5)
 
 	return actual_odds, final_outcome
 
@@ -1675,8 +1759,10 @@ def check_logged_out_popup(driver):
 #selected_markets = ['moneyline', 'run line', 'total runs']
 def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False, manual_picks=True):
 	print('\n===Read Actual Odds===\n')
-	print('Input: bet_dict = ' + str(bet_dict))
-	print('\nOutput: actual_odds = x\n')
+	# print('Input: bet_dict = ' + str(bet_dict))
+	# print('\nOutput: actual_odds = x\n')
+
+	writer.display_bet_details(bet_dict)
 	
 	actual_odds = None
 
@@ -1700,11 +1786,11 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 	# other sources keep logged in for time even if window closed
 	# betrivers logs out too quickly immediately when window closed
 	if website_name == 'betrivers':
-		print('Switch to Betrivers Window')
-		print('betrivers_window_handle: ' + betrivers_window_handle)
+		print('\nSwitch to Betrivers Window')
+		print('betrivers_window_handle: ' + betrivers_window_handle + '\n')
 		driver.switch_to.window(betrivers_window_handle)
 	else:
-		print('Switch to New Window')
+		print('\nSwitch to New Window\n')
 		driver.switch_to.new_window(type_hint='window')
 	
 	if manual_picks:
@@ -1721,7 +1807,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 	#save_cookies(driver, website_name, cookies_file, saved_cookies)
 
 	num_windows = len(driver.window_handles)
-	print('num_windows: ' + str(num_windows))
+	#print('num_windows: ' + str(num_windows))
 
 	#cur_window_idx = read_cur_window_idx(driver)
 	cur_window_handle = driver.current_window_handle
@@ -1751,6 +1837,8 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 	print('league: ' + league)
 	game = bet_dict['game'].lower()
 	print('game: ' + game)
+	# odds = bet_dict['odds']
+	# print('odds: ' + odds)
 
 	try:
 
@@ -1852,7 +1940,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 					# closing and reopen does not always work either
 					# so give up and move on after 3 tries
 					print('Loading listed bets...')
-					time.sleep(1)
+					time.sleep(0.5)
 					if load_retries == max_retries:
 						loading = False
 						print('Error: Failed to Load listed bets during read actual odds, BetMGM!')
@@ -1867,14 +1955,14 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			for listed_bet in listed_bets:
 				# Under 1.5
 				listed_line = listed_bet.find_element('class name', 'betslip-digital-pick__line-0-container').find_element('tag name', 'span').get_attribute('innerHTML').lower()
-				print('\ninit listed_line: ' + listed_line)
+				#print('\ninit listed_line: ' + listed_line)
 
 				# convert listed line to standard format 
 				# bc cannot always convert standard input to source format
 				# if extra letters such as
 				# pittsburgh u +0.5 -> pittsburgh +0.5
 				listed_line = converter.convert_bet_line_to_standard_format(listed_line)
-				print('listed_line: ' + listed_line)
+				print('\nlisted_line: ' + listed_line)
 
 				#  Masyn Winn (STL): Hits 
 				listed_market = listed_bet.find_element('class name', 'betslip-digital-pick__line-1').get_attribute('innerHTML').lower().strip()
@@ -1943,7 +2031,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 					print('Remove Old Pick from Slip')
 					remove_btn = listed_bet.find_element('tag name', 'bs-digital-pick-remove-button')
 					remove_btn.click()
-					time.sleep(1)
+					time.sleep(0.5)
 
 
 		elif website_name == 'betrivers':
@@ -2099,11 +2187,13 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 						while retries < max_retries:
 							try:
 								section.click()
-								print('\nOpened Section ' + str(section_idx))
-								time.sleep(0.1)
+								print('\nOpened Section ' + str(section_idx) + '\n')
+								# problem noticed at 0.2s: section does not open
+								# is that from no wait after??? print said clicked but not actually opened
+								time.sleep(0.5) # need >= 0.2s to load markets in section or else num markets could be 0
 								break
 							except:
-								print('Error clicking Section')
+								print('\nError clicking Section!\n')
 								# either close popup or scroll to coords
 								closed_popup = writer.close_logged_out_popup(driver)
 								if not closed_popup:
@@ -2112,40 +2202,47 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 										print('coordinates: ' + str(coordinates))
 										driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
 									except Exception as e:
-										print('ERROR scrolling to coordinates! ', e)
+										print('\nERROR scrolling to coordinates! ', e, '\n')
 
 								retries += 1
-								time.sleep(1)
+								time.sleep(0.5)
 						
 					# Markets in section
 					found_offer = False
 					#market_retries = 0
-					markets = None
+					markets = [] # or None?
 					#while market_retries < max_retries:
-					while markets is None:
+					# if len(markets)=0 probably needs more load time after opening section
+					#while markets is None:# or len(markets) == 0:
+					while len(markets) == 0:
+						# if loaded section, we know >0 markets in section
 						try:
-							print('Get Markets in Section')
+							print('\nGet Markets in Section\n')
+							#while len(markets) == 0:
 							markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
-							#break
+							print('num markets: ' + str(len(markets)))
+							if len(markets) == 0:
+								section.click()
+								print('\nRe-Opened Section ' + str(section_idx) + '\n')
+								time.sleep(0.2)
+								markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+								print('num markets: ' + str(len(markets)))
 						except:
-							
+							print('\nError getting markets in section!\n')
 							# market_retries += 1
 							# print('No Markets in Section, try ' + str(market_retries) + '/3')
 							# time.sleep(1)
 
-							print('Reload Sections')
+						#if markets is None or len(markets) == 0:
+							print('\nReload Sections\n')
 							sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
 							print('num sections: ' + str(len(sections)))
 							market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
 							section = sections[section_idx]
-							print('Get Markets in Section')
-							markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
+							# print('Get Markets in Section')
+							# markets = section.find_elements('class name', 'KambiBC-bet-offer-subcategory')
 							
-					print('num markets: ' + str(len(markets)))
-							
-
-					# if markets=None, reload sections
-
+					
 					# list_elements = section.find_elements('tag name', 'li')
 					# alt_btns = section.find_elements('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
 					for market_idx in range(len(markets)):
@@ -2202,8 +2299,9 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 								# Home Runs do not have participant elements
 								# instead participants in first column of table
 								# KambiBC-outcomes-list__column
-								if market_keyword == 'home run':
-									print('Find HR players')
+								if determiner.determine_single_column_market(market_keyword, sport):
+								#if market_keyword == 'home run':
+									print('Find Single Market players')
 									participant_retries = 0
 									
 									while participant_retries < max_retries:
@@ -2274,7 +2372,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 											break
 
 								if found_offer:
-									actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict)
+									actual_odds, final_outcome = read_player_market_odds(player_name, participant_names, market_element, bet_dict, offer_label)
 
 								break # done after found market
 
@@ -2290,6 +2388,13 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 
 				else:
 					print('Error: Missing Sections!')
+
+					# try refresh 3rd try
+					if section_retries == 1:
+						print('Refresh Page and Try Again')
+						driver.refresh()
+						time.sleep(1)
+
 					section_retries += 1
 
 		# find element by bet dict
@@ -2353,42 +2458,11 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# 		print('Arb Odds Changed to Invalid, so no need to double check betrivers odds')
 			# if not determiner.determine_odds_confirmed():
 				
-			# double check betrivers
-			print('\n===Double Check Betrivers Odds===\n')
-			# confirm actual odds
-			# click outcome to add to slip to confirm odds
-			# bc glitch causes odds change when slip open
-			writer.clear_betslip(driver)
-			writer.add_bet_to_betslip(final_outcome, driver, website_name)
-			#writer.click_outcome_btn(final_outcome, driver, website_name)
-			# adding to betslip still gets wrong reading when glitch
-			# so click wager field to see if causes odds change
-			# does NOT cause odds to change so need to login
-			# need to type in wager field to see if odds glitch changes
-			# last in list
-			# at this point only 1 item in betslip
-			# w/ 2 fields: wager and win
-			bet_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container')#.find_element('tag name', 'input')
-			if len(bet_fields) > 0:
-				wager_field = bet_fields[0].find_element('tag name', 'input')
-				try:
-					wager_field.send_keys(0) # see if typing 0 initiates change
-					wager_field.clear()
-				except:
-					print('ERROR: Failed to Type in Wager Field')
-
-			# if odds still same, see if login causes change
-			login_result = writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
-			if login_result == 'fail':
-				writer.close_bet_windows(driver, side_num, test, bet_dict)
-				return
+			betslip_odds = double_check_odds(driver, website_name, final_outcome, cookies_file, saved_cookies, url, side_num, test, bet_dict)
 			
-			# last in list
-			all_betslip_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
-			betslip_odds = None
-			if len(all_betslip_odds) > 0:
-				betslip_odds = all_betslip_odds[-1].get_attribute('innerHTML') # read from betslip
-			print('betslip_odds: ' + str(betslip_odds))
+			# betslip odds may have changed to 'Closed'
+			# but never init outcome odds?
+			# not necessarily but should quit earlier bc cannot click when closed
 			actual_odds = determiner.determine_valid_actual_odds(betslip_odds, pick_odds, pick_type, driver, side_num, test, bet_dict)
 			# if betslip_odds == None or int(betslip_odds) < int(pick_odds):
 			# 	print('\nOdds Mismatch')
@@ -5586,7 +5660,7 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 				#pre_btn.click()
 				driver.execute_script("arguments[0].click();", pre_btn)
 				ev_btn.click()
-				time.sleep(1)
+				time.sleep(0.5) # TEST 0.1 min time. 0.2 appears to be ok but need confirm
 
 				#break # exit loop after clicking to continue
 			except:
@@ -5859,7 +5933,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 			if re.search('odds', url):
 				driver.execute_script("arguments[0].click();", pre_btn)
 			arb_btn.click()
-			time.sleep(0.1)
+			time.sleep(0.5)
 
 				#break # exit loop after clicking to continue
 			# except:
@@ -6217,7 +6291,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 						if new_msg_header not in all_msg_headers:
 							all_msg_headers.append(new_msg_header)
 
-					time.sleep(5)
+					#time.sleep(5)
 
 				# HOPE that Latest Message btn appears when new msg
 				# so click it
@@ -6274,7 +6348,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 						#driver.execute_script("window.scrollBy(1000, 1000);")
 						driver.execute_script("window.scrollBy(0, -document.body.scrollHeight);")
 						print('Scrolled Up')
-						time.sleep(1000)
+						#time.sleep(1000)
 
 
 
@@ -6284,7 +6358,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 					game = arb_data[game_idx].split('%')[0] #.get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
 					print('game: ' + str(game))
 
-				time.sleep(1000)
+				#time.sleep(1000)
 
 
 

@@ -1125,7 +1125,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 					# if prematch, keep looping every 5 seconds for change
 					# if live, loop every 2 seconds bc fast change
-					time.sleep(3) # 4 seems too slow bc can see change long before notice
+					time.sleep(2) # 4 seems too slow bc can see change long before notice
 
 				except KeyboardInterrupt:
 					print('\nKeyboardInterrupt in Infinite Loop')
