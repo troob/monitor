@@ -148,7 +148,7 @@ def read_betslip_odds(driver, website_name):
 	# last in list
 	all_betslip_odds = driver.find_elements(odds_element[0], odds_element[1])
 	if len(all_betslip_odds) > 0:
-		betslip_odds = all_betslip_odds[-1].get_attribute('innerHTML') # read from betslip
+		betslip_odds = all_betslip_odds[-1].get_attribute('innerHTML').strip() # read from betslip
 
 	print('betslip_odds: ' + str(betslip_odds) + '\n')
 	return betslip_odds	
@@ -285,7 +285,8 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 		# First inning team total says yes/no bc only option to score or not
 		# so label is only 1 part
 		# set winner
-		if re.search('moneyline|lead|winner|first inning .+ total', market):
+		# first team to score
+		if re.search('moneyline|lead|winner|first inning .+ total|to score', market):
 		
 			# tie outcome does not have either name
 			# but only sports with no tie need to be converted to comma format
@@ -546,9 +547,9 @@ def read_player_market_odds(player_name, participants, market_element, bet_dict,
 
 def read_market_odds(market, market_element, bet_dict):
 	print('\n===Read Market Odds===\n')
-	print('Input: market = ' + market)
+	print('Input: market = ' + market + '\n')
 	#print('Input: market_element = <...> = ' + market_element.get_attribute('innerHTML'))
-	print('Input: bet_dict = {...} = ' + str(bet_dict) + '\n')
+	#print('Input: bet_dict = {...} = ' + str(bet_dict) + '\n')
 
 	market_odds = None
 
@@ -1787,7 +1788,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 	# betrivers logs out too quickly immediately when window closed
 	if website_name == 'betrivers':
 		print('\nSwitch to Betrivers Window')
-		print('betrivers_window_handle: ' + betrivers_window_handle + '\n')
+		#print('betrivers_window_handle: ' + betrivers_window_handle + '\n')
 		driver.switch_to.window(betrivers_window_handle)
 	else:
 		print('\nSwitch to New Window\n')

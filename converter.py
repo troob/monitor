@@ -12,7 +12,7 @@ def round_to_base(x, base=5):
 
 # specifically for arb bets???
 # what is different than ev bets???
-# nothing i can think of
+# ev bets always round to whole num bc smaller scale on limited sources
 # just depends on source and scale
 def round_bet_size(init_bet_size, source):
     print('\n===Round Bet Size===\n')
@@ -29,7 +29,7 @@ def round_bet_size(init_bet_size, source):
     # unlimited sources round to nearest 5, 10, 50, 100
     fully_limited_sources = ['betmgm', 'betrivers', 'fanatics']
     partly_limited_sources = ['draftkings', 'fanduel']
-    unlimited_sources = ['caesars', 'espn']
+    unlimited_sources = ['caesars', 'espn', 'fliff']
 
     # scale is used to tell whether to round to 50 if <1000 or 100 if >1000
     # scale = 1 #-99
@@ -43,7 +43,8 @@ def round_bet_size(init_bet_size, source):
 
         rounded_bet_size = round_half_up(init_bet_size)
     
-    elif source in unlimited_sources:
+    #elif source in unlimited_sources:
+    else:
 
         # cant have base 0 bc divide by 0
         # if init num < 5, round up to 5
@@ -60,7 +61,7 @@ def round_bet_size(init_bet_size, source):
 
             rounded_bet_size = round_to_base(init_bet_size, base)
 
-    print('rounded_bet_size: ' + rounded_bet_size + '\n')
+    print('rounded_bet_size: ' + str(rounded_bet_size) + '\n')
     return rounded_bet_size
 
 
@@ -468,9 +469,16 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
 
                 market_title = 'totals'
 
+            # team total
+            elif re.search('\stotal', market):
+
+                market_title = re.sub('total', 'goals', market)
+
             elif market == 'goals':
 
                 market_title = 'anytime goalscorer'
+
+            
 
 
         elif sport == 'soccer':

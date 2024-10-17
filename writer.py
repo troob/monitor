@@ -80,7 +80,7 @@ def close_logged_out_popup(driver):
 def switch_to_bet_window(bet_dict, driver, test, side_num=1):
     print('\n===Switch to Bet Window===\n')
     print('side_num: ' + str(side_num))
-    print('bet_dict: ' + str(bet_dict))
+    print('bet_dict: ' + str(bet_dict) + '\n')
 
     window_idx = None
 
@@ -95,7 +95,7 @@ def switch_to_bet_window(bet_dict, driver, test, side_num=1):
     window_key = 'window' + str(side_num)
     window_handle = bet_dict[window_key]
 
-    print('Switch to Window Idx: ' + str(window_idx))
+    print('\nSwitch to Window Idx: ' + str(window_idx) + '\n')
     driver.switch_to.window(window_handle)
 
     # we have what window idx is supposed to be
@@ -207,17 +207,17 @@ def switch_to_bet_window(bet_dict, driver, test, side_num=1):
 
         
 
-    print('Switched to Window Idx ' + str(window_idx))
+    print('\nSwitched to Window Idx ' + str(window_idx) + '\n')
     return window_idx
 
 def remove_old_bets(driver, website_name):
     print('\n===Remove Old Bets===\n')
-    print('website_name: ' + website_name)
+    print('website_name: ' + website_name + '\n')
 
     if website_name == 'betrivers':
         remove_bet_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
     else:
-        print('Website NA: ' + website_name)
+        print('\nWebsite NA: ' + website_name + '\n')
         return
     
     if len(remove_bet_btns) > 1:
@@ -1005,13 +1005,18 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                 else: # Odds Valid
                 
                     #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
-                    placeholder = wager_field.get_attribute('placeholder')
-                    #print('placeholder: ' + placeholder)
-                    if not placeholder == '':
-                        wager_field.clear()
-                        time.sleep(0.2)
+                    # placeholder = wager_field.get_attribute('placeholder')
+                    # #print('placeholder: ' + placeholder)
+                    # # ensure wager field clear
+                    # wager_field_val = wager_field.get_attribute('value')
+                    # print('wager_field_val: ' + wager_field_val)
+                    # error clearing field with placeholder condition after closing popup
+                    # so clear every time to avoid error after closing popup
+                    #if not placeholder == '' or wager_field_val != '':
+                    wager_field.clear()
+                    time.sleep(0.5)
                     wager_field.send_keys(bet_size)
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
                     # except:
                     #     print('Error: No Wager Field. Check Bet Locked???')
@@ -1050,13 +1055,13 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             close_dialog_btn = confirm_dialog.find_element('class name', 'ds-button')
                             print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
                             close_dialog_btn.click()
-                            time.sleep(0.1)
+                            time.sleep(0.5)
                             print('Closed Confirm Popup')
 
                             # Now try clicking plce bet again
                             try:
                                 place_bet_btn.click()
-                                time.sleep(1)
+                                time.sleep(0.5)
                             except:
                                 print('Failed to Click Place Bet After Closed Confirm Popup')
 
@@ -1071,7 +1076,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                                 close_dialog_btn = loc_dialog.find_element('class name', 'close')
                                 print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
                                 close_dialog_btn.click()
-                                time.sleep(0.2)
+                                time.sleep(0.5)
                                 print('Closed Location Popup')
                             except:
                                 print('No Location Popup')
@@ -1117,7 +1122,6 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
                         except:
                             print('No Receipt Yet. Loading placed bet to find limit...')
-
 
                             try:
                                 #print('\nBet Error\n')
