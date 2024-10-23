@@ -23,6 +23,8 @@ import time # halt code to retry website request, # need to read dynamic webpage
 
 from selenium import webdriver # need to read html5 webpages
 from webdriver_manager.chrome import ChromeDriverManager # need to access dynamic webpages
+from selenium.webdriver.chrome.service import Service
+
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import Select
 #import undetected_chromedriver as uc
@@ -71,7 +73,9 @@ def double_check_odds(driver, website_name, final_outcome=None, cookies_file=Non
 		# at this point only 1 item in betslip
 		# w/ 2 fields: wager and win
 		typed_wager = False
-		while not typed_wager:
+		type_retries = 0
+		max_retries = 3
+		while not typed_wager and type_retries < max_retries:
 			bet_fields = driver.find_elements('class name', 'mod-KambiBC-stake-input__container')#.find_element('tag name', 'input')
 			if len(bet_fields) > 0:
 				wager_field = bet_fields[0].find_element('tag name', 'input')
@@ -82,6 +86,18 @@ def double_check_odds(driver, website_name, final_outcome=None, cookies_file=Non
 				except:
 					print('ERROR: Failed to Type in Wager Field')
 					final_outcome.click()
+					type_retries += 1
+
+			else:
+				print('\nERROR: No bet fields found after adding bet to betslip!\n')
+				# try adding to betslip again if no bet fields found
+				writer.add_bet_to_betslip(final_outcome, driver, website_name)
+				type_retries += 1
+
+		if type_retries == max_retries:
+			print('\nERROR typing wager after adding bet to betslip, during double check odds!\n')
+			writer.close_bet_windows(driver, side_num, test, bet_dict)
+			return
 
 		# if odds still same, see if login causes change
 		login_result = writer.login_website(website_name, driver, cookies_file, saved_cookies, url)
@@ -89,11 +105,29 @@ def double_check_odds(driver, website_name, final_outcome=None, cookies_file=Non
 			writer.close_bet_windows(driver, side_num, test, bet_dict)
 			return
 		
+		# if odds changed: class mod-KambiBC-betslip-outcome__odds--changing
+		# mod-KambiBC-betslip-outcome__odds mod-KambiBC-betslip-outcome__odds--changing mod-KambiBC-betslip-outcome__odds--increasing
+		# never changes up
+		
 		# last in list
 		all_betslip_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
 		betslip_odds = None
+		
 		if len(all_betslip_odds) > 0:
-			betslip_odds = all_betslip_odds[-1].get_attribute('innerHTML') # read from betslip
+			betslip_odds_element = all_betslip_odds[-1]
+			# look for odds changing class in outerhtml
+			outer_betslip_odds = betslip_odds_element.get_attribute('outerHTML')
+			# click approve odds change
+			# mod-KambiBC-betslip__place-bet-btn mod-KambiBC-betslip__approve-odds-btn
+			# and take quick reading bc changes back up after 10s
+			if re.search('mod-KambiBC-betslip-outcome__odds--changing', outer_betslip_odds):
+				approve_odds_btn = driver.find_element('class name', 'mod-KambiBC-betslip__approve-odds-btn')
+				approve_odds_btn.click()
+				time.sleep(0.2)
+				all_betslip_odds = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__odds')
+				betslip_odds_element = all_betslip_odds[-1]
+
+			betslip_odds = betslip_odds_element.get_attribute('innerHTML') # read from betslip
 
 	
 	elif website_name == 'betmgm':
@@ -286,7 +320,8 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 		# so label is only 1 part
 		# set winner
 		# first team to score
-		if re.search('moneyline|lead|winner|first inning .+ total|to score', market):
+		# btts both teams to score
+		if re.search('moneyline|lead|winner|first inning .+ total|to score|btts', market):
 		
 			# tie outcome does not have either name
 			# but only sports with no tie need to be converted to comma format
@@ -677,13 +712,15 @@ def read_market_odds(market, market_element, bet_dict):
 			alt_btn = market_element.find_element('class name', 'KambiBC-outcomes-list__toggler-toggle-button')
 			print('alt_btn: ' + alt_btn.get_attribute('innerHTML'))
 			alt_btn.click()
-			time.sleep(0.5)
+			# problem getting outcomes at 0.5s
+			time.sleep(1)
 
 			# get altered market element
 			#print('\nMarket_element: ' + market_element.get_attribute('innerHTML'))
 			# repeat check in outcomes list
 			outcomes = market_element.find_elements('class name', 'KambiBC-betty-outcome')
 			# see if given bet matches any of the outcomes
+			print('num alt outcomes: ' + str(len(outcomes)))
 			
 			for outcome in outcomes:
 
@@ -1746,12 +1783,12 @@ def check_logged_out_popup(driver):
 	try:
 		#driver.find_element('xpath', '//div[@data-modal-name="POST_LOGOUT_POPUP_CLIENT_TIMEOUT"]')
 		driver.find_element('class name', 'close-modal-button')
-		print('Found Logged Out Popup')
+		print('\nFound Logged Out Popup\n')
 
 		return True
 
 	except Exception as e:
-		print('No Logged Out Popup')
+		print('\nNo Logged Out Popup\n', e)
 
 		return False
 			
@@ -1799,6 +1836,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 		# side num refers to side of arb
 		window2_x = size['width'] * side_num + 1 # why +1???
 		driver.set_window_position(window2_x, 0)
+	
 	url = bet_dict['link']
 	# Must navigate to page before adding cookies
 	driver.get(url)
@@ -1980,7 +2018,8 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 
 					# if NOT player market, 
 					# match directly with listed market
-					if not re.search(' - ', market):
+					# also goalscorer or touchdown scorer
+					if not re.search(' - ', market):# or re.search('- goals|- touchdowns', market):
 
 						# already converted spread to handicap
 						# if re.search('handicap', listed_market):
@@ -2001,23 +2040,27 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 
 					# if player market
 					# match name and market
-					else:
+					# Masyn Winn (STL): Hits 
+					# if no '):', then not player market so not match
+						
+					elif re.search('\)\s*:', listed_market):
 
-						# Masyn Winn (STL): Hits 
-						# if no '):', then not player market so not match
-						if re.search('\):', listed_market):
-							listed_name	 = listed_market.split(' (')[0]
-							listed_market = listed_market.split(': ')[1]
-							print('listed_name: ' + listed_name)
-							print('listed_market: ' + listed_market)
+						listed_name	 = listed_market.split(' (')[0]
+						listed_market = listed_market.split(': ')[1]
+						print('listed_name: ' + listed_name)
+						print('listed_market: ' + listed_market)
 
-							# bases (hits only)
-							# remove (...)
-							listed_market = re.sub(' \(.+\)', '', listed_market)
+						# bases (hits only)
+						# remove (...)
+						listed_market = re.sub(' \(.+\)', '', listed_market)
 
-							#if listed_name == input_name and listed_market == input_market:
-							if determiner.determine_matching_player_outcome(listed_name, listed_market, input_name, input_market):
-								found_market = True
+						#if listed_name == input_name and listed_market == input_market:
+						if determiner.determine_matching_player_outcome(listed_name, listed_market, input_name, input_market):
+							found_market = True
+
+					elif determiner.determine_matching_outcome(listed_market, market_title):
+						
+						found_market = True
 					
 
 				# ca independiente avellaneda (0.5) -> independiente +0.5
@@ -2461,6 +2504,13 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 				
 			betslip_odds = double_check_odds(driver, website_name, final_outcome, cookies_file, saved_cookies, url, side_num, test, bet_dict)
 			
+			# if betslip odds in changing status
+			# if ev, close and move on
+			# if arb, take lower of 2 odds
+			# init reading glitches to init odds
+			# but then changes back down to lower odds
+			# after entering in wager field
+
 			# betslip odds may have changed to 'Closed'
 			# but never init outcome odds?
 			# not necessarily but should quit earlier bc cannot click when closed
@@ -6418,6 +6468,8 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# 
 	#try:
 
+	service = Service()
+
 	options = webdriver.ChromeOptions()
 
 	dims = str(size[0]) + ',' + str(size[1])
@@ -6430,7 +6482,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 18') 
+	options.add_argument(r'--profile-directory=Profile 19') 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)
@@ -6443,6 +6495,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Turn-off userAutomationExtension 
 	options.add_experimental_option("useAutomationExtension", False) 
 
+	#ChromeDriverManager().install())#
 	driver = webdriver.Chrome(options=options)
 
 	

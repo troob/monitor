@@ -76,8 +76,8 @@ new_pick_rules = {'normal max': normal_max_val,
 				 'limited min': limited_min_val}
 
 
-valid_sports = ['baseball', 'football', 'hockey']#, 'basketball] # big markets to stay subtle
-valid_leagues = ['mlb', 'nfl', 'ncaaf', 'nhl'] # 10/22
+valid_sports = ['baseball', 'football', 'hockey', 'basketball'] # big markets to stay subtle
+valid_leagues = ['mlb', 'nfl', 'ncaaf', 'nhl', 'nba'] # 10/22
 
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 
@@ -1155,8 +1155,8 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 			print('\nConnectionResetError in Monitor Website, outer loop')
 			print('Exit')
 			exit()
-		except common.exceptions.SessionNotCreatedException:
-			print('Chrome Window Already Opened. Need to Close All Chrome Windows Before Starting Monitor.')
+		except common.exceptions.SessionNotCreatedException as e:
+			print('\nChrome Window Already Opened. Need to Close All Chrome Windows Before Starting Monitor.\n', e)
 			# Mac
 			
 			# Windows

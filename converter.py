@@ -92,8 +92,8 @@ def convert_name_to_standard_format(name):
         name = re.sub('\.', '', name)
 
     name = re.sub(' jr\.?| ii+| \(.+\)|amp;', '', name)
-    name = re.sub('á|ã', 'a', name)
-    name = re.sub('é|ê', 'e', name)
+    name = re.sub('á|ã|ä', 'a', name) # ä sometimes included?
+    name = re.sub('é|ê|è', 'e', name)
     name = re.sub('ó', 'o', name)
     name = re.sub('ú', 'u', name)
     
@@ -103,8 +103,9 @@ def convert_name_to_standard_format(name):
     if re.search('University', name):
         name = re.sub(' - ', ' ', name)
 
-    # remove university of
-    name = re.sub('university of | university', '', name)
+    # remove university of and _ university
+    # remove club
+    name = re.sub('club |university of | university', '', name)
 
     #print('name: ' + name)
     return name

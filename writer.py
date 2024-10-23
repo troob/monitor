@@ -67,6 +67,14 @@ def close_logged_out_popup(driver):
         except Exception as e:
             print('Error Closing Logged Out Popup')
 
+    # else:
+
+    #     # try refreshing page
+    #       need to refresh outcome btn too
+    #       so place in click outcome btn fcn
+    #     driver.refresh()
+    #     time.sleep(1)
+
     return closed_popup
 
 
@@ -426,6 +434,9 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                 print('login_btn: ' + login_btn.get_attribute('innerHTML'))
                 login_btn.click()
                 time.sleep(0.5)
+            except KeyboardInterrupt:
+                print('Exit')
+                exit()
             except Exception as e:
                 print('No Login Button', e)
 
@@ -442,6 +453,9 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                 print('usr_field_html: ' + usr_field_html)
 
                 login_page = True
+            except KeyboardInterrupt:
+                print('Exit')
+                exit()
             except:
                 print('Not Login Page')
 
@@ -460,7 +474,7 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
         submit_btn = driver.find_element('id', 'login-form-modal-submit') #('xpath', '//button[@class="login w-100 btn btn-primary"]')
         print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
         submit_btn.click()
-        time.sleep(3)
+        time.sleep(1)
 
         popups = main_popup = boost_popup = loc_popup = True
         while popups:
@@ -1682,20 +1696,39 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
     close_bet_windows(driver, test=test, bet_dict=bet_dict)
 
+
+def refresh_outcome_button(driver):
+    print('\n===Refresh Outcome Button===\n')
+
+    driver.refresh()
+    time.sleep(1)
+    while True:
+        sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+        print('num sections: ' + str(len(sections)))
+        if len(sections) == 0:
+            time.sleep(1)
+        else:
+            break
+
+    
+
 # click outcome btn to add to betslip
 def click_outcome_btn(outcome_btn, driver):
     print('\n===Click Outcome Button===\n')
 
     try:
         outcome_btn.click()
+        time.sleep(0.5)
+        print('\nClicked Outcome Button\n')
     except:
+        print('\nERROR: Failed to click outcome button!\n', e)
         try:
             coordinates = outcome_btn.location_once_scrolled_into_view
             print('coordinates: ' + str(coordinates))
             driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
             #driver.execute_script("arguments[0].scrollIntoView(true);", final_outcome)
         except Exception as e:
-            print('ERROR: Cannot find outcome button! ', e)
+            print('\nERROR: Cannot find outcome button!\n', e)
 
             close_logged_out_popup(driver)
             # try again
@@ -1704,16 +1737,35 @@ def click_outcome_btn(outcome_btn, driver):
                 print('coordinates: ' + str(coordinates))
                 driver.execute_script("window.scrollTo(coordinates['x'], coordinates['y'])")
             except Exception as e:
-                print('ERROR: Still cannot find outcome button! ', e)
+                print('\nERROR: Still cannot find outcome button after scroll to coords!\n', e)
+
+                try:
+                    driver.execute_script("window.scrollTo(0, 0)")  # Scroll to top
+                    driver.execute_script("arguments[0].scrollIntoView(true);", outcome_btn)
+                    driver.execute_script("arguments[0].click();", outcome_btn)
+                except:
+                    print('\nERROR: Still cannot find outcome button after scroll top, scroll into view, execute script click!\n', e)
 
 
+
+                # outcome_btn = refresh_outcome_button(driver)
+
+                # try:
+                #     outcome_btn.click()
+                #     time.sleep(0.5)
+                #     print('\nClicked Outcome Button\n')
+                # except:
+                #     print('\nERROR: Still cannot find outcome button after Refresh!\n', e)
+
+                
         try:
             outcome_btn.click()
+            time.sleep(0.5)
+            print('\nClicked Outcome Button\n')
         except Exception as e:
-            print('ERROR: Cannot click outcome button! ', e)
+            print('\nERROR: Cannot click outcome button!\n', e)
     
-    time.sleep(0.5)
-    print('Clicked Outcome Button')
+    
 
 
 def add_bet_to_betslip(final_outcome, driver, website_name):
@@ -1728,7 +1780,7 @@ def add_bet_to_betslip(final_outcome, driver, website_name):
         #print('final_outcome before click: ' + final_outcome.get_attribute('outerHTML'))
         # Determine if btn clicked if shown in betslip
         if not re.search('data-pressed=\"null\"', final_outcome.get_attribute('outerHTML')):
-            print('Confirmed Button Not Yet Clicked')
+            print('Outcome Button Not Yet Clicked')
             click_outcome_btn(final_outcome, driver)
         else:
             print('Outcome Button Already Clicked')
@@ -2292,12 +2344,18 @@ def place_arb_bet(driver, arb, side_num, test):
     print('bet_size: ' + bet_size)
     if test:
         bet_size = '1'
+
+    try:
     
-    # rewrite in bet size
-    wager_field.clear()
-    wager_field.send_keys(bet_size)
-    print('Entered Bet ' + str(side_num) + ': ' + bet_size)
-    time.sleep(0.1)
+        # rewrite in bet size
+        wager_field.clear()
+        wager_field.send_keys(bet_size)
+        print('Entered Bet ' + str(side_num) + ': ' + bet_size)
+        time.sleep(0.1)
+    except Exception as e:
+        print('\nERROR: Failed to rewrite in bet size!\n', e)
+        #close_bet_windows(driver, side_num, test, arb)
+        return
 
     # click bet side
     placed_bet = False
@@ -2485,6 +2543,8 @@ def place_bets_simultaneously(driver, arb, test):
         if not bet1_placed:
             side_num = 1
             arb = place_arb_bet(driver, arb, side_num, test)
+            if arb is None:
+                return
             bet1_placed = arb['placed1']
 
         # if side 1 odds changed while placing bet
@@ -2495,6 +2555,8 @@ def place_bets_simultaneously(driver, arb, test):
         if not bet2_placed:
             side_num = 2
             arb = place_arb_bet(driver, arb, side_num, test)
+            if arb is None:
+                return
             bet2_placed = arb['placed2']
 
     print('\nPlaced Bets Simultaneously\n')
@@ -2512,6 +2574,11 @@ def place_arb_bets(arb, driver, cookies_file, saved_cookies, pick_type, test):
 
     num_windows = len(driver.window_handles)
     #print('num_windows: ' + str(num_windows))
+
+    # dk not yet enabled
+    if arb['source1'] == 'draftkings' or arb['source2'] == 'draftkings':
+        print('\nDK not yet enabled for auto arb. NEED to enable.')
+        return
 
     # bet1
     # bet_dict = {'market':arb['market'], 
@@ -3119,19 +3186,27 @@ def write_ev_to_post(ev, client, send_mobile):
         # OR do not repeat arbs
         # BUT all will repeat all which are separated into channels
         post_all = True # for testing all arbs before finalizing all category channels
-        if all_props_str != '' and post_all:
-            client.chat_postMessage(
-                channel='all-evs',
-                text=all_props_str,
-                username='Ball'
-            )
+        send_retries = 0
+        max_retries = 3
+        # while send_retries < max_retries:
+        try:
+            if all_props_str != '' and post_all:
+                client.chat_postMessage(
+                    channel='all-evs',
+                    text=all_props_str,
+                    username='Ball'
+                )
 
-        elif new_user_props_str != '':
-            client.chat_postMessage(
-                channel='ball', # arbitrary name given to first channel
-                text=all_props_str,
-                username='Ball'
-            )
+            elif new_user_props_str != '':
+                client.chat_postMessage(
+                    channel='ball', # arbitrary name given to first channel
+                    text=all_props_str,
+                    username='Ball'
+                )
+        except Exception as e:
+            print('\nERROR: Failed to Post Message to Slack!\n', e)
+            # send_retries += 1
+            # time.sleep(1)
 
 def write_evs_to_post(evs, client, post=False):
     print('\n===Write EVs to Post===\n')
