@@ -224,6 +224,8 @@ def remove_old_bets(driver, website_name):
 
     if website_name == 'betrivers':
         remove_bet_btns = driver.find_elements('class name', 'mod-KambiBC-betslip-outcome__close-btn')
+    elif website_name == 'betmgm':
+        remove_bet_btns = driver.find_elements('tag name', 'bs-digital-pick-remove-button')
     else:
         print('\nWebsite NA: ' + website_name + '\n')
         return
@@ -1158,6 +1160,9 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                                 if re.search('limit', alert_msg):
                                     attempted_bet = True
                                     print('Attempted Bet')
+                                elif re.search('parlay', alert_msg):
+                                    print('Failed to Remove Old Pick so Try Again')
+                                    remove_old_bets
                                 else:
                                     # if not limit problem, then odds changed so close and continue
                                     place_bet = False
@@ -1339,22 +1344,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
             # If Arb, find limits on both sides
             
             # Determine Pick Type Limit
-            #bet_size = determiner.determine_pick_type_limit(bet_dict, test)
-            if not test and pick_type == 'ev':
-                bet_size = converter.round_half_up(float(re.sub('\$','',bet_dict['size'])))
-            else: # if test or arb
-                # enter bet size into wager field
-                # Test find limit with bet size guaranteed above limit
-                # depends on source and market
-                # for betrivers, $300 is max 
-                # so if less than 300 available then need to set limits diff by market
-                market = bet_dict['market']
-                odds = bet_dict['actual odds']
-                bet_size = determiner.determine_source_limit(website_name, market, odds)
-                # if website_name == 'betrivers':
-                #     max_bet = 400
-
-                # bet_size = max_bet #bet_dict['size']
+            bet_size = determiner.determine_limit(bet_dict, website_name, pick_type, test)
 
             #submit_wager(bet_size, website_name)
             # the field uses a changing id so get container 
@@ -1947,7 +1937,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             # check if enough funds
             place_btn_text = place_bet_btn.find_element('class name', 'ds-btn-text').get_attribute('innerHTML').lower()
             print('place_btn_text: ' + str(place_btn_text))
-            # if odds changed, if ev, stop and continue to monitor
+            # if odds changed, if arb, check new odds
             if re.search('accept', place_btn_text):
                 # accept odds for now until we check other side of arb
                 place_bet_btn.click()
@@ -2010,7 +2000,10 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                         attempted_bet = True
                         print('Attempted Bet')
 
-                    #if not re.search('limit', alert_msg):
+                    elif re.search('parlay', alert_msg):
+                        print('Failed to Remove Old Pick so Try Again')
+                        remove_old_bets
+
                     else:
                         # if not limit problem, then odds changed so close and continue
                         # if not limit problem, check if locked or odds changed
@@ -2044,9 +2037,11 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                     print('Loading placed bet to find limit...')
                     time.sleep(1)
 
-
-        bet_limit = wager_field.get_attribute('value').split('$')[1] # or getText()
-        print('bet_limit: ' + bet_limit)
+        try:
+            bet_limit = wager_field.get_attribute('value').split('$')[1] # or getText()
+            print('bet_limit: ' + bet_limit)
+        except Exception as e:
+            print('\nERROR: Failed to get bet limit bc failed to remove old picks?\n')
 
         # $100.00 -> 100.00
         # class betslip-summary-row--winnings

@@ -189,6 +189,7 @@ def read_betslip_odds(driver, website_name):
 
 # read input with timeout
 # so infinite loop monitor program continues without input
+# timeout in seconds
 def input_with_timeout(prompt, timeout):
 	print(prompt, end='', flush=True)
 
@@ -2132,13 +2133,13 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 								print('0 Sections. Refresh and Reload Sections.')
 								driver.refresh()
 								time.sleep(1)
-								while True:
-									sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
-									print('num sections: ' + str(len(sections)))
-									if len(sections) == 0:
-										time.sleep(1)
-									else:
-										break
+								#while True:
+								sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
+								print('num sections: ' + str(len(sections)))
+									# if len(sections) == 0:
+									# 	time.sleep(1)
+									# else:
+									# 	break
 
 
 					# Game NA
@@ -5806,6 +5807,21 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 						player_name = market_data[0]
 						player_market = re.sub('_', ' ', market_data[1]).title()
 						market = player_name + ' - ' + player_market
+					elif sport == 'basketball' and re.search('_', market):
+						# MONEYLINE_Q1 -> 1st quarter moneyline
+						market_data = market.split('_')
+						quarter_market = market_data[0].title()
+						quarter = market_data[1]
+						if quarter == 'Q1':
+							quarter = '1st'
+						elif quarter == 'Q2':
+							quarter = '2nd'
+						elif quarter == 'Q3':
+							quarter = '3rd'
+						elif quarter == 'Q4':
+							quarter = '4th'
+						market = quarter + ' Quarter ' + quarter_market
+
 					#print('market: ' + str(market))
 					market = converter.convert_name_to_standard_format(market)
 

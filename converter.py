@@ -84,6 +84,7 @@ def round_ev_bet_size(ev):
     #print('rounded_bet_size: ' + rounded_bet_size)
     return rounded_bet_size
 
+# COPY TO CLIENT
 def convert_name_to_standard_format(name):
     #print('\n===Convert Name to Standard Format: ' + name + '===\n')
 
@@ -93,8 +94,10 @@ def convert_name_to_standard_format(name):
 
     name = re.sub(' jr\.?| ii+| \(.+\)|amp;', '', name)
     name = re.sub('á|ã|ä', 'a', name) # ä sometimes included?
+    name = re.sub('č|ć', 'c', name)
     name = re.sub('é|ê|è', 'e', name)
     name = re.sub('ó', 'o', name)
+    name = re.sub('ş', 's', name) # Beşiktaş A.Ş.
     name = re.sub('ú', 'u', name)
     
     # if market contains 'University' and ' - ' 

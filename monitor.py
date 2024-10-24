@@ -635,7 +635,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 					try:
 						reader.input_with_timeout("\nPress Enter to continue...\n", 100)
 						print('You Pressed Enter, so continue')
-					except TimeoutError as e:
+					except TimeoutError:
 						print('Input Timeout, so turn off manual mode')
 						manual_picks = False
 						print('\nManual Mode Disabled\n')
@@ -1125,7 +1125,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 					# if prematch, keep looping every 5 seconds for change
 					# if live, loop every 2 seconds bc fast change
-					time.sleep(2) # 4 seems too slow bc can see change long before notice
+					#time.sleep(2) # 4 seems too slow bc can see change long before notice
 
 				except KeyboardInterrupt:
 					print('\nKeyboardInterrupt in Infinite Loop')
