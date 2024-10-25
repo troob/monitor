@@ -1,0 +1,138 @@
+Traceback (most recent call last):
+  File "monitor.py", line 37, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 37, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 37, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
+Traceback (most recent call last):
+  File "monitor.py", line 39, in <module>
+    slack_token = os.environ["SLACK_TOKEN"]
+  File "/Users/m/.pyenv/versions/3.8.14/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'SLACK_TOKEN'
