@@ -6,10 +6,11 @@ import reader # read player abbrevs
 
 import math
 
-
+# COPY TO CLIENT
 def round_to_base(x, base=5):
     return base * round_half_up(x/base)
 
+# COPY TO CLIENT
 # specifically for arb bets???
 # what is different than ev bets???
 # ev bets always round to whole num bc smaller scale on limited sources
@@ -27,6 +28,7 @@ def round_bet_size(init_bet_size, source):
     # fully limited sources round to nearest 0.10
     # partly limited sources round to whole number
     # unlimited sources round to nearest 5, 10, 50, 100
+    #limited_sources = reader.read_json('sources/limited-sources.json')
     fully_limited_sources = ['betmgm', 'betrivers', 'fanatics']
     partly_limited_sources = ['draftkings', 'fanduel']
     unlimited_sources = ['caesars', 'espn', 'fliff']
@@ -743,7 +745,7 @@ def convert_bet_to_team_loc(bet_outcome, market):
 
 def convert_name_format(name, name_format=None):
     print('\n===Convert Name Format===\n')
-    print('Input: name = ' + name)
+    print('Input: name = ' + name + '\n')
 
     # if not sure which format input but only want comma out
     if name_format == ',' and not re.search(',', name):

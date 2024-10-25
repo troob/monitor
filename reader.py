@@ -49,6 +49,7 @@ import determiner # determine matching outcome
 import sys, select # user input with timeout
 
 
+# COPY TO CLIENT
 # assume starting point: bet not added to betslip
 # so add to betslip and see if same odds
 # betrivers has specific glitch which changes odds after opening
@@ -85,7 +86,7 @@ def double_check_odds(driver, website_name, final_outcome=None, cookies_file=Non
 					typed_wager = True
 				except:
 					print('ERROR: Failed to Type in Wager Field')
-					final_outcome.click()
+					writer.add_bet_to_betslip(final_outcome, driver, website_name)
 					type_retries += 1
 
 			else:
@@ -165,6 +166,7 @@ def reload_section(driver, market, sport, league, website_name, pick_time_group)
 
 	return section
 
+# COPY TO CLIENT
 # read most recent bet added to betslip
 # need to make sure only bet if not multibet
 def read_betslip_odds(driver, website_name):
@@ -187,6 +189,7 @@ def read_betslip_odds(driver, website_name):
 	print('betslip_odds: ' + str(betslip_odds) + '\n')
 	return betslip_odds	
 
+# COPY TO CLIENT
 # read input with timeout
 # so infinite loop monitor program continues without input
 # timeout in seconds
@@ -200,20 +203,25 @@ def input_with_timeout(prompt, timeout):
 	else:
 		raise TimeoutError('Timeout reached. No input received.')
 
+# COPY TO CLIENT
 def read_remaining_funds(driver, website_name):
 	print('\n===Read Remaining Funds===\n')
 
-	if website_name == 'betmgm':
-		funds_element = driver.find_element('class name', 'user-balance')
-		# remove $
-		funds = float(funds_element.get_attribute('innerHTML')[1:])
-		
-	elif website_name == 'betrivers':
-		funds_element = driver.find_element('xpath', '//div[@data-target="menu-quick-deposit"]')
-		# remove $
-		funds = float(funds_element.find_element('tag name', 'div').find_element('tag name', 'span').get_attribute('innerHTML')[1:])
-		
-	print('funds: ' + str(funds))
+	funds = 0
+	try:
+		if website_name == 'betmgm':
+			funds_element = driver.find_element('class name', 'user-balance')
+			# remove $
+			funds = float(funds_element.get_attribute('innerHTML')[1:])
+			
+		elif website_name == 'betrivers':
+			funds_element = driver.find_element('xpath', '//div[@data-target="menu-quick-deposit"]')
+			# remove $
+			funds = float(funds_element.find_element('tag name', 'div').find_element('tag name', 'span').get_attribute('innerHTML')[1:])
+	except Exception as e:
+		print('\nERROR: Failed to find funds element for ' + website_name.title() + '!\n', e)
+
+	print('Funds: ' + str(funds) + '\n')
 	return funds
 
 # remove outdated objects
@@ -277,6 +285,7 @@ def read_current_data(todays_date):
 	return init_evs, init_arbs
 
 
+# COPY TO CLIENT
 # diff markets have diff formats
 # moneyline has only 1 div but others have 2
 # convert source outcome label to input standard format
@@ -322,7 +331,7 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 		# set winner
 		# first team to score
 		# btts both teams to score
-		if re.search('moneyline|lead|winner|first inning .+ total|to score|btts', market):
+		if re.search('moneyline|lead|winner|first inning .+ total|to win|to score|btts', market):
 		
 			# tie outcome does not have either name
 			# but only sports with no tie need to be converted to comma format
@@ -373,7 +382,13 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 
 				part2 = parts[2].get_attribute('innerHTML') # symbols/numbers dont lower
 				#print('part2: ' + part2)
-				outcome_label += ' ' + part2
+				if not re.search('<', part2):
+					outcome_label += ' ' + part2
+
+			# # if "yes <class..."
+			# # remove "<..."
+			# if re.search('<', outcome_label):
+			# 	outcome_label = outcome_label.split(' <')[0]
 
 		
 		if sport == 'tennis' and re.search('spread', market):
@@ -402,6 +417,8 @@ def read_outcome_label(outcome, market, sport='', team_sports='', outcome_title=
 			
 
 		outcome_odds = parts[-1].get_attribute('innerHTML')
+
+	
 		
 	# print('\noutcome_label: ' + outcome_label)
 	# print('outcome_odds: ' + outcome_odds + '\n')
@@ -772,7 +789,7 @@ def read_section_idx(section_title, sections, default=0):
 
 	return section_idx
 
-
+# COPY TO CLIENT
 def read_market_section(market, sport, league, website_name, sections, pick_time_group):
 	print('\n===Read Market Section===\n')
 	print('Input: market = ' + market)
@@ -1028,33 +1045,78 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			# 1st Quarter
 			# Halftime
 			# need to search for section by title bc at end
-			elif re.search('Quarter', market):
-				section_title = '1st Quarter'
-				section_idx = 9 # default
+			elif re.search('quarter', market):
+				quarter_num = market.split()[0] # '1st'
+				section_title = quarter_num + ' Quarter' # '1st Quarter'
+				section_idx = 11 # default
+				if quarter_num == '2nd':
+					section_idx = 12
+				elif quarter_num == '3rd': # skip half time
+					section_idx = 14
+				elif quarter_num == '4th': # skip end of 3rd quarter
+					section_idx = 16
 				section_idx = read_section_idx(section_title, sections, section_idx)
 			
 				if re.search('3 way', market):
-					market_title = '1st quarter (3-way)'
+					market_title = quarter_num + ' quarter (3-way)'
 				elif re.search('moneyline', market):
-					market_title = 'moneyline - quarter 1'
+					market_title = 'moneyline - quarter ' + quarter_num[0]
 				elif re.search('spread', market):
-					market_title = 'spread - 1st quarter'
+					market_title = 'spread - ' + quarter_num + ' quarter'
+				elif re.search('quarter .+ total', market):
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total points by ' + team_name + ' - ' + quarter_num + ' quarter'
 				elif re.search('total', market):
-					market_title = 'total points - 1st quarter'
+					market_title = 'total points - ' + quarter_num + ' quarter'
 
-			elif re.search('Half', market):
+			elif re.search('half', market):
+				half_num = market.split()[0] # '1st'
 				section_title = 'Half Time'
-				section_idx = 10 # default
+				section_idx = 13 # default
+				if half_num == '2nd':
+					section_title = 'Second Half'
+					section_idx = 17
 				section_idx = read_section_idx(section_title, sections, section_idx)
 			
 				if re.search('3 way', market):
-					market_title = '1st half (3-way)'
+					market_title = half_num + ' half (3-way)'
 				elif re.search('moneyline', market):
-					market_title = 'moneyline - 1st half'
+					market_title = 'moneyline - ' + half_num + ' half'
 				elif re.search('spread', market):
-					market_title = 'spread - 1st half'
+					market_title = 'spread - ' + half_num + ' half'
+				elif re.search('half .+ total', market):
+					team_name = converter.convert_market_to_team_name(market, league, sport)
+					market_title = 'total points by ' + team_name + ' - ' + half_num + ' half'
 				elif re.search('total', market):
-					market_title = 'total points - 1st half'
+					market_title = 'total points - ' + half_num + ' half'
+
+			# elif re.search('quarter', market):
+			# 	section_title = '1st Quarter'
+			# 	section_idx = 9 # default
+			# 	section_idx = read_section_idx(section_title, sections, section_idx)
+			
+			# 	if re.search('3 way', market):
+			# 		market_title = '1st quarter (3-way)'
+			# 	elif re.search('moneyline', market):
+			# 		market_title = 'moneyline - quarter 1'
+			# 	elif re.search('spread', market):
+			# 		market_title = 'spread - 1st quarter'
+			# 	elif re.search('total', market):
+			# 		market_title = 'total points - 1st quarter'
+
+			# elif re.search('half', market):
+			# 	section_title = 'Half Time'
+			# 	section_idx = 10 # default
+			# 	section_idx = read_section_idx(section_title, sections, section_idx)
+			
+			# 	if re.search('3 way', market):
+			# 		market_title = '1st half (3-way)'
+			# 	elif re.search('moneyline', market):
+			# 		market_title = 'moneyline - 1st half'
+			# 	elif re.search('spread', market):
+			# 		market_title = 'spread - 1st half'
+			# 	elif re.search('total', market):
+			# 		market_title = 'total points - 1st half'
 
 
 			# Team Total in Game section
@@ -1416,7 +1478,7 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 			print('Unknown Sport while reading market section!')
 
 	print('market_title: ' + market_title)
-	print('section_idx: ' + str(section_idx))
+	print('section_idx: ' + str(section_idx) + '\n')
 	return market_title, section_idx
 
 
@@ -1825,7 +1887,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 	# other sources keep logged in for time even if window closed
 	# betrivers logs out too quickly immediately when window closed
 	if website_name == 'betrivers':
-		print('\nSwitch to Betrivers Window')
+		print('\nSwitch to Betrivers Window\n')
 		#print('betrivers_window_handle: ' + betrivers_window_handle + '\n')
 		driver.switch_to.window(betrivers_window_handle)
 	else:
@@ -2136,10 +2198,15 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 								#while True:
 								sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
 								print('num sections: ' + str(len(sections)))
-									# if len(sections) == 0:
-									# 	time.sleep(1)
-									# else:
-									# 	break
+								
+								# if 0 sections, recheck if home page
+								# bc maybe not loaded first time
+								try:
+									driver.find_element('xpath', '//div[@data-testid="parlay-widget-header"]')
+									print('\nHome Page: Game NA\n')
+									game_available = False
+								except:
+									print('\nGame Page: Get Sections\n')
 
 
 					# Game NA
@@ -2254,12 +2321,12 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 						
 					# Markets in section
 					found_offer = False
-					#market_retries = 0
+					market_retries = 0
 					markets = [] # or None?
 					#while market_retries < max_retries:
 					# if len(markets)=0 probably needs more load time after opening section
 					#while markets is None:# or len(markets) == 0:
-					while len(markets) == 0:
+					while len(markets) == 0 and market_retries < max_retries:
 						# if loaded section, we know >0 markets in section
 						try:
 							print('\nGet Markets in Section\n')
@@ -2274,12 +2341,13 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 								print('num markets: ' + str(len(markets)))
 						except:
 							print('\nError getting markets in section!\n')
-							# market_retries += 1
-							# print('No Markets in Section, try ' + str(market_retries) + '/3')
-							# time.sleep(1)
+							market_retries += 1
+							print('No Markets in Section, try ' + str(market_retries) + '/3')
 
 						#if markets is None or len(markets) == 0:
 							print('\nReload Sections\n')
+							driver.refresh()
+							time.sleep(1)
 							sections = driver.find_elements('class name', 'KambiBC-bet-offer-category')
 							print('num sections: ' + str(len(sections)))
 							market_title, section_idx = read_market_section(market, sport, league, website_name, sections, pick_time_group)
@@ -5809,18 +5877,22 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 						market = player_name + ' - ' + player_market
 					elif sport == 'basketball' and re.search('_', market):
 						# MONEYLINE_Q1 -> 1st quarter moneyline
+						# TOTAL_H1 -> 1st half total
 						market_data = market.split('_')
 						quarter_market = market_data[0].title()
-						quarter = market_data[1]
-						if quarter == 'Q1':
-							quarter = '1st'
-						elif quarter == 'Q2':
-							quarter = '2nd'
-						elif quarter == 'Q3':
-							quarter = '3rd'
-						elif quarter == 'Q4':
-							quarter = '4th'
-						market = quarter + ' Quarter ' + quarter_market
+						period = market_data[1]
+						period_type = 'Half'
+						if period[0] == 'Q':
+							period_type = 'Quarter'
+						if period[1] == '1':
+							period = '1st'
+						elif period[1] == '2':
+							period = '2nd'
+						elif period[1] == '3':
+							period = '3rd'
+						elif period[1] == '4':
+							period = '4th'
+						market = period + ' ' + period_type + ' ' + quarter_market
 
 					#print('market: ' + str(market))
 					market = converter.convert_name_to_standard_format(market)
@@ -6125,6 +6197,23 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 								player_name = market_data[0]
 								player_market = re.sub('_', ' ', market_data[1]).title()
 								market = player_name + ' - ' + player_market
+							elif sport == 'basketball' and re.search('_', market):
+								# MONEYLINE_Q1 -> 1st quarter moneyline
+								market_data = market.split('_')
+								quarter_market = market_data[0].title()
+								period = market_data[1]
+								period_type = 'Half'
+								if period[0] == 'Q':
+									period_type = 'Quarter'
+								if period[1] == '1':
+									period = '1st'
+								elif period[1] == '2':
+									period = '2nd'
+								elif period[1] == '3':
+									period = '3rd'
+								elif period[1] == '4':
+									period = '4th'
+								market = period + ' ' + period_type + ' ' + quarter_market
 							#print('market: ' + str(market))
 							market = converter.convert_name_to_standard_format(market)
 							
