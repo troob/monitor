@@ -6,6 +6,17 @@ import reader # read player abbrevs
 
 import math
 
+# milwaukee bucks -> mil bucks
+def convert_team_name_to_abbrev(team_name):
+    print('\n===Convert Team Name to Abbrev===\n')
+
+    # split loc and name
+    loc, name = convert_team_to_loc_and_name(team_name)
+
+    loc_abbrev = convert_team_loc_to_abbrev(loc)
+
+    return loc_abbrev + ' ' + name
+
 # COPY TO CLIENT
 def round_to_base(x, base=5):
     return base * round_half_up(x/base)
@@ -205,10 +216,15 @@ def convert_bet_line_to_source_format(bet_line, market, sport, website_name):
 
     elif website_name == 'draftkings':
 
+        if re.search('moneyline', market):
+
+            # milwaukee bucks -> mil bucks
+            bet_line = convert_team_name_to_abbrev(bet_line)
+
         # special case player props not o/u but yes only
         # so player name is bet line
         # football anytime td scorer has player name as line
-        if re.search('- touchdowns|- goals', market):
+        elif re.search('- touchdowns|- goals', market):
             player_name = market.split(' - ')[0]
             bet_line = player_name
 
@@ -457,7 +473,7 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
                 team_name = team_part.split(' total')[0] # 'Philadelphia Eagles'
                 team_name = convert_name_to_standard_format(team_name)
 
-                market_title = team_name + ' ' + period_part + ' points'
+                market_title = team_name + ' ' + period_part + 'points'
 
             # eagles total -> eagles total points
             elif re.search('total', market):
@@ -600,6 +616,17 @@ def convert_market_to_source_format(market, sport, game, league, website_name):
                 team_name = team_part.split(' total')[0] # 'milwaukee brewers'
                 team_abbrev = team_name #convert_team_name_to_abbrev(team_name) # 'mil brewers'
                 market_title = team_abbrev + ' team total runs - ' + inning_part
+
+        elif sport == 'basketball':
+
+            # 3rd quarter moneyline -> moneyline 3rd quarter
+            # moneyline always last word
+            if re.search('quarter moneyline|half moneyline', market):
+                market_data = market.rsplit(' ', 1)
+                period_part = market_data[0]
+                market_part = market_data[1]
+                market_title = market_part + ' ' + period_part
+
 
         elif sport == 'football':
             #print('Football')
@@ -778,6 +805,7 @@ def convert_name_format(name, name_format=None):
 # if university or state then loc is team name
 # but problem is university names can have any name
 # so need to know league
+# milwaukee bucks -> milwaukee, bucks
 def convert_team_to_loc_and_name(team):
     print('\n===Convert Team to Loc and Name===\n')
     print('Input: team = kansas city royals or chicago white sox = ' + team)

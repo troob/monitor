@@ -5221,6 +5221,7 @@ def determine_valid_pick(pick, valid_sports, valid_leagues, limited_sources, new
 
     if pick_type == 'arb':
         
+        # avoid small leagues for unlimited sources
         # only allow small leagues for limited sources
         if pick_sport not in valid_sports or pick_league not in valid_leagues:
             if arb_source1 not in limited_sources or arb_source2 not in limited_sources:

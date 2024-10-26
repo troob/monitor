@@ -348,12 +348,12 @@ def close_bet_windows(driver, side_num=1, test=False, bet_dict={}):
 
     
     # send back to main window
-    driver.switch_to.window(windows[0])
+    driver.switch_to.window(driver.window_handles[0])
 
     #print('\n===Closed Bet Windows===\n')
 
 
-
+# ALTER FOR CLIENT
 # Assume already on webpage
 def login_website(website_name, driver, cookies_file='', saved_cookies=[], url=''):
     print('\n===Login Website===\n')
@@ -420,127 +420,154 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
 
 
     elif website_name == 'betrivers':
-        # look for my account menu btn
-        # betrivers always requires login new window so may not need this for betrivers
-        # unless leave open window for certain predefined time period
-        # such as 5 min bc if haven't seen prop in 5min then probably not for a while???
-        # not necessarily so maybe dont keep open at all unless already have more props in queue
-        try:
-            driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
-            print('\nAlready Logged In Betrivers\n')
-            return
-        except:
-            print('\nLogin Betrivers\n')
-            # login_betrivers()
 
-        # keep looking for login page
-        # OR just click login btn once???
-        # problem is if not loaded yet then will move on before login
-        login_page = False
-        while not login_page:
-            # class = sc-gHLcSH cnmSeS
-            # id=rsi-top-navigation
-            # div
-            # second div
-            # button
-            # goes to login page
+        login_retries = 0
+        max_retries = 3
+        while login_retries < max_retries:
+            # look for my account menu btn
+            # betrivers always requires login new window so may not need this for betrivers
+            # unless leave open window for certain predefined time period
+            # such as 5 min bc if haven't seen prop in 5min then probably not for a while???
+            # not necessarily so maybe dont keep open at all unless already have more props in queue
             try:
-                login_btn = driver.find_element('id', 'rsi-top-navigation').find_element('tag name', 'div').find_element('xpath', 'div[2]').find_element('tag name', 'button')   # .find_element('class name', 'sc-gHLcSH')
-                print('login_btn: ' + login_btn.get_attribute('innerHTML'))
-                login_btn.click()
-                time.sleep(0.5)
-            except KeyboardInterrupt:
-                print('Exit')
-                exit()
-            except Exception as e:
-                print('No Login Button', e)
+                driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
+                print('\nAlready Logged In Betrivers\n')
+                return
+            except:
+                print('\nLogin Betrivers\n')
+                # login_betrivers()
+
+            # keep looking for login page
+            # OR just click login btn once???
+            # problem is if not loaded yet then will move on before login
+            login_page = False
+            while not login_page:
+                # class = sc-gHLcSH cnmSeS
+                # id=rsi-top-navigation
+                # div
+                # second div
+                # button
+                # goes to login page
+                try:
+                    login_btn = driver.find_element('id', 'rsi-top-navigation').find_element('tag name', 'div').find_element('xpath', 'div[2]').find_element('tag name', 'button')   # .find_element('class name', 'sc-gHLcSH')
+                    print('login_btn: ' + login_btn.get_attribute('innerHTML'))
+                    login_btn.click()
+                    time.sleep(0.5)
+                except KeyboardInterrupt:
+                    print('Exit')
+                    exit()
+                except Exception as e:
+                    print('No Login Button', e)
+
+                    try:
+                        driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
+                        print('\nAlready Logged In Betrivers\n')
+                        return
+                    except:
+                        print('\nLogin Betrivers\n')
 
                 try:
-                    driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
-                    print('\nAlready Logged In Betrivers\n')
-                    return
+                    usr_field_input = driver.find_element('id', 'login-form-modal-email')
+                    usr_field_html = usr_field_input.get_attribute('outerHTML')
+                    print('usr_field_html: ' + usr_field_html)
+
+                    login_page = True
+                except KeyboardInterrupt:
+                    print('Exit')
+                    exit()
                 except:
-                    print('\nLogin Betrivers\n')
+                    print('Not Login Page')
 
-            try:
-                usr_field_input = driver.find_element('id', 'login-form-modal-email')
-                usr_field_html = usr_field_input.get_attribute('outerHTML')
-                print('usr_field_html: ' + usr_field_html)
+            # it adds class validation-ok if valid email entered
+            if not re.search('valid', usr_field_html):
+                usr_field_input.send_keys(email)
 
-                login_page = True
-            except KeyboardInterrupt:
-                print('Exit')
-                exit()
-            except:
-                print('Not Login Page')
+            # login-form-modal-password
+            pwd_field_input = driver.find_element('id', 'login-form-modal-password')
+            pwd_field_html = pwd_field_input.get_attribute('outerHTML')
+            print('pwd_field_html: ' + pwd_field_html)
+            if not re.search('valid', pwd_field_html):
+                pwd_field_input.send_keys(token)
 
-        # it adds class validation-ok if valid email entered
-        if not re.search('valid', usr_field_html):
-            usr_field_input.send_keys(email)
+            # id = login-form-modal-submit
+            submit_btn = driver.find_element('id', 'login-form-modal-submit') #('xpath', '//button[@class="login w-100 btn btn-primary"]')
+            print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
+            submit_btn.click()
+            time.sleep(1)
 
-        # login-form-modal-password
-        pwd_field_input = driver.find_element('id', 'login-form-modal-password')
-        pwd_field_html = pwd_field_input.get_attribute('outerHTML')
-        print('pwd_field_html: ' + pwd_field_html)
-        if not re.search('valid', pwd_field_html):
-            pwd_field_input.send_keys(token)
+            popups = main_popup = boost_popup = loc_popup = True
+            while popups:
+                try:
+                    # class = close-modal-button-container
+                    close_popup_btn = driver.find_element('xpath', '//div[@class="close-modal-button"]')
+                    print('close_popup_btn: ' + close_popup_btn.get_attribute('innerHTML'))
+                    close_popup_btn.click()
+                    time.sleep(0.5)
 
-        # id = login-form-modal-submit
-        submit_btn = driver.find_element('id', 'login-form-modal-submit') #('xpath', '//button[@class="login w-100 btn btn-primary"]')
-        print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
-        submit_btn.click()
-        time.sleep(1)
+                    print('\nClosed Main Popup\n')
+                    main_popup = False
 
-        popups = main_popup = boost_popup = loc_popup = True
-        while popups:
-            try:
-                # class = close-modal-button-container
-                close_popup_btn = driver.find_element('xpath', '//div[@class="close-modal-button"]')
-                print('close_popup_btn: ' + close_popup_btn.get_attribute('innerHTML'))
-                close_popup_btn.click()
-                time.sleep(0.5)
+                # First time login each day shows profit boost popup instead
+                except:
+                    print('No Main Popup Yet')
 
-                print('\nClosed Main Popup\n')
-                main_popup = False
-
-            # First time login each day shows profit boost popup instead
-            except:
-                print('No Main Popup Yet')
-
-            print('\nCheck If Profit Boost Popup\n')
-            # 'data-translate="BTN_CLOSE_TITLE"'
-            try:
-                close_boost_btn = driver.find_element('xpath', '//a[@data-translate="BTN_CLOSE_TITLE"]')
-                close_boost_btn.click()
-                print('\nClosed Profit Boost\n')
-                boost_popup = False
-            except:
-                print('No Profit Boost')
-
-                if main_popup == False:
+                print('\nCheck If Profit Boost Popup\n')
+                # 'data-translate="BTN_CLOSE_TITLE"'
+                try:
+                    close_boost_btn = driver.find_element('xpath', '//a[@data-translate="BTN_CLOSE_TITLE"]')
+                    close_boost_btn.click()
+                    print('\nClosed Profit Boost\n')
                     boost_popup = False
+                except:
+                    print('No Profit Boost')
 
-            print('\nCheck If Location Popup\n')
-            try:
-                # close location popup
-                # 'data-testid="alert"'
-                # > tag button or aria-label="Close"
-                close_loc_btn = driver.find_element('xpath', '//div[@data-testid="alert"]').find_element('tag name', 'button')
-                print('close_loc_btn: ' + close_loc_btn.get_attribute('outerHTML'))
-                close_loc_btn.click()
-                print('\nClosed Location Popup\n')
-                loc_popup = False
-            except:
-                print('No Location Popup')
+                    if main_popup == False:
+                        boost_popup = False
 
-                if main_popup == False:
+                print('\nCheck If Location Popup\n')
+                try:
+                    # close location popup
+                    # 'data-testid="alert"'
+                    # > tag button or aria-label="Close"
+                    close_loc_btn = driver.find_element('xpath', '//div[@data-testid="alert"]').find_element('tag name', 'button')
+                    print('close_loc_btn: ' + close_loc_btn.get_attribute('outerHTML'))
+                    close_loc_btn.click()
+                    print('\nClosed Location Popup\n')
                     loc_popup = False
+                except:
+                    print('No Location Popup')
 
-            
-            if not main_popup and not boost_popup and not loc_popup:
-                popups = False
+                    if main_popup == False:
+                        loc_popup = False
 
-        logged_in = True
+
+                # check login fail
+                # data-modal-name="LOGIN_FAILED"
+                # close btn: class="btn btn-primary btn-modal-close w-120", data-translate="BTN_CLOSE_OK"
+                # if no main popup, then closed so login success
+                # so no need to check login fail
+                if main_popup: # main popup default true means not logged in
+                    print('\nCheck If Login Fail Popup\n')
+                    try:
+                        close_fail_btn = driver.find_element('class name', 'btn-modal-close')
+                        close_fail_btn.click()
+                        print('\nClosed Fail Popup. Refresh and Try Again.\n')
+                        # try login again
+                        driver.refresh()
+                        time.sleep(1)
+                        login_retries += 1
+                        if login_retries == max_retries:
+                            print('\nFailed to Login Automatially\n')
+                            return 'fail'
+                        break
+                    except:
+                        print('No Fail Popup')
+
+                
+                if not main_popup and not boost_popup and not loc_popup:
+                    popups = False
+
+            logged_in = True
 
     elif website_name == 'betmgm':
         # check if logged in by top right corner menu
@@ -745,7 +772,7 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                         time.sleep(3) 
 
                 except:
-                    print('Failed to Login Automatially')
+                    print('\nFailed to Login Automatially\n')
                     return 'fail'
 
 
@@ -1759,7 +1786,10 @@ def click_outcome_btn(outcome_btn, driver):
                 print('\nERROR: Still cannot find outcome button after scroll to coords!\n', e)
 
                 try:
-                    driver.execute_script("window.scrollTo(0, 0)")  # Scroll to top
+                    # Scroll to top fails opt 1 so try opt 2
+                    #driver.execute_script("window.scrollTo(0, 0)")  
+                    driver.execute_script("window.scrollBy(0, -document.body.scrollHeight);")
+                    
                     driver.execute_script("arguments[0].scrollIntoView(true);", outcome_btn)
                     driver.execute_script("arguments[0].click();", outcome_btn)
                 except:

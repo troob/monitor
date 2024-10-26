@@ -77,7 +77,7 @@ new_pick_rules = {'normal max': normal_max_val,
 
 
 valid_sports = ['baseball', 'football', 'hockey', 'basketball'] # big markets to stay subtle
-valid_leagues = ['mlb', 'nfl', 'ncaaf', 'nhl', 'nba'] # 10/22
+valid_leagues = ['mlb', 'nfl', 'ncaaf', 'nhl', 'nba', 'ufc'] # 10/22
 
 arb_type = 'pre' # all/both/options, live, OR prematch/pre
 
@@ -925,6 +925,8 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 			# keep looping every 5 seconds for change
 			while True:
 
+				#main_start_time = datetime.today()
+
 				try:
 
 					# DO we need to separate live and prematch in 2 files???
@@ -945,10 +947,13 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 					# no duplicates
 					#print('Read Init Picks')
 					# first loop init as current data but after can read from json direct
+					#read_saved_data_start_time = datetime.today()
 					if monitor_idx != 1:
 						init_arbs = reader.read_json(arbs_file)
 						init_evs = reader.read_json(evs_file)	
-
+					# read_saved_data_end_time = datetime.today()
+					# read_saved_data_duration = (read_saved_data_end_time - read_saved_data_start_time).seconds
+					# print('read_saved_data_duration: ' + str(read_saved_data_duration) + ' seconds')
 
 					# only 1 file for efficiency but in file it separates live and prematch arbs
 					# init_live_arb_data = init_arb_data[0]
@@ -975,6 +980,9 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 					# read either live or pre, not both
 					# === Monitor New Arb picks ===
 
+					print('\nStart Read Arb\n')
+					read_arb_start_time = datetime.today()
+
 					arb_data = []
 					if arb_type == 'live':
 						# if on pre-page, click live btn
@@ -991,6 +999,10 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						# read live twice before
 						arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 					
+					read_arb_end_time = datetime.today()
+					read_arb_duration = (read_arb_end_time - read_arb_start_time).seconds
+					print('\nread_arb_duration: ' + str(read_arb_duration) + ' seconds\n')
+
 					if arb_data == 'reboot':
 						print('Reboot')
 						driver.quit()
@@ -1011,9 +1023,16 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						break
 
 					if arb_data is not None:
+
+						#monitor_arb_start_time = datetime.today()
 					
 						# monitor either live or pre, not both
 						new_arbs, manual_picks = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, test)
+						
+						# monitor_arb_end_time = datetime.today()
+						# monitor_arb_duration = (monitor_arb_end_time - monitor_arb_start_time).seconds
+						# print('monitor_arb_duration: ' + str(monitor_arb_duration) + ' seconds')
+
 						if new_arbs == 'reboot':
 							print('Reboot')
 							driver.quit()
@@ -1025,6 +1044,8 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						# to compare bt loops
 						#prev_arb_data = init_arb_data # save last 2 in case glitch causes temp disappearance
 						#writer.write_data_to_file(arb_data, arb_data_file) # becomes init next loop
+
+						#save_arb_start_time = datetime.today()
 
 						# init final arbs as init arbs in case no new arbs
 						all_arbs = init_arbs
@@ -1048,6 +1069,11 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						# save new arbs as json and remove if past
 						if not test:
 							writer.write_json_to_file(all_arbs, arbs_file)
+
+							# save_arb_end_time = datetime.today()
+							# save_arb_duration = (save_arb_end_time - save_arb_start_time).seconds
+							# print('save_arb_duration: ' + str(save_arb_duration) + ' seconds')
+
 					
 
 					#open_all_arbs_bets(new_arbs)
@@ -1055,11 +1081,18 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 					# === Monitor New +EV picks ===
 
+					read_ev_start_time = datetime.today()
+
 					ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources)
 					if ev_data == 'reboot':
 						print('Reboot')
 						driver.quit()
 						break
+
+					read_ev_end_time = datetime.today()
+					read_ev_duration = (read_ev_end_time - read_ev_start_time).seconds
+					print('read_ev_duration: ' + str(read_ev_duration) + ' seconds')
+
 
 					# if ev_data is None:
 					# 	# exit
@@ -1083,16 +1116,26 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						break
 					if ev_data is not None:
 						#try:
+
+						#monitor_ev_start_time = datetime.today()
+
 						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, send_mobile, test)
 						if new_evs == 'reboot':
 							print('Reboot')
 							driver.quit()
 							break
+
+						# monitor_ev_end_time = datetime.today()
+						# monitor_ev_duration = (monitor_ev_end_time - monitor_ev_start_time).seconds
+						# print('monitor_ev_duration: ' + str(monitor_ev_duration) + ' seconds')
+
 						# except KeyboardInterrupt:
 						# 	print('Stop Monitor EVs')
 						# prev_ev_data = init_ev_data # save last 2 in case glitch causes temp disappearance
 						# writer.write_data_to_file(ev_data, ev_data_file) # becomes init next loop
 					
+						#save_ev_start_time = datetime.today()
+
 						#print('init_evs: ' + str(init_evs))
 						all_evs = init_evs
 						ev_idx = len(all_evs)
@@ -1110,6 +1153,11 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						#print('all_evs: ' + str(all_evs))
 						if not test:
 							writer.write_json_to_file(all_evs, evs_file)
+
+							# save_ev_end_time = datetime.today()
+							# save_ev_duration = (save_ev_end_time - save_ev_start_time).seconds
+							# print('save_ev_duration: ' + str(save_ev_duration) + ' seconds')
+
 
 
 					monitor_idx += 1 # used only for first loop
@@ -1131,6 +1179,13 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 					print('\nKeyboardInterrupt in Infinite Loop')
 					print('Exit')
 					exit()
+
+
+
+				# main_end_time = datetime.today()
+				# main_duration = (main_end_time - main_start_time).seconds
+				# print('main_duration: ' + str(main_duration) + ' seconds')
+
 
 			# if keyboard interrupt quit
 			# then exit outer loop

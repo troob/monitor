@@ -1905,7 +1905,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 	driver.get(url)
 	cookies_file = 'data/cookies.json'
 	saved_cookies = ''#add_cookies(driver, website_name, cookies_file)
-	#time.sleep(2) # wait to load. sometimes fails at 1 sec
+	time.sleep(1.1) # wait to load. sometimes fails at 1 sec
 	#save_cookies(driver, website_name, cookies_file, saved_cookies)
 
 	num_windows = len(driver.window_handles)
@@ -6027,6 +6027,7 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 # read pre or live is exactly the same format
 # so can use for either but need to press btn first
 # use input arb type to know which btn to press
+# 'try except' does not make code take longer! so use freely
 def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[], max_retries=3):
 	# print('\n===Read Prematch Arb Data===\n')
 	# print('\nOutput: prematch_arb_data = [{%, $, ...}, ...]\n')
@@ -6049,114 +6050,147 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 		# Comment out try block to pinpoint exact error
 		try:
 
-			# starting from oddsview start screen
-			# starts on live, best odds
-			# click prematch
-			# click arb
-			# retry in case of error
-			# problem is login dialog box blocks btns 
-			# after a minute on page
-			# try:
-			# 	pre_btn.click()
-			# 	arb_btn.click()
-			# 	time.sleep(1)
-			# except:
-			# 	print('Error clicking pre or arb btn')
+			#click_btns_start_time = datetime.today()
 
-			# click_retries = 0
-			# while click_retries < max_retries:
-			#try:
-			# print('pre_btn: ' + pre_btn.get_attribute('outerHTML'))
-			# print('arb_btn: ' + arb_btn.get_attribute('outerHTML'))
-			#pre_btn.click()
 			if re.search('odds', url):
 				driver.execute_script("arguments[0].click();", pre_btn)
 			arb_btn.click()
 			time.sleep(0.5)
 
-				#break # exit loop after clicking to continue
-			# except:
-			# 	print('Error clicking pre or arb btn')
-				#click_retries += 1
+			# click_btns_end_time = datetime.today()
+			# click_btns_duration = (click_btns_end_time - click_btns_start_time).microseconds
+			# print('click_btns_duration: ' + str(click_btns_duration) + ' microseconds')
 
-			# if click_retries == 3:
-			# 	return None
 
+			# oddsview
 			if re.search('odds', url):
+
+				#read_arb_table_start_time = datetime.today()
 
 				# arb table changes so wait to call table each monitor loop
 				prematch_arb_table = driver.find_elements('tag name', 'table')[-1]
 				#print('prematch_arb_table: ' + prematch_arb_table.get_attribute('innerHTML'))
 
-
 				arb_rows = prematch_arb_table.find_elements('tag name', 'tr')
+
+				# read_arb_table_end_time = datetime.today()
+				# read_arb_table_duration = (read_arb_table_end_time - read_arb_table_start_time).microseconds
+				# print('read_arb_table_duration: ' + str(read_arb_table_duration) + ' seconds')
+
+				# loop takes 3 seconds if finding each element separately
+				# how long to parse string???
+				arb_loop_start_time = datetime.today()
+
 				#print('\nArbs:')
 				# skip header row
 				# only take rows that have nested rows
 				num = 1
 				#for idx in range(1, len(arb_rows)):
 				for arb in arb_rows[1:]:
+
+					arb_start_time = datetime.today()
+
+					#read_arb_str_start_time = datetime.today()
+
 					#arb = arb_rows[idx]
 					#print('arb: ' + str(arb))
+
 					arb_str = ''
-					try:
-						arb_str = arb.get_attribute('innerHTML')
-					except:
-						print('No Arb')
-						break # break not continue, bc no arbs will loop thru all rows
+					#try:
+					arb_str = arb.get_attribute('innerHTML')
+					# except:
+					# 	print('No Arb')
+					# 	break # break not continue, bc no arbs will loop thru all rows
+
+					# read_arb_str_end_time = datetime.today()
+					# read_arb_str_duration = (read_arb_str_end_time - read_arb_str_start_time).microseconds
+					# print('read_arb_str_duration: ' + str(read_arb_str_duration) + ' seconds')
 
 					if re.search('<tr ', arb_str):
-						#print("\nArb " + str(num) + ": " + arb_str)
+						#print("\n===Arb " + str(num) + ": " + arb_str)
+						#print('\n===Arb ' + str(num) + '===\n')
 						num += 1
 
-						arb_data = []
-						try:
-							arb_data = arb.find_elements('tag name', 'td')
+						arb_str_data = arb_str.split('</td>')
+						# #print('\nArbs\n')
+						# for arb_datum_idx in range(len(arb_str_data)):
+						# 	arb_datum = arb_str_data[arb_datum_idx] + '</td>'
+						# 	print('\narb_datum ' + str(arb_datum_idx) + ': ' + arb_datum)
+
+
+
+						#read_arb_data_start_time = datetime.today()
+
+						#try:
+						#arb_data = arb.find_elements('tag name', 'td')
 							# TEST: print arb data to find idxs
 							# for ad_idx in range(len(arb_data)):
 							# 	ad = arb_data[ad_idx].get_attribute('innerHTML')
 							# 	print('ad ' + str(ad_idx) + ': ' + str(ad))
-						except:
-							print('No Arb Data')
-							continue
+						# except:
+						# 	print('No Arb Data')
+						# 	continue
+
+						# read_arb_data_end_time = datetime.today()
+						# read_arb_data_duration = (read_arb_data_end_time - read_arb_data_start_time).microseconds
+						# print('read_arb_data_duration: ' + str(read_arb_data_duration) + ' seconds')
+
+
+						# read_arb_val_start_time = datetime.today()
 
 						# find val first and all other relative to it
 						# re.search('%')
+						# ...font-semibold">0.6% <br>
 						val_idx = 1
-						value = arb_data[val_idx].get_attribute('innerHTML').split('%')[0] #.get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+						#value = arb_data[val_idx].get_attribute('innerHTML').split('%')[0] #.get_attribute('innerHTML').rstrip('%') # '0.7%' -> 0.7
+						value = arb_str_data[val_idx].split('>')[1].split('%')[0]
 						#print('value: ' + str(value))
 
-						# read all arbs and then split into test and valid later
-						# if float(value) < min_value or float(value) > max_value:
-						# 	continue
+						# read_arb_val_end_time = datetime.today()
+						# read_arb_val_duration = (read_arb_val_end_time - read_arb_val_start_time).microseconds
+						# print('read_arb_val_duration: ' + str(read_arb_val_duration) + ' seconds')
 
-						# profit depends on limits
-						#profit = arb_data[1].get_attribute('innerHTML') # '$11.22'
-						# if len(arb_data) <= 2:
-						# 	print('No Game')
-						# 	break
 
+						# read_arb_game_start_time = datetime.today()
+						
 						#try:
 						game_idx = val_idx + 2
-						game_element = arb_data[game_idx]
-						game_data = game_element.find_elements('tag name', 'p')
+						#game_element = arb_data[game_idx]
+						game_str = arb_str_data[game_idx]
+
+						#game_data = game_element.find_elements('tag name', 'p')
+						#print('game_data 1: ' + str(game_data))
+						game_data = game_str.split('</p>')
+						#print('game_data 2: ' + str(game_data))
 						# sport = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML')
 						# sport = sport.split('|')[1].strip().lower()
 						#print('Sport: ' + sport)
-						try:
-							sport_data = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML').split('|')
-						
-							#sport_data = sport_element.split('|')
-							sport = sport_data[0].strip().lower()
-							#print('sport: ' + str(sport))
-							league = sport_data[1].strip().lower()
-						except:
-							print('Error Getting Sport Data: ' + game_element.get_attribute('innerHTML'))
+						#try:
+						#sport_data = game_element.find_element('tag name', 'div').find_element('tag name', 'div').get_attribute('innerHTML').split('|')
+						#print('sport_data 1: ' + str(sport_data))
+						sport_data = game_str.split('</div>')[0].split('</div>')[0].split(' | ')
+						#print('sport_data 2: ' + str(sport_data))
+
+						#sport_data = sport_element.split('|')
+						sport = sport_data[0].split('>')[-1].strip().lower()
+						#print('sport: ' + str(sport))
+						league = sport_data[1].strip().lower()
+						# except:
+						# 	print('Error Getting Sport Data: ' + game_element.get_attribute('innerHTML'))
 						#print('league: ' + str(league))
+
+						# read_arb_game_end_time = datetime.today()
+						# read_arb_game_duration = (read_arb_game_end_time - read_arb_game_start_time).microseconds
+						# print('read_arb_game_duration: ' + str(read_arb_game_duration) + ' seconds')
+
+
+						#read_arb_date_start_time = datetime.today()
+
 						# Mon Jul 1, 4:00 AM -> Jul 1
 						# OR Today, 9:00 PM
 						# remove comma for csv
-						game_date_data = game_data[0].get_attribute('innerHTML').split(', ')
+						#game_date_data = game_data[0].get_attribute('innerHTML').split(', ')
+						game_date_data = game_data[0].split('>')[-1].split(', ')
 						game_date = game_date_data[0]
 						#print('game_date: ' + str(game_date))
 						game_time = game_date_data[1]
@@ -6170,218 +6204,175 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 							game_date += ' ' + cur_yr
 						#print('game_date: ' + str(game_date) + '\n')
 						
-						game = game_data[1].get_attribute('innerHTML')
+						#game = game_data[1].get_attribute('innerHTML')
+						game = game_data[1].split('>')[-1]
 						game = converter.convert_name_to_standard_format(game)
+						#print('game: ' + str(game))
+
+						# read_arb_date_end_time = datetime.today()
+						# read_arb_date_duration = (read_arb_date_end_time - read_arb_date_start_time).microseconds
+						# print('read_arb_date_duration: ' + str(read_arb_date_duration) + ' seconds')
+
+							
+						#read_arb_market_start_time = datetime.today()
+
+						market = None
+						#try:
+						#market_idx = val_idx + 3
+						# poor source format sometimes includes _ and all caps for football player markets (source will probably fix soon???)
+						# so make uniform here
+						#market = arb_data[val_idx + 3].find_element('tag name', 'p').get_attribute('innerHTML')
+						#print('market 1: ' + str(market))
+						market = arb_str_data[val_idx + 3].split('</p>')[0].split('>')[-1]
+						#print('market 2: ' + str(market))
+						if sport == 'football' and re.search(' - ', market):
+							market_data = market.split(' - ')
+							player_name = market_data[0]
+							player_market = re.sub('_', ' ', market_data[1]).title()
+							market = player_name + ' - ' + player_market
+						elif sport == 'basketball' and re.search('_', market):
+							# MONEYLINE_Q1 -> 1st quarter moneyline
+							market_data = market.split('_')
+							quarter_market = market_data[0].title()
+							period = market_data[1]
+							period_type = 'Half'
+							if period[0] == 'Q':
+								period_type = 'Quarter'
+							if period[1] == '1':
+								period = '1st'
+							elif period[1] == '2':
+								period = '2nd'
+							elif period[1] == '3':
+								period = '3rd'
+							elif period[1] == '4':
+								period = '4th'
+							market = period + ' ' + period_type + ' ' + quarter_market
+						#print('market: ' + str(market))
+						market = converter.convert_name_to_standard_format(market)
 							
 						# except:
-						# 	print('No Game')
-						# 	continue
-						#print('game: ' + str(game))
-						
-						# check same day game bc less suspicious
-						# if game not in todays_schedule:
-						# 	continue
-
-						# sometimes stale element so still len but no element
-						# if len(arb_data) <= 3:
 						# 	print('No Market')
-						# 	break
-						market = None
-						try:
-							#market_idx = val_idx + 3
-							# poor source format sometimes includes _ and all caps for football player markets (source will probably fix soon???)
-							# so make uniform here
-							market = arb_data[val_idx + 3].find_element('tag name', 'p').get_attribute('innerHTML')
-							if sport == 'football' and re.search(' - ', market):
-								market_data = market.split(' - ')
-								player_name = market_data[0]
-								player_market = re.sub('_', ' ', market_data[1]).title()
-								market = player_name + ' - ' + player_market
-							elif sport == 'basketball' and re.search('_', market):
-								# MONEYLINE_Q1 -> 1st quarter moneyline
-								market_data = market.split('_')
-								quarter_market = market_data[0].title()
-								period = market_data[1]
-								period_type = 'Half'
-								if period[0] == 'Q':
-									period_type = 'Quarter'
-								if period[1] == '1':
-									period = '1st'
-								elif period[1] == '2':
-									period = '2nd'
-								elif period[1] == '3':
-									period = '3rd'
-								elif period[1] == '4':
-									period = '4th'
-								market = period + ' ' + period_type + ' ' + quarter_market
-							#print('market: ' + str(market))
-							market = converter.convert_name_to_standard_format(market)
-							
-						except:
-							print('No Market')
-							continue
+						# 	continue
 
-						bet1 = arb_data[val_idx + 5].find_element('tag name', 'div').get_attribute('innerHTML')
-						#print('bet1: ' + str(bet1))
-						bet2 = arb_data[val_idx + 6].find_element('tag name', 'div').get_attribute('innerHTML')
-						#print('bet2: ' + str(bet2))
+						# read_arb_market_end_time = datetime.today()
+						# read_arb_market_duration = (read_arb_market_end_time - read_arb_market_start_time).microseconds
+						# print('read_arb_market_duration: ' + str(read_arb_market_duration) + ' seconds')
+
+
+						#read_arb_bet_start_time = datetime.today()
+
+						# bet1 = arb_data[val_idx + 5].find_element('tag name', 'div').get_attribute('innerHTML')
+						# print('bet1 1: ' + str(bet1))
+						# bet2 = arb_data[val_idx + 6].find_element('tag name', 'div').get_attribute('innerHTML')
+						# print('bet2 1: ' + str(bet2))
+
+						bet1 = arb_str_data[val_idx + 4].split('</div>')[0].split('>')[-1]
+						#print('bet1 2: ' + str(bet1))
+						bet2 = arb_str_data[val_idx + 5].split('</div>')[0].split('>')[-1]
+						#print('bet2 2: ' + str(bet2))
 
 						bet1 = converter.convert_name_to_standard_format(bet1)
 						bet2 = converter.convert_name_to_standard_format(bet2)
 
-						size1 = arb_data[val_idx + 11].find_element('tag name', 'p').get_attribute('innerHTML')
-						#print('size1: ' + str(size1))
-						size2 = arb_data[val_idx + 12].find_element('tag name', 'p').get_attribute('innerHTML')
-						#print('size2: ' + str(size2))
-						
-						# nested elements
-						# bets element
-						# vals_element = arb_data[4]#.get_attribute('innerHTML')
-						# #print('vals_element: ' + str(vals_element.get_attribute('innerHTML')))
-						# # bet_sources = bets_element.find_elements('tag name', 'img')
-						# # for bet_source in bet_sources:
-						# # 	print('bet_source: ' + bet_source.get_attribute('innerHTML'))
+						# read_arb_bet_end_time = datetime.today()
+						# read_arb_bet_duration = (read_arb_bet_end_time - read_arb_bet_start_time).microseconds
+						# print('read_arb_bet_duration: ' + str(read_arb_bet_duration) + ' seconds')
 
-						# try:
-						# 	vals_data = vals_element.find_elements('tag name', 'tr')
+
+						#read_arb_size_start_time = datetime.today()
+
+						# size1 = arb_data[val_idx + 11].find_element('tag name', 'p').get_attribute('innerHTML')
+						# print('size1: ' + str(size1))
+						# size2 = arb_data[val_idx + 12].find_element('tag name', 'p').get_attribute('innerHTML')
+						# print('size2: ' + str(size2))
+
+						# size1_data = arb_str_data[val_idx + 11].split('</p>')
+						# print('size1_data: ' + str(size1_data))
+						size1 = arb_str_data[val_idx + 10].split('</p>')[0].split('>')[-1]
+						#print('size1 2: ' + str(size1))
+						size2 = arb_str_data[val_idx + 11].split('</p>')[0].split('>')[-1]
+						#print('size2 2: ' + str(size2))
+
+						# read_arb_size_end_time = datetime.today()
+						# read_arb_size_duration = (read_arb_size_end_time - read_arb_size_start_time).microseconds
+						# print('read_arb_size_duration: ' + str(read_arb_size_duration) + ' seconds')
+
+
+						# read_arb_link_start_time = datetime.today()
+
+						# links_element = arb_data[val_idx + 13]
+						# links_data = links_element.find_elements('tag name', 'tr')
+						
+						# links_str = arb_str_data[val_idx + 13]
+						# link1 = links_str.split('</tr>')
+						# print('links_data: ' + str(links_data))
+
+						#try:
+						#link1 = links_data[0].find_element('tag name', 'a').get_attribute('href')
+						link1 = arb_str_data[val_idx + 13].split('href="')[-1].split('"')[0]
+						link1 = re.sub('nj', 'ny', link1)
+						#print('link1: ' + link1)
+
 						# except:
-						# 	print('No Vals')
+						# 	print('No Link 1')
+						# 	# for row in links_data:
+						# 	# 	print('row: ' + row.get_attribute('innerHTML'))
 						# 	continue
-						# # for td_idx in range(len(row_data)):
-						# # 	td = row_data[td_idx]
-						# # 	td_link = td.find_element('tag name', 'a').get_attribute('href')
-						# # 	print('td ' + str(td_idx) + ': ' + td_link)
-						
-						# # website defaults to nj so convert link to ny
-						# # NY: https://sports.ny.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
-						# # NJ: https://sports.nj.betmgm.com/en/sports/events/15881485?options=15881485-1117747290--1077475125
-						# # if len(arb_data) <= 13:
-						# # 	print('No Link')
-						# # 	continue
-						
-						# # link1_element = arb_data[13]
-						# # #print('link1_element: ' + str(link1_element.get_attribute('innerHTML')))
-						# # link1 = link1_element.find_element('tag name', 'a').get_attribute('href')
-						# # if len(row_data) == 0:
-						# # 	print('No Links')
-						# # 	break
-						# try:
-						# 	# V2
-						# 	# link1 = row_data[0].find_element('tag name', 'a').get_attribute('href')
-						# 	# link1 = re.sub('nj', 'ny', link1)
-						# 	#print('link1: ' + link1)
 
-						# 	#V3
-						# 	size1 = vals_data[0].find_element('tag name', 'div').get_attribute('innerHTML')
+						#try:
+						#link2 = links_data[1].find_element('tag name', 'a').get_attribute('href')
+						link2 = arb_str_data[val_idx + 14].split('href="')[-1].split('"')[0]
+						link2 = re.sub('nj', 'ny', link2)
+						#print('link2: ' + link2)
 
 						# except:
-						# 	print('No Val 1')
-						# 	for row in vals_data:
+						# 	print('No Link 2')
+						# 	for row in links_data:
 						# 		print('row: ' + row.get_attribute('innerHTML'))
 						# 	continue
 
-						# # link2_element = arb_data[14]
-						# # #print('link2_element: ' + str(link2_element.get_attribute('innerHTML')))
-						# # link2 = link2_element.find_element('tag name', 'a').get_attribute('href')
-						# # if len(row_data) <= 1:
-						# # 	print('No Link 2')
-						# # 	break
-						# try:
-						# 	# link2 = row_data[1].find_element('tag name', 'a').get_attribute('href')
-						# 	# link2 = re.sub('nj', 'ny', link2)
-						# 	#print('link2: ' + link2)
+						# read_arb_link_end_time = datetime.today()
+						# read_arb_link_duration = (read_arb_link_end_time - read_arb_link_start_time).microseconds
+						# print('read_arb_link_duration: ' + str(read_arb_link_duration) + ' seconds')
 
-						# 	#V3
-						# 	size2 = vals_data[1].find_element('tag name', 'div').get_attribute('innerHTML')
-
-						# except:
-						# 	print('No Val 2')
-						# 	continue
-
-						# print('size1: ' + size1)
-						# print('size2: ' + size2)
-
-
-						links_element = arb_data[val_idx + 13]
-						links_data = links_element.find_elements('tag name', 'tr')
-
-						try:
-							link1 = links_data[0].find_element('tag name', 'a').get_attribute('href')
-							link1 = re.sub('nj', 'ny', link1)
-							#print('link1: ' + link1)
-
-						except:
-							print('No Link 1')
-							# for row in links_data:
-							# 	print('row: ' + row.get_attribute('innerHTML'))
-							continue
-
-						try:
-							link2 = links_data[1].find_element('tag name', 'a').get_attribute('href')
-							link2 = re.sub('nj', 'ny', link2)
-							#print('link2: ' + link2)
-
-						except:
-							print('No Link 2')
-							for row in links_data:
-								print('row: ' + row.get_attribute('innerHTML'))
-							continue
 						
-						
+						#read_arb_source_start_time = datetime.today()
+
 						source1 = read_source_from_link(link1)
-						#print('bet1: ' + str(bet1))
-						# if bet1 not in sources:
-						# 	print('No bet1: ' + bet1)
-						# 	continue
-						
-						# if len(bet_sources) == 1:
-						# 	print('Only 1 Bet Source Found')
-						# 	break
 
 						source2 = read_source_from_link(link2)
-						#print('bet2: ' + str(bet2))
-						# if bet2 not in sources:
-						# 	print('No bet2: ' + bet2)
-						# 	continue
-						# bets = (bet1, bet2)
-						# print('bets: ' + str(bets))
 
 
-						# if bet1 == '' or bet2 == '':
-						# 	print('Unknown Bet source: ' + link1 + ', ' + link2)
-						# 	break
 						if source1 not in sources or source2 not in sources:
 							#print('Unavailable Bet source: ' + link1 + ', ' + link2)
 							continue
 
+						# read_arb_source_end_time = datetime.today()
+						# read_arb_source_duration = (read_arb_source_end_time - read_arb_source_start_time).microseconds
+						# print('read_arb_source_duration: ' + str(read_arb_source_duration) + ' seconds')
 
 
-						odds1 = arb_data[val_idx + 8].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						# read_arb_odds_start_time = datetime.today()
+
+						# odds1 = arb_data[val_idx + 8].find_element('tag name', 'p').get_attribute('innerHTML').strip()
 						
-						# if len(arb_data) <= 9:
-						# 	# error so continue
+						# #try:
+						# odds2 = arb_data[val_idx + 9].find_element('tag name', 'p').get_attribute('innerHTML').strip()
+						# except:
 						# 	print('No odds2')
-						# 	break
-							
-						try:
-							odds2 = arb_data[val_idx + 9].find_element('tag name', 'p').get_attribute('innerHTML').strip()
-						except:
-							print('No odds2')
-							continue
+						# 	continue
 						# print('odds1: ' + odds1)
 						# print('odds2: ' + odds2)#.get_attribute('innerHTML'))
+						odds1 = arb_str_data[val_idx + 7].split('</p>')[0].split('> ')[-1].strip()
+						odds2 = arb_str_data[val_idx + 8].split('</p>')[0].split('> ')[-1].strip()
+						# print('odds1: ' + odds1)
+						# print('odds2: ' + odds2)
 
-						# if source=betrivers, odds might not be correct
-						# so give 2 options:
-						# 1. if correct
-						# 2. adjusted down by 5 (bc seems most common error)
+						# read_arb_odds_end_time = datetime.today()
+						# read_arb_odds_duration = (read_arb_odds_end_time - read_arb_odds_start_time).microseconds
+						# print('read_arb_odds_duration: ' + str(read_arb_odds_duration) + ' seconds')
 
 
-
-						# V3 format
-						#odds_element = arb_data[5]
-						
-						
 						# game_date, 
 						#arb_row = [value, game, market, source1, source2, odds1, odds2, link1, link2, size1, size2, game_date, sport]
 						#print('arb_row: ' + str(arb_row))
@@ -6408,6 +6399,16 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 
 						# test 1 to see why not equal
 						#break
+
+						arb_end_time = datetime.today()
+						arb_duration = (arb_end_time - arb_start_time).microseconds
+						print('arb_duration: ' + str(arb_duration) + ' microseconds\n')
+
+
+				arb_loop_end_time = datetime.today()
+				arb_loop_duration = (arb_loop_end_time - arb_loop_start_time).seconds
+				print('arb_loop_duration: ' + str(arb_loop_duration) + ' seconds')
+
 
 			elif re.search('slack', url):
 				print('Read Slack Prematch Arb Data')
@@ -6475,12 +6476,12 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 					#arb = arb_rows[idx]
 					print('\nArb ' + str(num) + ': ' + str(arb))
 					arb_str = ''
-					try:
-						arb_str = arb.get_attribute('innerHTML')
-						#print('arb_str: ' + arb_str)
-					except:
-						print('\nNo Arb\n')
-						break # break not continue, bc no arbs will loop thru all rows
+					#try:
+					arb_str = arb.get_attribute('innerHTML')
+					#print('arb_str: ' + arb_str)
+					# except:
+					# 	print('\nNo Arb\n')
+					# 	break # break not continue, bc no arbs will loop thru all rows
 					
 					print("\nArb Str " + str(num) + ": " + arb_str)
 					num += 1
