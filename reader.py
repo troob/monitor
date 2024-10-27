@@ -146,7 +146,10 @@ def find_place_bet_button(driver, source):
 	place_bet_button = None
 
 	place_btn_element = None
-	if source == 'draftkings':
+	if source == 'betrivers':
+		place_btn_element = ('class name', 'mod-KambiBC-betslip__place-bet-btn')
+
+	elif source == 'draftkings':
 		place_btn_element = ('class name', 'dk-place-bet-button__primary-text')
 
 	if place_btn_element is not None:
@@ -6400,14 +6403,14 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 						# test 1 to see why not equal
 						#break
 
-						arb_end_time = datetime.today()
-						arb_duration = (arb_end_time - arb_start_time).microseconds
-						print('arb_duration: ' + str(arb_duration) + ' microseconds\n')
+						# arb_end_time = datetime.today()
+						# arb_duration = (arb_end_time - arb_start_time).microseconds
+						# print('arb_duration: ' + str(arb_duration) + ' microseconds\n')
 
 
-				arb_loop_end_time = datetime.today()
-				arb_loop_duration = (arb_loop_end_time - arb_loop_start_time).seconds
-				print('arb_loop_duration: ' + str(arb_loop_duration) + ' seconds')
+				# arb_loop_end_time = datetime.today()
+				# arb_loop_duration = (arb_loop_end_time - arb_loop_start_time).seconds
+				# print('arb_loop_duration: ' + str(arb_loop_duration) + ' seconds')
 
 
 			elif re.search('slack', url):
@@ -6588,7 +6591,7 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 19') 
+	options.add_argument(r'--profile-directory=Profile 20') 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)

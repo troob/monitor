@@ -855,7 +855,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 
 			
-
+			# === SETUP ===
 			# Add time to manually relogin after resetting oddsview account
 			# NEED to replace with autologin including 2fa
 			#time.sleep(1000) # wait before opening next page to seem human
@@ -925,7 +925,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 			# keep looping every 5 seconds for change
 			while True:
 
-				#main_start_time = datetime.today()
+				main_start_time = datetime.today()
 
 				try:
 
@@ -980,28 +980,30 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 					# read either live or pre, not both
 					# === Monitor New Arb picks ===
 
-					print('\nStart Read Arb\n')
-					read_arb_start_time = datetime.today()
+					#print('\nStart Read Arb\n')
+					#read_arb_start_time = datetime.today()
 
-					arb_data = []
-					if arb_type == 'live':
-						# if on pre-page, click live btn
-						# init on live page so not extra btn to press
-						arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
-					elif arb_type == 'pre':
-						# if on live-page, click pre btn
-						# all arbs read this loop, incuding invalid picks
-						arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url, sources)
-						#arb_dict = reader.read_prematch_arb_dict(driver, pre_btn, arb_btn, sources)
-					# live_arb_data = arb_data[0]
-					# prematch_arb_data = arb_data[1]
-					else: # both
-						# read live twice before
-						arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+					# arb_data = []
+					# if arb_type == 'live':
+					# 	# if on pre-page, click live btn
+					# 	# init on live page so not extra btn to press
+					# 	arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
+					# elif arb_type == 'pre':
+					# 	# if on live-page, click pre btn
+					# 	# all arbs read this loop, incuding invalid picks
+					# 	arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url, sources)
+					# 	#arb_dict = reader.read_prematch_arb_dict(driver, pre_btn, arb_btn, sources)
+					# # live_arb_data = arb_data[0]
+					# # prematch_arb_data = arb_data[1]
+					# else: # both
+					# 	# read live twice before
+					# 	arb_data = reader.read_live_arb_data(driver, sources)#, todays_date)
 					
-					read_arb_end_time = datetime.today()
-					read_arb_duration = (read_arb_end_time - read_arb_start_time).seconds
-					print('\nread_arb_duration: ' + str(read_arb_duration) + ' seconds\n')
+					arb_data = reader.read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url, sources)
+
+					# read_arb_end_time = datetime.today()
+					# read_arb_duration = (read_arb_end_time - read_arb_start_time).seconds
+					# print('\nread_arb_duration: ' + str(read_arb_duration) + ' seconds\n')
 
 					if arb_data == 'reboot':
 						print('Reboot')
@@ -1081,7 +1083,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 					# === Monitor New +EV picks ===
 
-					read_ev_start_time = datetime.today()
+					#read_ev_start_time = datetime.today()
 
 					ev_data = reader.read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources)
 					if ev_data == 'reboot':
@@ -1089,9 +1091,9 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						driver.quit()
 						break
 
-					read_ev_end_time = datetime.today()
-					read_ev_duration = (read_ev_end_time - read_ev_start_time).seconds
-					print('read_ev_duration: ' + str(read_ev_duration) + ' seconds')
+					# read_ev_end_time = datetime.today()
+					# read_ev_duration = (read_ev_end_time - read_ev_start_time).seconds
+					# print('read_ev_duration: ' + str(read_ev_duration) + ' seconds')
 
 
 					# if ev_data is None:
@@ -1182,10 +1184,15 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 
 
-				# main_end_time = datetime.today()
-				# main_duration = (main_end_time - main_start_time).seconds
-				# print('main_duration: ' + str(main_duration) + ' seconds')
+				main_end_time = datetime.today()
+				main_duration = (main_end_time - main_start_time).seconds
+				#print('main_duration: ' + str(main_duration) + ' seconds')
 
+				# at least 5s bt loops
+				min_wait_time = 5
+				if main_duration < min_wait_time:
+					reamining_duration = min_wait_time - main_duration
+					time.sleep(reamining_duration)
 
 			# if keyboard interrupt quit
 			# then exit outer loop
@@ -1371,16 +1378,20 @@ if __name__ == "__main__":
 	# and sometimes want sound off while still running
 	manual_picks = True
 
-	test = False
+	# need test var pure monitor only, do not place picks
+	# but still read actual odds without logging in
+	place_picks = True
 
-	# post to mobile for mobile manual action
-	# need desktop for arb so no need to ever send arb for mobile manual action
-	# ev is mobile capable bc only 1
+	# post to mobile for mobile client action
+	# need desktop for arb so no need to ever send arb for manual action
+	# ev is manual capable bc only 1
 	send_mobile = True # send for notice and manual action
 	
 	# Main switch to stop sending commands out 
 	# to external devices for auto action
 	send_commands = False
+
+	test = False
 
 	#manual_arbs = False # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
 	monitor_website(url, manual_picks, send_mobile, test, test_ev, test_arb)

@@ -718,12 +718,21 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     else:
                         return 0.3
                     
-                # -210 <= x < inf
-                else:
+                # -210 <= x <= -176
+                elif pick_odds <= -176:
                     if pick_source == 'betmgm':
                         return 0.5 # 1.1
                     elif pick_source == 'fanatics':
                         return 0.5 # 1
+                    else:
+                        return 0.3
+                    
+                # -175 <= x < inf
+                else:
+                    if pick_source == 'betmgm':
+                        return 0.5 # 1.1
+                    elif pick_source == 'fanatics':
+                        return 0.6 # 0.8
                     else:
                         return 0.3
 
@@ -1745,10 +1754,19 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         else:
                             return 0.3
                         
-                    # +220 <= x <= +264
-                    if pick_odds <= 264:
+                    # +220 <= x <= +239
+                    if pick_odds <= 239:
                         if pick_source == 'betrivers':
                             return 0.8 # 4.1
+                        elif pick_source == 'betmgm':
+                            return 0.5 # 5.8
+                        else:
+                            return 0.3
+                        
+                    # +240 <= x <= +264
+                    if pick_odds <= 264:
+                        if pick_source == 'betrivers':
+                            return 0.9 # 4.9
                         elif pick_source == 'betmgm':
                             return 0.5 # 5.8
                         else:
@@ -1757,7 +1775,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     # +265 <= x <= +279
                     if pick_odds <= 279:
                         if pick_source == 'betrivers':
-                            return 0.9 # 5.2
+                            return 1 # 5.2
                         elif pick_source == 'betmgm':
                             return 0.5 # 5.8
                         else:
@@ -1766,7 +1784,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     # +280 <= x <= +349
                     if pick_odds <= 349:
                         if pick_source == 'betrivers':
-                            return 1 # 3.8
+                            return 1.1 # 3.8
                         elif pick_source == 'betmgm':
                             return 0.5 # 5.8, 6.2
                         else:
@@ -1775,7 +1793,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     # +350 <= x <= +359
                     if pick_odds <= 359:
                         if pick_source == 'betrivers':
-                            return 1.1 # 3.9
+                            return 1.2 # 3.9
                         elif pick_source == 'betmgm':
                             return 0.5 # 5.8, 6.2
                         else:
@@ -1784,16 +1802,25 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     # +360 <= x <= +399
                     if pick_odds <= 399:
                         if pick_source == 'betrivers':
-                            return 1.1 # 3.9
+                            return 1.2 # 3.9
                         elif pick_source == 'betmgm':
                             return 0.6 # 4.5
                         else:
                             return 0.3
                         
-                    # +400 <= x <= +499
+                    # +400 <= x <= +459
+                    if pick_odds <= 459:
+                        if pick_source == 'betrivers':
+                            return 1.2 # 3.9
+                        elif pick_source == 'betmgm':
+                            return 0.7 # 6.3
+                        else:
+                            return 0.3
+                        
+                    # +460 <= x <= +499
                     if pick_odds <= 499:
                         if pick_source == 'betrivers':
-                            return 1.1 # 3.9
+                            return 1.3 # 6.6
                         elif pick_source == 'betmgm':
                             return 0.7 # 6.3
                         else:
@@ -1802,7 +1829,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     # +500 <= x < inf
                     else:
                         if pick_source == 'betrivers':
-                            return 1.1 # 3.9
+                            return 1.3 # 6.6
                         elif pick_source == 'betmgm':
                             return 0.7 # 6.3
                         elif pick_source == 'fanatics':
@@ -2174,10 +2201,21 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         else:
                             return 0.3
                         
-                    # +105 <= x < inf
+                    # +105 <= x <= +259
+                    elif pick_odds <= 259:
+                        if pick_source == 'betmgm':
+                            return 0.5 # 0.5
+                        elif pick_source == 'fanatics':
+                            return 1.1 # 2
+                        else:
+                            return 0.3
+                        
+                    # +260 <= x < inf
                     else:
                         if pick_source == 'betmgm':
                             return 0.5 # 0.5
+                        elif pick_source == 'betrivers':
+                            return 0.4 # 5.2
                         elif pick_source == 'fanatics':
                             return 1.1 # 2
                         else:
@@ -2440,17 +2478,24 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     if pick_odds <= -126:
                         return 0.3
                     
-                    # -125 <= x <= -106
-                    if pick_odds <= -106:
+                    # -125 <= x <= -116
+                    if pick_odds <= -116:
                         if pick_source == 'fanatics':
                             return 0.4 # 4.3
+                        else:
+                            return 0.3
+                        
+                    # -115 <= x <= -106
+                    if pick_odds <= -106:
+                        if pick_source == 'fanatics':
+                            return 0.5 # 5.7
                         else:
                             return 0.3
                     
                     # -105 <= x <= +119
                     elif pick_odds <= 119:
                         if pick_source == 'fanatics':
-                            return 0.5 # 5.1
+                            return 0.6 # 5.1
                         else:
                             return 0.3
                         
@@ -2459,7 +2504,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         if pick_source == 'betmgm':
                             return 0.4 # 2.3
                         elif pick_source == 'fanatics':
-                            return 0.5 # 3.8, 5.1
+                            return 0.7 # 3.8, 5.1
                         else:
                             return 0.3
                         
@@ -2468,16 +2513,25 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         if pick_source == 'betmgm':
                             return 0.5 # 1.7
                         elif pick_source == 'fanatics':
-                            return 0.5 # 3.8, 5.1
+                            return 0.7 # 3.8, 5.1
                         else:
                             return 0.3
                         
-                    # +140 <= x < inf
+                    # +140 <= x <= +144
+                    elif pick_odds <= 144:
+                        if pick_source == 'betmgm':
+                            return 0.6 # 4.6
+                        elif pick_source == 'fanatics':
+                            return 0.7 # 3.8, 5.1
+                        else:
+                            return 0.3
+                        
+                    # +145 <= x < inf
                     else:
                         if pick_source == 'betmgm':
                             return 0.6 # 4.6
                         elif pick_source == 'fanatics':
-                            return 0.5 # 3.8, 5.1
+                            return 0.8 # 4.3
                         else:
                             return 0.3
                 
@@ -2487,31 +2541,38 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     if pick_odds <= -116:
                         return 0.3
                     
-                    # -115 <= x <= -101
-                    if pick_odds <= -101:
+                    # -115 <= x <= -106
+                    if pick_odds <= -106:
                         if pick_source == 'fanatics':
                             return 0.4 # 1.3
+                        else:
+                            return 0.3
+                        
+                    # -105 <= x <= -101
+                    if pick_odds <= -101:
+                        if pick_source == 'fanatics':
+                            return 0.5 # 7.1
                         else:
                             return 0.3
                     
                     # +100 <= x <= +119
                     elif pick_odds <= 119:
                         if pick_source == 'fanatics':
-                            return 0.5 # 1.4
+                            return 0.6 # 1.4
                         else:
                             return 0.3
                         
                     # +120 <= x <= +124
                     elif pick_odds <= 124:
                         if pick_source == 'fanatics':
-                            return 0.6 # 1.7
+                            return 0.7 # 1.7
                         else:
                             return 0.3
                         
                     # +125 <= x < inf
                     else:
                         if pick_source == 'fanatics':
-                            return 0.7 # 3.8
+                            return 0.8 # 3.8
                         else:
                             return 0.3
                         
@@ -2525,14 +2586,18 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     
                     # +100 <= x <= +129
                     if pick_odds <= 129:
-                        if pick_source == 'betrivers':
+                        if pick_source == 'betmgm':
+                            return 0.4 # 2.9
+                        elif pick_source == 'betrivers':
                             return 0.4 # 2.8
                         else:
                             return 0.3
                         
                     # +130 <= x <= +134
                     if pick_odds <= 134:
-                        if pick_source == 'betrivers':
+                        if pick_source == 'betmgm':
+                            return 0.4 # 2.9
+                        elif pick_source == 'betrivers':
                             return 0.4 # 2.8
                         elif pick_source == 'fanatics':
                             return 0.4 # 4.8
@@ -2541,7 +2606,9 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     
                     # +135 <= x < inf
                     else:
-                        if pick_source == 'betrivers':
+                        if pick_source == 'betmgm':
+                            return 0.4 # 2.9
+                        elif pick_source == 'betrivers':
                             return 0.4 # 2.8
                         elif pick_source == 'fanatics':
                             return 0.5 # 4.3
@@ -2631,14 +2698,23 @@ def determine_min_pick_val(pick, pick_type='ev'):
 
                 if re.search('o', pick_bet):
 
-                    # -inf < x <= +109
-                    if pick_odds <= 109:
+                    # -inf < x <= -131
+                    if pick_odds <= -131:
                         return 0.3
+                    
+                    # -130 <= x <= +109
+                    if pick_odds <= 109:
+                        if pick_source == 'fanatics':
+                            return 0.4 # 1.3
+                        else:
+                            return 0.3
                     
                     # +110 <= x <= +134
                     if pick_odds <= 134:
                         if pick_source == 'betmgm':
                             return 0.4 # 2
+                        elif pick_source == 'fanatics':
+                            return 0.4 # 1.3
                         else:
                             return 0.3
 
@@ -2646,6 +2722,8 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     if pick_odds <= 139:
                         if pick_source == 'betmgm':
                             return 0.5 # 3.5
+                        elif pick_source == 'fanatics':
+                            return 0.4 # 1.3
                         else:
                             return 0.3
                     
@@ -2654,7 +2732,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         if pick_source == 'betmgm':
                             return 0.5 # 3.5
                         elif pick_source == 'fanatics':
-                            return 0.4 # 6.8
+                            return 0.5 # 6.8
                         else:
                             return 0.3
                         
@@ -2663,7 +2741,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         if pick_source == 'betmgm':
                             return 0.6 # 4.4, 4.8
                         elif pick_source == 'fanatics':
-                            return 0.4 # 6.8
+                            return 0.5 # 6.8
                         else:
                             return 0.3
 
@@ -2672,7 +2750,7 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         if pick_source == 'betmgm':
                             return 0.7 # 4.7
                         elif pick_source == 'fanatics':
-                            return 0.4 # 6.8
+                            return 0.5 # 6.8
                         else:
                             return 0.3
                         
@@ -2683,14 +2761,14 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         elif pick_source == 'betrivers':
                             return 0.4 # 6
                         elif pick_source == 'fanatics':
-                            return 0.4 # 6.8
+                            return 0.5 # 6.8
                         else:
                             return 0.3
                 
                 else: # under
 
                     # -inf < x <= -168
-                    if pick_odds <= -68:
+                    if pick_odds <= -168:
                         return 0.3
                     
                     # -167 <= x <= -136
@@ -4781,9 +4859,20 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         else:
                             return 0.3
                         
-                    # +190 <= x <= +204
-                    elif pick_odds <= 204:
+                    # +190 <= x <= +194
+                    elif pick_odds <= 194:
                         if pick_source == 'betrivers':
+                            return 0.6 # 5.4
+                        elif pick_source == 'fanatics':
+                            return 1.5 # 2.8
+                        else:
+                            return 0.3
+                        
+                    # +195 <= x <= +204
+                    elif pick_odds <= 204:
+                        if pick_source == 'betmgm':
+                            return 0.4 # 4.5
+                        elif pick_source == 'betrivers':
                             return 0.6 # 5.4
                         elif pick_source == 'fanatics':
                             return 1.5 # 2.8
@@ -4792,7 +4881,9 @@ def determine_min_pick_val(pick, pick_type='ev'):
                         
                     # +205 <= x < inf
                     else:
-                        if pick_source == 'betrivers':
+                        if pick_source == 'betmgm':
+                            return 0.4 # 4.5
+                        elif pick_source == 'betrivers':
                             return 0.6 # 5.4
                         elif pick_source == 'fanatics':
                             return 1.5 # 2.8
@@ -5057,10 +5148,17 @@ def determine_min_pick_val(pick, pick_type='ev'):
                     else:
                         return 0.3
 
-                # -220 <= x < inf
-                else:
+                # -220 <= x <= -187
+                elif pick_odds <= -187:
                     if pick_source == 'betrivers':
                         return 0.5 # 2.2
+                    else:
+                        return 0.3
+                    
+                # -186 <= x < inf
+                else:
+                    if pick_source == 'betrivers':
+                        return 0.6 # 0.7
                     else:
                         return 0.3
                     
@@ -5094,7 +5192,23 @@ def determine_min_pick_val(pick, pick_type='ev'):
 
             elif pick_market == 'game spread':
                 
-                return 0.3
+                # Plus
+                if re.search('\+', pick_bet):
+
+                    # -inf < x <= +109
+                    if pick_odds <= 109:
+                        return 0.3
+                    
+                    # +110 <= x < inf
+                    else:
+                        if pick_source == 'fanatics':
+                            return 0.4 # 1.4
+                        else:
+                            return 0.3
+                # Minus
+                else:
+                    
+                    return 0.3
                 
             elif re.search('to win at least 1', pick_market):
                 

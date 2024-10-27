@@ -633,6 +633,10 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                 submit_btn = driver.find_element('xpath', '//button[@class="login w-100 btn btn-primary"]')
                 print('submit_btn: ' + submit_btn.get_attribute('innerHTML'))
                 login_page = True
+            except KeyboardInterrupt:
+                print('\nKeyboardInterrupt in Login')
+                print('Exit')
+                exit()
             except:
                 print('Loading Login Page...')
                 time.sleep(1)
@@ -656,6 +660,10 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                     print('pwd_msg: ' + pwd_msg)
                     loading = False
                     print('Done Loading')
+                except KeyboardInterrupt:
+                    print('\nKeyboardInterrupt in Login')
+                    print('Exit')
+                    exit()
                 except:
                     print('Loading...')
 
@@ -782,6 +790,10 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
         while not logged_in:
             try:
                 pwd_field = driver.find_element('name', 'password')
+            except KeyboardInterrupt:
+                print('\nKeyboardInterrupt in Login')
+                print('Exit')
+                exit()
             except:
                 logged_in = True
                 print('\nLogin Success\n')
@@ -1019,34 +1031,10 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
 
             bet_size = determiner.determine_limit(bet_dict, website_name, pick_type, test)
 
-            wager_field = None
-            load_retries = 0
-            while not logged_in and load_retries < max_retries:
-                try:
-                    # wager field not always there if bet closed during login
-                    # so look for place bet btn
-                    try:
-                        wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
-                        logged_in = True
-                    except:
-                        print('ERROR: No Wager Field')
-
-                    try:
-                        driver.find_element('class name', 'place-button')
-                        logged_in = True
-                    except:
-                        print('ERROR: No Place Bet Button')
-
-                except:
-                    print('Not Logged In Yet')
-                    time.sleep(1)
-                    load_retries += 1
-
-            if load_retries == max_retries:
-                close_bet_windows(driver, test=test, bet_dict=bet_dict)
+            wager_field = load_bet_page(driver, website_name, bet_dict, test)
+        
+            if wager_field is None:
                 return
-
-            remove_old_bets(driver, website_name)
 
             # if error other than limit
             # then not considered attempted bet
@@ -1891,6 +1879,50 @@ def recheck_location(driver):#, place_bet_btn):#, website_name):
             print('Checking Location...')
             time.sleep(1)
 
+# after logging in, wait for fields to load
+def load_bet_page(driver, website_name, bet_dict, test, max_retries=3):
+
+    wager_field = None
+    load_retries = 0
+    refresh_retries = 0
+    logged_in = False
+    while not logged_in and refresh_retries < max_retries:
+        while not logged_in and load_retries < max_retries:
+            try:
+                # wager field not always there if bet closed during login
+                # so look for place bet btn
+                #try:
+                wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
+                logged_in = True
+                # except:
+                #     print('ERROR: No Wager Field')
+
+                #try:
+                driver.find_element('class name', 'place-button')
+                logged_in = True
+                # except:
+                #     print('ERROR: No Place Bet Button')
+
+            except:
+                print('Not Logged In Yet')
+                time.sleep(1)
+                load_retries += 1
+
+        if load_retries == max_retries:
+            print('Failed to Load so Refresh and Retry')
+            driver.refresh()
+            time.sleep(1)
+            refresh_retries += 1
+            load_retries = 0
+
+
+    if load_retries == max_retries:
+        close_bet_windows(driver, test=test, bet_dict=bet_dict)
+        return 
+
+    remove_old_bets(driver, website_name)
+
+    return wager_field
 
 # just like place bet but only up to getting limit
 # remove the final place bet click
@@ -1974,21 +2006,16 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
 
     if website_name == 'betmgm':
 
-        logged_in = False
+        
         login_result = login_website(website_name, driver, cookies_file, saved_cookies, url)
         if login_result == 'fail':
             close_bet_windows(driver, side_num, test, bet_dict)
             return
 
-        while not logged_in:
-            try:
-                wager_field = driver.find_element('class name', 'stake-input-value')#.find_element('tag name', 'input')
-                logged_in = True
-            except:
-                print('Not Logged In Yet')
-                time.sleep(1)
-
-        #remove_old_bets(driver, website_name)
+        wager_field = load_bet_page(driver, website_name, bet_dict, test)
+        
+        if wager_field is None:
+            return
 
         attempted_bet = False
         while not attempted_bet:
@@ -2351,6 +2378,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     # Do not close window after finding limit
     
     bet_limit = float(bet_limit)
+    payout = re.sub(',', '', payout)
     payout = float(payout)
     print('bet_limit: ' + str(bet_limit))
     print('payout: ' + str(payout))
@@ -2452,12 +2480,13 @@ def place_arb_bet(driver, arb, side_num, test):
             # case 2a betrivers: how to tell if glitch odds changed?
             # - compare to init odds
             # case 3, side 2 odds changed, approve and place
-            # try:
-            place_btn_text = place_btn.get_attribute('innerHTML').lower()
-            # except Exception as e:
-            #     print('Failed to Click Place Bet Button! ', e)
-            #     place_btn = reader.find_place_bet_button(driver, source)
-            #     place_btn_text = place_btn.get_attribute('innerHTML').lower()
+            try:
+                place_btn_text = place_btn.get_attribute('innerHTML').lower()
+            except Exception as e:
+                print('Failed to Click Place Bet Button! ', e)
+                # place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
+                place_btn = reader.find_place_bet_button(driver, source)
+                place_btn_text = place_btn.get_attribute('innerHTML').lower()
             print('place_btn_text: ' + place_btn_text)
             
             # new_odds = determiner.determine_odds_changed(driver, source)
