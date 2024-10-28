@@ -842,10 +842,13 @@ def read_market_section(market, sport, league, website_name, sections, pick_time
 				market_title = player_name + ' to win at least one set'
 
 		# === MMA & Boxing ===
-		# elif sport == 'mma' or sport == 'boxing':
+		elif sport == 'mma' or sport == 'boxing':
 
-		# 	if market == 'total':
-		# 		market_title = 'total rounds'
+			if market == 'moneyline 3 way':
+				market_title = 'moneyline (3-way)'
+
+			elif market == 'total':
+				market_title = 'total rounds'
 
 
 		# ===== Team Sports =====
