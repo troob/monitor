@@ -1361,7 +1361,14 @@ if __name__ == "__main__":
 	# So instead scrape sites directly
 	# need to change profile num each time change oddsview account to clear cache?
 	# maybe can just clear cache same profile
-	profile_num = 3 # client: 1
+	
+	# change for client
+	profile_num = 3 # client: 1, old mac: 3
+	# need test var pure monitor only, do not place picks
+	# but still read actual odds without logging in
+	place_picks = False # client: false
+	
+	
 	url = 'https://www.oddsview.com/odds'
 	#url = 'https://sportsbook.draftkings.com'
 
@@ -1387,9 +1394,7 @@ if __name__ == "__main__":
 	# and sometimes want sound off while still running
 	manual_picks = True
 
-	# need test var pure monitor only, do not place picks
-	# but still read actual odds without logging in
-	place_picks = True # client: false
+	
 
 	# post to mobile for mobile client action
 	# need desktop for arb so no need to ever send arb for manual action
