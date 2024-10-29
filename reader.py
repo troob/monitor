@@ -4,7 +4,7 @@
 # === Standard External Libraries ===
 from bs4 import BeautifulSoup # read html from webpage
 
-import csv
+import csv, os
 
 from datetime import datetime, timedelta # get current year so we can get current teams
 
@@ -6596,7 +6596,10 @@ def open_react_website(url, profile_num=1, size=(1250,1144), position=(0,0), fir
 
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
-	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
+	device_user_name = os.getlogin()
+	#print('device_user_name: ' + device_user_name)
+	dir_str = r"--user-data-dir=/Users/" + device_user_name + r"/Library/Application Support/Google/Chrome"
+	options.add_argument(dir_str)
 	profile_str = r'--profile-directory=Profile ' + str(profile_num)
 	options.add_argument(profile_str) 
 	

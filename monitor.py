@@ -1225,6 +1225,8 @@ def monitor_website(url, manual_picks=False, send_mobile=True, place_picks=True,
 			exit()
 		except common.exceptions.SessionNotCreatedException as e:
 			print('\nChrome Window Already Opened. Need to Close All Chrome Windows Before Starting Monitor.\n', e)
+			print('Exit')
+			exit()
 			# Mac
 			
 			# Windows
