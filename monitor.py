@@ -202,7 +202,7 @@ monitor_ev = True
 # input all EVs read this scan
 # output only valid EVs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, send_mobile, test, pick_time_group='prematch', pick_type='ev'):
+def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, place_picks, send_mobile, test, pick_time_group='prematch', pick_type='ev'):
 	# print('\n===Monitor New EVs===\n')
 	# print('Input: ev_data = [[...],...]')# + str(ev_data))
 	# print('\nOutput: new_evs = [[%, $, ...], ...]\n')
@@ -302,6 +302,9 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 
 
 		# === Place Bet === 
+		if not place_picks:
+			continue
+
 		# if actual odds blank '' then we know valid pick but not enabled for auto pick so cannot place bet
 		if actual_odds == '':
 			continue
@@ -316,7 +319,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 # input all arbs read this scan
 # output only valid arbs into proper channels
 # so diff users only see arbs that apply to them
-def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks=False, test=False, pick_time_group='prematch', pick_type='arb'):
+def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks=False, place_picks=True, test=False, pick_time_group='prematch', pick_type='arb'):
 	# print('\n===Monitor New Arbs===\n')
 	# print('Input: arb_data = [{...},...]')# + str(arb_data))
 	# print('Input: init_arbs = {0:{...},...}')
@@ -552,6 +555,9 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 
 		# === Place Bet === 
+		if not place_picks:
+			continue
+
 		# if actual odds blank '' then we know valid pick but not enabled for auto pick so cannot place bet
 		if treat_ev and actual_odds1 == '':
 			continue
@@ -809,7 +815,7 @@ def monitor_arb_type(first_live_time, last_pre_time):
 # open website once 
 # and then loop over it 
 # simulate human behavior to avoid getting blocked
-def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_ev={}, test_arb={}, max_retries=3):
+def monitor_website(url, manual_picks=False, send_mobile=True, place_picks=True, profile_num=1, test=False, test_ev={}, test_arb={}, max_retries=3):
 	print('\n===Monitor Website===\n')
 
 	cur_yr = str(todays_date.year)
@@ -845,7 +851,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 				# get website driver all elements
 				# and specific navigation buttons which remain on screen the whole time
 				# no matter which page you navigate to
-				website = reader.open_dynamic_website(url)
+				website = reader.open_dynamic_website(url, profile_num)
 				# need to switch bt live and prematch on same page
 				driver = website[0]
 				arb_btn = website[1]
@@ -1029,7 +1035,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 						#monitor_arb_start_time = datetime.today()
 					
 						# monitor either live or pre, not both
-						new_arbs, manual_picks = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, test)
+						new_arbs, manual_picks = monitor_new_arbs(arb_data, init_arbs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, place_picks, test)
 						
 						# monitor_arb_end_time = datetime.today()
 						# monitor_arb_duration = (monitor_arb_end_time - monitor_arb_start_time).seconds
@@ -1121,7 +1127,7 @@ def monitor_website(url, manual_picks=False, send_mobile=True, test=False, test_
 
 						#monitor_ev_start_time = datetime.today()
 
-						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, send_mobile, test)
+						new_evs = monitor_new_evs(ev_data, init_evs, new_pick_rules, monitor_idx, valid_sports, driver, betrivers_window_handle, manual_picks, place_picks, send_mobile, test)
 						if new_evs == 'reboot':
 							print('Reboot')
 							driver.quit()
@@ -1353,6 +1359,9 @@ if __name__ == "__main__":
 	# diff from read react website bc we keep site open and loop read data
 	# oodsview was free but now charges
 	# So instead scrape sites directly
+	# need to change profile num each time change oddsview account to clear cache?
+	# maybe can just clear cache same profile
+	profile_num = 3 # client: 1
 	url = 'https://www.oddsview.com/odds'
 	#url = 'https://sportsbook.draftkings.com'
 
@@ -1380,7 +1389,7 @@ if __name__ == "__main__":
 
 	# need test var pure monitor only, do not place picks
 	# but still read actual odds without logging in
-	place_picks = True
+	place_picks = True # client: false
 
 	# post to mobile for mobile client action
 	# need desktop for arb so no need to ever send arb for manual action
@@ -1394,7 +1403,7 @@ if __name__ == "__main__":
 	test = False
 
 	#manual_arbs = False # Same as half auto arbs enabled = True. If user present, we can handle manual arbs bc of desktop interface
-	monitor_website(url, manual_picks, send_mobile, test, test_ev, test_arb)
+	monitor_website(url, manual_picks, send_mobile, place_picks, profile_num, test, test_ev, test_arb)
 
 	# Server GUI
 	# show list of active users

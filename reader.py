@@ -214,17 +214,20 @@ def read_remaining_funds(driver, website_name):
 	try:
 		if website_name == 'betmgm':
 			funds_element = driver.find_element('class name', 'user-balance')
-			# remove $
-			funds = float(funds_element.get_attribute('innerHTML')[1:])
+			funds = funds_element.get_attribute('innerHTML')
 			
 		elif website_name == 'betrivers':
 			funds_element = driver.find_element('xpath', '//div[@data-target="menu-quick-deposit"]')
-			# remove $
-			funds = float(funds_element.find_element('tag name', 'div').find_element('tag name', 'span').get_attribute('innerHTML')[1:])
+			funds = funds_element.find_element('tag name', 'div').find_element('tag name', 'span').get_attribute('innerHTML')
+
+		# remove $ and ,
+		funds = re.sub('\$|,','',funds)
+		funds = float(funds)
+
 	except Exception as e:
 		print('\nERROR: Failed to find funds element for ' + website_name.title() + '!\n', e)
 
-	print('Funds: ' + str(funds) + '\n')
+	print('Funds: $' + str(funds) + '\n')
 	return funds
 
 # remove outdated objects
@@ -6574,7 +6577,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 	#return prematch_arb_data
 
 # init width=1212? too small for betslip sidepanel with proper zoom
-def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False, mobile=False):
+def open_react_website(url, profile_num=1, size=(1250,1144), position=(0,0), first_window=False, mobile=False):
 	#print('\n===Open React Website===\n')
 
 	# 
@@ -6594,7 +6597,8 @@ def open_react_website(url, size=(1250,1144), position=(0,0), first_window=False
 	# Login to Chrome Profile
 	# V5: NEED all chrome windows fully closed and quit
 	options.add_argument(r"--user-data-dir=/Users/m/Library/Application Support/Google/Chrome")
-	options.add_argument(r'--profile-directory=Profile 20') 
+	profile_str = r'--profile-directory=Profile ' + str(profile_num)
+	options.add_argument(profile_str) 
 	
 	# FAIL: enable password manager to autofill
 	#options.add_experimental_option("credentials_enable_service", True)
@@ -7063,7 +7067,7 @@ def open_slack_website(driver):
 	print('Opened Slack Website')
 	return driver, arb_btn, ev_btn
 
-def open_dynamic_website(url, max_retries=3):
+def open_dynamic_website(url, profile_num=1, max_retries=3):
 	print('\n===Open Dynamic Website===\n')
 
 	# ensure chrome closed before opening auto window
@@ -7074,7 +7078,7 @@ def open_dynamic_website(url, max_retries=3):
 	# while retries < max_retries:
 	# 	try:
 
-	driver = open_react_website(url)
+	driver = open_react_website(url, profile_num)
 
 	arb_btn = pre_btn = ev_btn = None
 

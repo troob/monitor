@@ -994,6 +994,53 @@ def close_popups(driver, website_name):
             elif main_popup and boost_popup and loc_popup:
                 popups = False
 
+def click_place_btn(place_bet_btn, driver, website_name):
+
+    # needs fcn to account for glitches to ensure clean click
+    # may fail with popup glitch 
+    # which simply needs to be closed and retried
+    try:
+        place_bet_btn.click()
+        time.sleep(1)
+        print('Placed Bet to Find Limit')
+        #time.sleep(3) 
+    except:
+        print('Error: Failed to Click Place Bet Button! Check popup confirm number popup.')
+
+        #if logged_in:
+        # check for confirm phone popup
+        try:
+            confirm_dialog = driver.find_element('tag name', 'ms-modal-dialog')#
+            close_dialog_btn = confirm_dialog.find_element('class name', 'ds-button')
+            print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
+            close_dialog_btn.click()
+            time.sleep(0.5)
+            print('Closed Confirm Popup')
+
+            # Now try clicking plce bet again
+            try:
+                place_bet_btn.click()
+                time.sleep(0.5)
+            except:
+                print('Failed to Click Place Bet After Closed Confirm Popup')
+
+        except:
+            print('No Confirm Popup')
+
+            print('Check Location Popup')
+            try:
+                # tag ms-geo-location-installer
+                # class close
+                loc_dialog = driver.find_element('tag name', 'ms-geo-location-installer')#
+                close_dialog_btn = loc_dialog.find_element('class name', 'close')
+                print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
+                close_dialog_btn.click()
+                time.sleep(0.5)
+                print('Closed Location Popup')
+            except:
+                print('No Location Popup')
+
+
 
 def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick_type='ev', test=True, max_retries=3):
     print('\n===Place Bet===\n')
@@ -1092,50 +1139,8 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                         wager_remaining_funds(driver, website_name)
 
                     # ===Click Place Bet Btn BetMGM===
-                    # needs fcn to account for glitches to ensure clean click
-                    # may fail with popup glitch 
-                    # which simply needs to be closed and retried
-                    try:
-                        place_bet_btn.click()
-                        time.sleep(1)
-                        print('Placed Bet to Find Limit')
-                        #time.sleep(3) 
-                    except:
-                        print('Error: Failed to Click Place Bet Button! Check popup confirm number popup.')
-
-                        #if logged_in:
-                        # check for confirm phone popup
-                        try:
-                            confirm_dialog = driver.find_element('tag name', 'ms-modal-dialog')#
-                            close_dialog_btn = confirm_dialog.find_element('class name', 'ds-button')
-                            print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
-                            close_dialog_btn.click()
-                            time.sleep(0.5)
-                            print('Closed Confirm Popup')
-
-                            # Now try clicking plce bet again
-                            try:
-                                place_bet_btn.click()
-                                time.sleep(0.5)
-                            except:
-                                print('Failed to Click Place Bet After Closed Confirm Popup')
-
-                        except:
-                            print('No Confirm Popup')
-
-                            print('Check Location Popup')
-                            try:
-                                # tag ms-geo-location-installer
-                                # class close
-                                loc_dialog = driver.find_element('tag name', 'ms-geo-location-installer')#
-                                close_dialog_btn = loc_dialog.find_element('class name', 'close')
-                                print('close_dialog_btn: ' + close_dialog_btn.get_attribute('innerHTML'))
-                                close_dialog_btn.click()
-                                time.sleep(0.5)
-                                print('Closed Location Popup')
-                            except:
-                                print('No Location Popup')
-
+                    click_place_btn(place_bet_btn, driver, website_name)
+                    
 
                     # wait to finish loading
                     # either close receipt btn or alert msg
@@ -1531,8 +1536,8 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                         close_bet_windows(driver, side_num=1, test=test, bet_dict=bet_dict)
                         return
                     
-                except:
-                    print('Unknown Error while placing bet')
+                except Exception as e:
+                    print('\nUnknown Error while placing bet\n', e)
 
                     print('Re-Enter Wager in Field')
                     #wager_field.send_keys(bet_size)
@@ -1561,7 +1566,7 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                     
                     # wait for place bet btn to enable
                     place_btn_disabled = place_bet_btn.get_attribute('disabled')
-                    print('place_btn_disabled: ' + str(place_btn_disabled))
+                    #print('place_btn_disabled: ' + str(place_btn_disabled))
                     while place_btn_disabled == 'true':
                         try:
                             place_btn_disabled = place_bet_btn.get_attribute('disabled')
@@ -1625,7 +1630,20 @@ def place_bet(bet_dict, driver, final_outcome, cookies_file, saved_cookies, pick
                             time.sleep(1)
                             print('Clicked Back Btn')
 
-                            if error_title == 'not enough money':
+                            if error_title == 'wager too high':
+                                # click back and then place bet with max amount already in field
+
+                                place_bet_btn = driver.find_element('class name', 'mod-KambiBC-betslip__place-bet-btn')
+                                place_bet_btn.click()
+                                time.sleep(1)
+                                print('Placed Bet')
+
+                                close_receipt_btn = driver.find_element('class name', 'mod-KambiBC-betslip-receipt__close-button')
+                                close_receipt_btn.click()
+                                time.sleep(1)
+                                print('Closed Receipt')
+
+                            elif error_title == 'not enough money':
                                 print('Not enough money')
 
                                 # close bet to reset
@@ -2058,7 +2076,9 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                 wager_field.send_keys(remaining_funds)
                 time.sleep(0.5)
 
-                payout = float(driver.find_element('class name', 'betslip-summary-row--winnings').find_element('class name', 'betslip-summary-value').get_attribute('innerHTML').split('$')[1])
+                # remove , needed here bc returns here
+                payout = re.sub(',','',driver.find_element('class name', 'betslip-summary-row--winnings').find_element('class name', 'betslip-summary-value').get_attribute('innerHTML').split('$')[1])
+                payout = float(payout)
                 print('payout: ' + str(payout))
                 
                 return remaining_funds, payout, wager_field, place_bet_btn
@@ -2072,10 +2092,11 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             # needs fcn to account for glitches to ensure clean click
             # may fail with popup glitch 
             # which simply needs to be closed and retries
-            place_bet_btn.click()
-            time.sleep(1)
-            print('Placed Bet to Find Limit')
-            time.sleep(1) 
+            click_place_btn(place_bet_btn, driver, website_name)
+            # place_bet_btn.click()
+            # time.sleep(1)
+            # print('Placed Bet to Find Limit')
+            # time.sleep(1) 
 
             # wait to finish loading
             loading = True
@@ -2136,6 +2157,9 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         # $100.00 -> 100.00
         # class betslip-summary-row--winnings
         payout = driver.find_element('class name', 'betslip-summary-row--winnings').find_element('class name', 'betslip-summary-value').get_attribute('innerHTML').split('$')[1]
+        # remove , done at end for all sources
+        # payout = re.sub(',','',payout)
+        # payout = float(payout)
         print('payout: ' + payout)
 
     elif website_name == 'betrivers':
@@ -2297,6 +2321,9 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             print('Clicked Back Btn to see payout')
 
             payout = driver.find_element('class name', 'mod-KambiBC-js-betslip-summary__potential-payout-value').get_attribute('innerHTML').split('$')[1]
+            # remove , done at end for all sources
+            # payout = re.sub(',','',payout)
+            # payout = float(payout)
             print('payout: ' + str(payout))
 
         
@@ -2313,66 +2340,76 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
         # if unsure then use lowest conservative limit
         # eg big markets like moneyline, especially likely odds
 
-        place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
+        try:
 
-        attempted_bet = False
-        while not attempted_bet:
-            place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
-            print('place_bet_btn_text: ' + place_bet_btn_text)
+            place_bet_btn = driver.find_element('class name', 'dk-place-bet-button__primary-text')
 
-            if re.search('accept', place_bet_btn_text):
-                # accept odds for now until we check other side of arb
-                place_bet_btn.click()
+            attempted_bet = False
+            while not attempted_bet:
+                place_bet_btn_text = place_bet_btn.get_attribute('innerHTML').lower()
+                print('place_bet_btn_text: ' + place_bet_btn_text)
 
-            wager_field = driver.find_element('class name', 'betslip-wager-box__input')
-            #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
-            placeholder = wager_field.get_attribute('placeholder')
-            #print('placeholder: ' + placeholder)
-            if not placeholder == '0.00':
-                wager_field.clear()
+                if re.search('accept', place_bet_btn_text):
+                    # accept odds for now until we check other side of arb
+                    place_bet_btn.click()
+                elif re.search('remove', place_bet_btn_text):
+                    print('\nWarning: Bet Closed\n')
+                    close_bet_windows(driver, side_num, test, bet_dict)
+
+                
+                wager_field = driver.find_element('class name', 'betslip-wager-box__input')
+                #print('wager_field: ' + wager_field.get_attribute('outerHTML'))
+                placeholder = wager_field.get_attribute('placeholder')
+                #print('placeholder: ' + placeholder)
+                if not placeholder == '0.00':
+                    wager_field.clear()
+                    time.sleep(0.5)
+                wager_field.send_keys(max_bet_size)
                 time.sleep(0.5)
-            wager_field.send_keys(max_bet_size)
-            time.sleep(0.5)
 
-            place_bet_btn.click()
-            time.sleep(1)
-            print('Placed Bet to Find Limit')
+                place_bet_btn.click()
+                time.sleep(1)
+                print('Placed Bet to Find Limit')
 
-            # wait to finish loading
-            loading = True
-            while loading:
-                try:
-                    alert_msg = driver.find_element('class name', 'dk-action-required__title').get_attribute('innerHTML').lower() # Wager too high
-                    print('alert_msg: ' + alert_msg)
-                    loading = False
-                    print('Done Loading placed bet to find limit')
+                # wait to finish loading
+                loading = True
+                while loading:
+                    try:
+                        alert_msg = driver.find_element('class name', 'dk-action-required__title').get_attribute('innerHTML').lower() # Wager too high
+                        print('alert_msg: ' + alert_msg)
+                        loading = False
+                        print('Done Loading placed bet to find limit')
 
-                    if re.search('too high', alert_msg):
-                        attempted_bet = True
-                        print('Attempted Bet')
-                except KeyboardInterrupt:
-                    loading = False
-                except:
-                    print('Loading placed bet to find limit...')
-                    time.sleep(1)
+                        if re.search('too high', alert_msg):
+                            attempted_bet = True
+                            print('Attempted Bet')
+                    except KeyboardInterrupt:
+                        loading = False
+                    except:
+                        print('Loading placed bet to find limit...')
+                        time.sleep(1)
 
-        # after attempted bet to find limit
-        wager_field = driver.find_element('class name', 'betslip-wager-box__input')
-        bet_limit = wager_field.get_attribute('value')#.split('$')[1] # or getText()
-        print('bet_limit: ' + bet_limit)
+            # after attempted bet to find limit
+            wager_field = driver.find_element('class name', 'betslip-wager-box__input')
+            bet_limit = wager_field.get_attribute('value')#.split('$')[1] # or getText()
+            print('bet_limit: ' + bet_limit)
 
-        # $100.00 -> 100.00
-        payout = driver.find_element('class name', 'betslip-regular-payout__label-value').get_attribute('innerHTML').split('$')[1]
-        print('payout: ' + payout)
+            # $100.00 -> 100.00
+            payout = driver.find_element('class name', 'betslip-regular-payout__label-value').get_attribute('innerHTML').split('$')[1]
+            print('payout: ' + payout)
 
-        # do we need to click leave in betslip
-        # to see odds changes? is it glitchy? YES
-        # also important so place bet can click btn
-        # and we can diff bt odds change vs wager change
-        # class dk-betslip-tertiary-button__wrapper
-        betslip_btn = driver.find_element('class name', 'dk-betslip-tertiary-button__wrapper')
-        betslip_btn.click()
-        print('Clicked Leave in Betslip')
+            # do we need to click leave in betslip
+            # to see odds changes? is it glitchy? YES
+            # also important so place bet can click btn
+            # and we can diff bt odds change vs wager change
+            # class dk-betslip-tertiary-button__wrapper
+            betslip_btn = driver.find_element('class name', 'dk-betslip-tertiary-button__wrapper')
+            betslip_btn.click()
+            print('Clicked Leave in Betslip')
+
+
+        except Exception as e:
+            print('\nUnknown Errror While Finding Bet Limit!\n', e)
 
 
     # Do not close window after finding limit
@@ -2576,6 +2613,10 @@ def place_arb_bet(driver, arb, side_num, test):
                                 print('Clicked Place Bet Again')
                             except:
                                 print('Failed to Click Place Again')
+                                # if arb bet 1, close and move on
+                                # if arb bet 2, arb 1 already placed so keep open until becomes available again
+                                return 
+                            
                         time.sleep(0.5)
 
                 end_time = datetime.today()

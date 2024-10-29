@@ -562,7 +562,9 @@ def determine_limit(bet_dict, website_name, pick_type, test):
         # for betrivers, $300 is max 
         # so if less than 300 available then need to set limits diff by market
         market = bet_dict['market']
-        odds = bet_dict['actual odds']
+        odds = bet_dict['odds']
+        if 'actual odds' in bet_dict.keys():
+            odds = bet_dict['actual odds']
         bet_size = determine_source_limit(website_name, market, odds)
 
     print('bet_size: ' + str(bet_size))

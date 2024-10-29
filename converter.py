@@ -722,8 +722,12 @@ def convert_full_team_name(bet_outcome, market):
 
     # convert_team_to_loc_and_name
     # only sox has 2 names in team
-    # white sox and blue bombers is 2 words
-    multi_names = ['sox', 'blue']
+    # 2 word teams:
+    # white sox
+    # blue bombers
+    # trail blazers
+    # hockey club
+    multi_names = ['sox', 'blue', 'blazer', 'club']
     split_num = 1
     for multi_name in multi_names:
         if multi_name in bet_outcome:
@@ -750,7 +754,7 @@ def convert_bet_to_team_loc(bet_outcome, market):
 
     # only sox has 2 names in team
     # white sox and blue bombers is 2 words
-    multi_names = ['sox', 'blue']
+    multi_names = ['sox', 'blue', 'blazer', 'club']
     split_num = 1
     for multi_name in multi_names:
         if multi_name in bet_outcome:
@@ -814,7 +818,7 @@ def convert_team_to_loc_and_name(team):
     # only sox has 2 names in team
     # white sox is 2 words
     #multi_name = 'sox'
-    multi_names = ['sox', 'blue']
+    multi_names = ['sox', 'blue', 'blazer', 'club']
     split_num = 1
     for multi_name in multi_names:
         if multi_name in team:
