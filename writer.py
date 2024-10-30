@@ -441,7 +441,8 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
             # OR just click login btn once???
             # problem is if not loaded yet then will move on before login
             login_page = False
-            while not login_page:
+            login_page_retries = 0
+            while not login_page and login_page_retries < max_retries:
                 # class = sc-gHLcSH cnmSeS
                 # id=rsi-top-navigation
                 # div
@@ -457,7 +458,7 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                     print('Exit')
                     exit()
                 except Exception as e:
-                    print('No Login Button', e)
+                    print('No Login Button\n', e)
 
                     try:
                         driver.find_element('xpath', '//div[@data-target="menu-user-account"]')
@@ -465,6 +466,9 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                         return
                     except:
                         print('\nLogin Betrivers\n')
+
+                        # try close popups
+                        close_popups(driver, website_name)
 
                 try:
                     usr_field_input = driver.find_element('id', 'login-form-modal-email')
@@ -477,6 +481,12 @@ def login_website(website_name, driver, cookies_file='', saved_cookies=[], url='
                     exit()
                 except:
                     print('Not Login Page')
+                    login_page_retries += 1
+
+                    if login_page_retries == max_retries:
+                        print('\nFailed to Login Automatially\n')
+                        return 'fail'
+
 
             # it adds class validation-ok if valid email entered
             if not re.search('valid', usr_field_html):
@@ -2013,7 +2023,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
     if final_outcome is None:
         print('final_outcome none, Close Bet Windows\n')
         close_bet_windows(driver, side_num, test, bet_dict)
-        return bet_limit
+        return bet_limit, payout
     
     # get max number that is less than available funds
     # but always over known limit
@@ -2217,7 +2227,7 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
             except Exception as e:
                 print('Failed to Click Final Outcome: ', e)
                 close_bet_windows(driver, side_num, test, bet_dict)
-                return bet_limit
+                return bet_limit, payout
 
         
 
@@ -2298,33 +2308,57 @@ def find_bet_limit(bet_dict, driver, cookies_file, saved_cookies, pick_type, tes
                 error_msg = error_element.get_attribute('innerHTML').lower() 
                 print('error_msg: ' + error_msg)
 
+                # $100.00 -> 100.00
+                # mod-kambibc-betslip-feedback__currency
+                # error finding element so reinspect or just split from error msg
+                #feedback_currency = driver.find_element('class name', 'mod-kambibc-betslip-feedback__currency').get_attribute('innerHTML')
+                #feedback_currency = error_msg.split('</span></span>')[0]
+                #print('feedback_currency: ' + feedback_currency)
+                #[:-1] # remove final period not needed bc span has only money
+                if re.search('\$', error_msg):
+                    bet_limit = error_msg.split('$')[1].split('<')[0]
+                    print('bet_limit: ' + bet_limit)
+                    
+                    # click back btn to see payout
+                    back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
+                    print('back_btn: ' + back_btn.get_attribute('innerHTML'))
+                    back_btn.click()
+                    time.sleep(1)
+                    print('Clicked Back Btn to see payout')
+
+                    payout = driver.find_element('class name', 'mod-KambiBC-js-betslip-summary__potential-payout-value').get_attribute('innerHTML').split('$')[1]
+                    # remove , done at end for all sources
+                    # payout = re.sub(',','',payout)
+                    # payout = float(payout)
+                    print('payout: ' + str(payout))
+
             except:
                 print('Loading placed bet to find limit...')
                 time.sleep(1)
 
-        # $100.00 -> 100.00
-        # mod-kambibc-betslip-feedback__currency
-        # error finding element so reinspect or just split from error msg
-        #feedback_currency = driver.find_element('class name', 'mod-kambibc-betslip-feedback__currency').get_attribute('innerHTML')
-        #feedback_currency = error_msg.split('</span></span>')[0]
-        #print('feedback_currency: ' + feedback_currency)
-        #[:-1] # remove final period not needed bc span has only money
-        if re.search('\$', error_msg):
-            bet_limit = error_msg.split('$')[1].split('<')[0]
-            print('bet_limit: ' + bet_limit)
+        # # $100.00 -> 100.00
+        # # mod-kambibc-betslip-feedback__currency
+        # # error finding element so reinspect or just split from error msg
+        # #feedback_currency = driver.find_element('class name', 'mod-kambibc-betslip-feedback__currency').get_attribute('innerHTML')
+        # #feedback_currency = error_msg.split('</span></span>')[0]
+        # #print('feedback_currency: ' + feedback_currency)
+        # #[:-1] # remove final period not needed bc span has only money
+        # if re.search('\$', error_msg):
+        #     bet_limit = error_msg.split('$')[1].split('<')[0]
+        #     print('bet_limit: ' + bet_limit)
             
-            # click back btn to see payout
-            back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
-            print('back_btn: ' + back_btn.get_attribute('innerHTML'))
-            back_btn.click()
-            time.sleep(1)
-            print('Clicked Back Btn to see payout')
+        #     # click back btn to see payout
+        #     back_btn = driver.find_element('class name', 'mod-KambiBC-betslip-button')
+        #     print('back_btn: ' + back_btn.get_attribute('innerHTML'))
+        #     back_btn.click()
+        #     time.sleep(1)
+        #     print('Clicked Back Btn to see payout')
 
-            payout = driver.find_element('class name', 'mod-KambiBC-js-betslip-summary__potential-payout-value').get_attribute('innerHTML').split('$')[1]
-            # remove , done at end for all sources
-            # payout = re.sub(',','',payout)
-            # payout = float(payout)
-            print('payout: ' + str(payout))
+        #     payout = driver.find_element('class name', 'mod-KambiBC-js-betslip-summary__potential-payout-value').get_attribute('innerHTML').split('$')[1]
+        #     # remove , done at end for all sources
+        #     # payout = re.sub(',','',payout)
+        #     # payout = float(payout)
+        #     print('payout: ' + str(payout))
 
         
     elif website_name == 'draftkings':

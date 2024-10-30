@@ -1668,6 +1668,8 @@ def load_listed_bets(driver, website_name, max_retries=10):
 			if load_retries == max_retries:
 				loading = False
 				print('Error: Failed to Load listed bets during read actual odds! ' + website_name)
+				# returns none which closes in outer fcn
+				#writer.close_bet_windows(driver, side_num, test, bet_dict)
 			load_retries += 1
 
 	return listed_bets
@@ -1867,7 +1869,7 @@ def check_logged_out_popup(driver):
 	
 
 #selected_markets = ['moneyline', 'run line', 'total runs']
-def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False, manual_picks=True):
+def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group='prematch', pick_type='ev', side_num=1, max_retries=3, test=False, manual_picks=True, place_picks=True):
 	print('\n===Read Actual Odds===\n')
 	# print('Input: bet_dict = ' + str(bet_dict))
 	# print('\nOutput: actual_odds = x\n')
@@ -2557,6 +2559,12 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 			# ===Load Listed Bets===
 			listed_bets = load_listed_bets(driver, website_name)
 
+			# if failed to load, close window
+			if listed_bets is None:
+				writer.close_bet_windows(driver, side_num, test, bet_dict)
+				return actual_odds, final_outcome, cookies_file, saved_cookies
+
+
 			# ===Find Matching Market + Line===
 			# ===Remove Old Picks from Betslip===
 			actual_odds, final_outcome = find_matching_bet(listed_bets, market, market_title, bet_line, player_name, player_market, website_name, driver)
@@ -2571,7 +2579,7 @@ def read_actual_odds(bet_dict, driver, betrivers_window_handle, pick_time_group=
 		# if EV, close if gone or odds got worse
 		actual_odds = determiner.determine_valid_actual_odds(actual_odds, pick_odds, pick_type, driver, side_num, test, bet_dict)
 
-		if actual_odds is not None and website_name == 'betrivers':
+		if actual_odds is not None and website_name == 'betrivers' and place_picks:
 			# if side 2, we have side 1 actual odds
 			# so check if valid arb odds before doublechecking odds
 			# if side_num == 2:
@@ -6013,7 +6021,7 @@ def read_prematch_ev_data(driver, pre_btn, ev_btn, cur_yr, sources=[], max_retri
 			print('Unknown Error: ', e)
 			e_str = str(e)
 			#print('e_str: ' + e_str)
-			if re.search('invalid session id', e_str) or re.search('disconnected', e_str):
+			if re.search('invalid session id|disconnected|timeout', e_str):# or re.search('disconnected', e_str):
 				# reboot window
 				# open dynamic window
 				# restart monitor website fcn from the top
@@ -6546,7 +6554,7 @@ def read_prematch_arb_data(driver, pre_btn, arb_btn, cur_yr, url='', sources=[],
 			print('Unknown Error: ', e)
 			e_str = str(e)
 			#print('e_str: ' + e_str)
-			if re.search('invalid session id', e_str) or re.search('disconnected', e_str):
+			if re.search('invalid session id|disconnected|timeout', e_str):# or re.search('disconnected', e_str):
 				# reboot window
 				# open dynamic window
 				# restart monitor website fcn from the top

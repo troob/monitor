@@ -269,7 +269,7 @@ def monitor_new_evs(ev_data, init_evs, new_ev_rules, monitor_idx, valid_sports, 
 		if ev_source in enabled_sources:
 
 			#actual_odds, final_outcome, cookies_file, saved_cookies = reader.read_actual_odds(ev_row, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(ev_row, driver, betrivers_window_handle, pick_time_group, pick_type, test=test, manual_picks=manual_picks)
+			actual_odds_data = reader.read_actual_odds(ev_row, driver, betrivers_window_handle, pick_time_group, pick_type, test=test, manual_picks=manual_picks, place_picks=place_picks)
 			if actual_odds_data == 'reboot':
 				return 'reboot'
 			actual_odds = actual_odds_data[0]
@@ -406,7 +406,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 			bet1_dict['link'] = arb['link1']
 			bet1_dict['size'] = determiner.determine_source_limit(bet1_dict['source'], bet1_dict['market'], bet1_dict['odds'])
 			#actual_odds1, final_outcome1, cookies_file, saved_cookies = reader.read_actual_odds(bet1_dict, driver, pick_time_group, pick_type)
-			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type='ev', test=test, manual_picks=manual_picks)
+			actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type='ev', test=test, manual_picks=manual_picks, place_picks=place_picks)
 			if actual_odds_data == 'reboot':
 				return 'reboot'
 			actual_odds1 = actual_odds_data[0]
@@ -438,7 +438,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# side num defines placement of window
 				# actual_odds1, final_outcome1, cookies_file, saved_cookies = 
-				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test, manual_picks=manual_picks)
+				actual_odds_data = reader.read_actual_odds(bet1_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test, manual_picks=manual_picks, place_picks=place_picks)
 				if actual_odds_data == 'reboot':
 					return 'reboot'
 				actual_odds1 = actual_odds_data[0]
@@ -473,7 +473,7 @@ def monitor_new_arbs(arb_data, init_arbs, new_arb_rules, monitor_idx, valid_spor
 
 				# actual_odds2, final_outcome2, cookies_file, saved_cookies
 				side_num = 2
-				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test, manual_picks=manual_picks)
+				actual_odds_data = reader.read_actual_odds(bet2_dict, driver, betrivers_window_handle, pick_time_group, pick_type, side_num, test=test, manual_picks=manual_picks, place_picks=place_picks)
 				if actual_odds_data == 'reboot':
 					return 'reboot'
 				actual_odds2 = actual_odds_data[0]
@@ -1227,6 +1227,12 @@ def monitor_website(url, manual_picks=False, send_mobile=True, place_picks=True,
 			print('\nChrome Window Already Opened. Need to Close All Chrome Windows Before Starting Monitor.\n', e)
 			print('Exit')
 			exit()
+		except Exception as e:
+			print('\nUnknown Error in Main Loop:\n', e)
+			driver.quit()
+			print('Exit')
+			exit()
+			
 			# Mac
 			
 			# Windows
@@ -1365,10 +1371,17 @@ if __name__ == "__main__":
 	# maybe can just clear cache same profile
 	
 	# change for client
-	profile_num = 3 # client: 1, old mac: 3
+	
+	profile_num = 20 # client: 1, old mac: 3
 	# need test var pure monitor only, do not place picks
 	# but still read actual odds without logging in
-	place_picks = False # client: false
+	place_picks = True # client: false
+
+	client_version = False
+
+	if client_version:
+		profile_num = 3
+		place_picks = False
 	
 	
 	url = 'https://www.oddsview.com/odds'

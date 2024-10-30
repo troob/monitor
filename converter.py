@@ -1431,7 +1431,7 @@ def convert_team_to_loc_abbrev(team_loc, sport=''):
         # even tho 2 teams in LA 1 labeled LA and other Los Angeles
         team_locs = {'atlanta':'atl', 
                     'boston':'bos', 
-                    'brooklyn':'bk', 
+                    'brooklyn':'bkn', 
                     'charlotte':'cha', 
                     'chicago':'chi',
                     'cleveland':'cle',
@@ -1757,7 +1757,7 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
             # even tho 2 teams in LA 1 labeled LA and other Los Angeles
             team_locs = {'atlanta':'atl', 
                         'boston':'bos', 
-                        'brooklyn':'bk', 
+                        'brooklyn':'bkn', 
                         'charlotte':'cha', 
                         'chicago':'chi',
                         'cleveland':'cle',
@@ -1905,7 +1905,7 @@ def convert_team_loc_to_source_abbrev(team_loc, sport='', source=''):
             # even tho 2 teams in LA 1 labeled LA and other Los Angeles
             team_locs = {'atlanta':'atl', 
                         'boston':'bos', 
-                        'brooklyn':'bk', 
+                        'brooklyn':'bkn', 
                         'charlotte':'cha', 
                         'chicago':'chi',
                         'cleveland':'cle',
